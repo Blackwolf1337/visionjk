@@ -1280,10 +1280,10 @@ void CG_FxTest_f( void ) {
 	}
 	VectorMA( cg.refdef.vieworg, 2048.0f, cg.refdef.viewaxis[0], end );
 	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.snap ? cg.snap->ps.clientNum : 0, MASK_SOLID );
-	// sparks:saber, sparks:clash, sparks:blaster, sparks:explosion: the sparks the renderer simulates
+	// sparks:saber, sparks:clash, sparks:blaster, sparks:explosion, sparks:drops, sparks:metal, stone, wood, glass, cold, soft, deflect: the sparks the renderer simulates
 	fxTest.sparks = 0;
 	if ( !Q_strncmp( CG_Argv( 1 ), "sparks:", 7 ) ) {
-		static const char *kinds[] = { "saber", "clash", "blaster", "explosion" };
+		static const char *kinds[] = { "saber", "clash", "blaster", "explosion", "drops", "metal", "stone", "wood", "glass", "cold", "soft", "deflect" };
 
 		for ( int k = 0; k < (int)ARRAY_LEN( kinds ); k++ ) {
 			if ( !Q_stricmp( CG_Argv( 1 ) + 7, kinds[k] ) ) {
@@ -1361,6 +1361,55 @@ qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, 
 		b.count = 16; b.speed = 230.0f; b.spread = 0.8f; b.life = 0.45f; b.size = 0.3f;
 		b.gravity = 600.0f; b.drag = 2.0f; b.bounce = 0.35f; b.cooling = 1.5f; b.rest = 1.2f;
 		VectorSet( b.color, 4.0f, 1.8f, 0.6f );
+		break;
+	case GPUSPARKS_DROPS:
+		// molten drops off blades that met: few, slow and heavy, they fall, hardly bounce and cool where they lie
+		b.count = 18; b.speed = 150.0f; b.spread = 1.4f; b.life = 1.6f; b.size = 0.5f;
+		b.gravity = 800.0f; b.drag = 0.35f; b.bounce = 0.15f; b.cooling = 0.75f; b.rest = 4.0f;
+		VectorSet( b.color, 5.0f, 2.6f, 0.9f );
+		break;
+	// a blade dragged along a surface (saber/cg_saberdrag.c), a little at a time and by what it touches
+	case GPUSPARKS_DRAG_METAL:
+		// long white streaks that bounce
+		b.count = 7; b.speed = 340.0f; b.spread = 0.55f; b.life = 0.7f; b.size = 0.3f;
+		b.gravity = 650.0f; b.drag = 1.2f; b.bounce = 0.5f; b.cooling = 1.1f; b.rest = 1.2f;
+		VectorSet( b.color, 5.0f, 4.0f, 2.6f );
+		break;
+	case GPUSPARKS_DRAG_STONE:
+		// orange grit, short
+		b.count = 5; b.speed = 230.0f; b.spread = 0.7f; b.life = 0.45f; b.size = 0.28f;
+		b.gravity = 700.0f; b.drag = 1.8f; b.bounce = 0.3f; b.cooling = 1.4f; b.rest = 0.8f;
+		VectorSet( b.color, 4.2f, 2.0f, 0.7f );
+		break;
+	case GPUSPARKS_DRAG_WOOD:
+		// slow embers that float and glow on
+		b.count = 4; b.speed = 110.0f; b.spread = 1.0f; b.life = 1.1f; b.size = 0.32f;
+		b.gravity = 180.0f; b.drag = 2.2f; b.bounce = 0.1f; b.cooling = 0.7f; b.rest = 2.0f;
+		VectorSet( b.color, 3.6f, 1.3f, 0.3f );
+		break;
+	case GPUSPARKS_DRAG_GLASS:
+		// few, thin and very bright
+		b.count = 4; b.speed = 380.0f; b.spread = 0.5f; b.life = 0.3f; b.size = 0.2f;
+		b.gravity = 500.0f; b.drag = 1.5f; b.bounce = 0.6f; b.cooling = 1.8f; b.rest = 0.0f;
+		VectorSet( b.color, 5.0f, 5.0f, 5.0f );
+		break;
+	case GPUSPARKS_DRAG_COLD:
+		// water and ice: pale flecks that are out at once
+		b.count = 3; b.speed = 170.0f; b.spread = 1.1f; b.life = 0.22f; b.size = 0.24f;
+		b.gravity = 350.0f; b.drag = 2.5f; b.bounce = 0.1f; b.cooling = 2.2f; b.rest = 0.0f;
+		VectorSet( b.color, 2.2f, 2.8f, 3.4f );
+		break;
+	case GPUSPARKS_DRAG_SOFT:
+		// earth, cloth, leaves: a few dull bits
+		b.count = 2; b.speed = 120.0f; b.spread = 1.0f; b.life = 0.4f; b.size = 0.26f;
+		b.gravity = 500.0f; b.drag = 2.4f; b.bounce = 0.05f; b.cooling = 1.6f; b.rest = 0.6f;
+		VectorSet( b.color, 2.6f, 1.0f, 0.25f );
+		break;
+	case GPUSPARKS_DEFLECT:
+		// a shot thrown off a blade: a quick bright spray where it was hit
+		b.count = 22; b.speed = 360.0f; b.spread = 1.2f; b.life = 0.4f; b.size = 0.3f;
+		b.gravity = 550.0f; b.drag = 1.8f; b.bounce = 0.35f; b.cooling = 1.5f; b.rest = 0.8f;
+		VectorSet( b.color, 5.0f, 3.8f, 2.2f );
 		break;
 	case GPUSPARKS_EXPLOSION:
 	default:

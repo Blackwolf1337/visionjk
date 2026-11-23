@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // players out of the way, holstered sabers, the effects of force powers, the look of duellists. Not from OpenJK.
 
 #include "cg_local.h"
+#include "cgame/saber/cg_saberbelt.h"
 #include "ghoul2/G2.h"
 
 /*
@@ -243,6 +244,7 @@ static void CG_JPDrawHolsteredSaber( centity_t *cent, clientInfo_t *ci, int sabe
 	else
 	{ // a bit away from the body
 		VectorMA( re.origin, scale * -5.0f, boltAxis[2], re.origin );
+		CG_SaberBeltSwing( cent, saberNum, re.origin, boltAxis, angles );
 	}
 	AnglesToAxis( angles, offset );
 	MatrixMultiply( offset, boltAxis, re.axis );
@@ -355,6 +357,7 @@ void CG_JPHolster( centity_t *cent, clientInfo_t *ci )
 		return;
 	}
 
+	CG_SaberBeltUpdate( cent, ci );	// VisionJK: a switched off saber on the belt (saber/cg_saberbelt.c)
 	sinceAnim = cg.time - hs->drawAnimTime;
 	for ( i = 0; i < MAX_SABERS; i++ )
 	{
@@ -434,7 +437,7 @@ void CG_JPHolster( centity_t *cent, clientInfo_t *ci )
 
 	// first saber. A normal saber only hangs on the hip while another weapon is used
 	if ( has[0] && onBody[0]
-		&& (inBack[0] || !saberOut || (ci->saber[0].type == SABER_STAFF
+		&& (inBack[0] || !saberOut || CG_SaberBeltHolds( cent ) || (ci->saber[0].type == SABER_STAFF
 			&& (anim == BOTH_S1_S7_NEW || anim == BOTH_S7_S1_NEW || anim == BOTH_STAND2TO1_NEW)))
 		&& CG_JPHolsterSaberModel( hs, ci, 0 ) )
 	{
@@ -455,7 +458,7 @@ void CG_JPHolster( centity_t *cent, clientInfo_t *ci )
 	}
 
 	// second saber
-	if ( has[1] && onBody[1] && (inBack[1] || !saberOut) && CG_JPHolsterSaberModel( hs, ci, 1 ) )
+	if ( has[1] && onBody[1] && (inBack[1] || !saberOut || CG_SaberBeltHolds( cent )) && CG_JPHolsterSaberModel( hs, ci, 1 ) )
 	{
 		CG_JPDrawHolsteredSaber( cent, ci, 1, !(inBack[1] || ci->saber[1].type == SABER_STAFF) );
 		if ( saberOut && trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, 2 ) )

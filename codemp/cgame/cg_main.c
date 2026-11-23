@@ -30,6 +30,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "ui/ui_saberfx.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberignite.h"
+#include "cgame/saber/cg_saberclash.h"
+#include "cgame/saber/cg_saberdrawn.h"
+#include "cgame/saber/cg_saberwound.h"
+#include "cgame/saber/cg_saberdrag.h"
+#include "cgame/saber/cg_saberdrop.h"
+#include "cgame/saber/cg_saberbelt.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -2685,6 +2693,11 @@ Ghoul2 Insert End
 	cgs.media.bdecal_burn1 = trap->R_RegisterShader("gfx/damage/bodybigburnmark1");
 	cgs.media.mSaberDamageGlow = trap->R_RegisterShader("gfx/effects/saberDamageGlow");
 	CG_SaberScarsRegister();
+	CG_SaberSoundRegister();
+	CG_SaberIgniteRegister();
+	CG_SaberClashRegister();
+	CG_SaberWoundsRegister();
+	CG_SaberDropRegister();
 
 	CG_RegisterCvars();
 
@@ -2770,6 +2783,13 @@ Ghoul2 Insert End
 
 	CG_InitMarkPolys();
 	CG_SaberScarsInit();
+	CG_SaberSoundInit();
+	CG_SaberClashInit();
+	CG_SaberDrawnInit();
+	CG_SaberWoundsInit();
+	CG_SaberDragInit();
+	CG_SaberDropInit();
+	CG_SaberBeltInit();
 
 	// remove the last loading update
 	cg.infoScreenText[0] = 0;
@@ -2855,6 +2875,7 @@ void CG_Shutdown( void )
 
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine
 
+	CG_SaberDropShutdown();
     CG_DestroyAllGhoul2();
 
 //	Com_Printf("... FX System Cleanup\n");

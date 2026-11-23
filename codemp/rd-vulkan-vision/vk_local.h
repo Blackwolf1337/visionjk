@@ -390,6 +390,7 @@ extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
 extern cvar_t	*v_softParticles;	// vk_post.cpp
 extern cvar_t	*v_litParticles;	// vk_post.cpp
+extern cvar_t	*v_saberSmoke;	// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );

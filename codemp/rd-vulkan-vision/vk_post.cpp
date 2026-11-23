@@ -41,6 +41,7 @@ cvar_t	*v_exposure;
 cvar_t	*v_ssr;
 cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
+cvar_t	*v_saberSmoke;
 
 // after a pass of its own in the middle of a view: the sets of the frame, the state and the viewport of the scene again
 static void VK_ResumeScene( void ) {
@@ -64,6 +65,7 @@ void VK_InitPost( void ) {
 		"Smooths the edges of the level after it is drawn (SMAA 1x), far cheaper than r_ext_multisample and sharper than a blur; with r_ext_multisample 2 it also catches thin lines. Vulkan only. 0: off" );
 	v_softParticles = ri.Cvar_Get( "v_softParticles", "1", CVAR_ARCHIVE_ND,
 		"Smoke, dust and fire of the effects fade out where they meet walls and the floor and right in front of the eye, instead of cutting into them with a hard edge. Vulkan only. 0: off. Above 1: the units over which they fade (1: 10)" );
+	v_saberSmoke = ri.Cvar_Get( "v_saberSmoke", "1", CVAR_ARCHIVE_ND, "Blades and other moving lights glow in the smoke and dust around them" );
 	v_litParticles = ri.Cvar_Get( "v_litParticles", "1", CVAR_ARCHIVE_ND,
 		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
 	VK_CreatePostTargets( width, height );

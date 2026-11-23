@@ -987,7 +987,10 @@ static qboolean VK_SpriteLit( void ) {
 }
 
 static void VK_SpriteLight( const vec3_t at, vec3_t light ) {
-	vec3_t ambient, directed, dir, point;
+	vec3_t ambient, directed, dir, point, glow = { 0.0f, 0.0f, 0.0f };
+	// v_saberSmoke: a moving light (a blade above all) also glows in the smoke further out than it lights a wall, and past
+	// the limit of the plain light, or a blade in a dark room would only tint it
+	const float glowReach = v_saberSmoke->integer ? 1.5f : 0.0f;
 
 	VectorCopy( at, point );
 	if ( !R_LightForPoint( point, ambient, directed, dir ) ) {
@@ -1018,14 +1021,21 @@ static void VK_SpriteLight( const vec3_t at, vec3_t light ) {
 			VectorCopy( dl->origin, nearest );
 		}
 		d = Distance( at, nearest );
-		if ( reach <= 0.0f || d >= reach ) {
+		if ( reach <= 0.0f ) {
+			continue;
+		}
+		if ( d < reach * glowReach ) {
+			f = 1.0f - d / ( reach * glowReach );
+			VectorMA( glow, 1.4f * f * f, dl->color, glow );
+		}
+		if ( d >= reach ) {
 			continue;
 		}
 		f = 1.0f - d / reach;
 		VectorMA( light, 1.2f * f * f, dl->color, light );
 	}
 	for ( int c = 0; c < 3; c++ ) {
-		light[c] = Com_Clamp( 0.4f, 1.6f, light[c] );
+		light[c] = Q_min( 3.2f, Com_Clamp( 0.4f, 1.6f, light[c] ) + glow[c] );
 	}
 }
 

@@ -33,6 +33,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/menudef.h"
 
 #include "ghoul2/G2.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberignite.h"
+#include "cgame/saber/cg_saberclash.h"
+#include "cgame/saber/cg_saberwound.h"
 //==========================================================================
 
 extern qboolean WP_SaberBladeUseSecondBladeStyle( saberInfo_t *saber, int bladeNum );
@@ -2165,8 +2169,12 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 	case EV_SABER_ATTACK:
 		DEBUGNAME("EV_SABER_ATTACK");
 		{
-			qhandle_t swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", Q_irand(1, 8)));
+			qhandle_t swingSound = CG_SaberStyleSwingSound( cg_entities[es->number].currentState.fireflag );
 			clientInfo_t *client = NULL;
+			if ( !swingSound )
+			{
+				swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", Q_irand(1, 8)));
+			}
 			if ( cg_entities[es->number].currentState.eType == ET_NPC )
 			{
 				client = cg_entities[es->number].npcClient;
@@ -2270,6 +2278,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					fxDir[1] = 1;
 				}
 				trap->S_StartSound(es->origin, es->number, CHAN_AUTO, hitSound );
+				if ( es->otherEntityNum >= 0 && es->otherEntityNum < MAX_CLIENTS && cg_entities[es->otherEntityNum].ghoul2 )
+					CG_SaberWoundAt( &cg_entities[es->otherEntityNum], es->origin );
 				if ( es->eventParm == 3 )
 				{	// moderate or big hits.
 					trap->FX_PlayEffectID( hitPersonSmallFxID, es->origin, fxDir, -1, -1, qfalse );
@@ -2395,6 +2405,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					trap->FX_PlayEffectID( blockFXID, es->origin, fxDir, -1, -1, qfalse );
 					// VisionJK: a burst of sparks where the renderer simulates them (v_gpuSparks)
 					CG_GpuSparks( es->origin, fxDir, GPUSPARKS_CLASH, 1.0f );
+					CG_SaberClash( es->origin, fxDir, 1.0f, (qboolean)!noFlare );
 
 					if ( !noFlare )
 					{
@@ -2413,6 +2424,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					fxDir[1] = 1;
 				}
 				trap->FX_PlayEffectID(cgs.effects.mBlasterDeflect, es->origin, fxDir, -1, -1, qfalse);
+				CG_SaberDeflect( es->origin, fxDir );
 			}
 		}
 		break;
@@ -2423,6 +2435,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			cg_saberFlashTime = cg.time-50;
 			VectorCopy( es->origin, cg_saberFlashPos );
 			CG_ScreenFxFlash( es->origin, 64.0f, 1.0f );
+			{
+				static const vec3_t up = { 0.0f, 0.0f, 1.0f };
+
+				CG_SaberClash( es->origin, up, 1.2f, qtrue );
+			}
 			trap->S_StartSound ( es->origin, -1, CHAN_WEAPON, trap->S_RegisterSound( va("sound/weapons/saber/saberhitwall%i", Q_irand(1, 3)) ) );
 		}
 		break;
@@ -2445,11 +2462,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			{
 				if (ci->saber[0].soundOn)
 				{
-					trap->S_StartSound (NULL, es->number, CHAN_AUTO, ci->saber[0].soundOn );
+					trap->S_StartSound (NULL, es->number, CHAN_AUTO, CG_SaberIgniteSound( &ci->saber[0], qtrue ) );
 				}
-				if (ci->saber[1].soundOn)
+				if (ci->saber[1].soundOn && ci->saber[1].model[0])
 				{
-					trap->S_StartSound (NULL, es->number, CHAN_AUTO, ci->saber[1].soundOn );
+					trap->S_StartSound (NULL, es->number, CHAN_AUTO, CG_SaberIgniteSound( &ci->saber[1], qtrue ) );
 				}
 			}
 		}
@@ -3245,7 +3262,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		else
 		{
 			if ( cgs.gameSounds[ es->eventParm ] ) {
-				trap->S_StartSound (NULL, es->number, es->saberEntityNum, cgs.gameSounds[ es->eventParm ] );
+				const sfxHandle_t generalSound = CG_SaberIgniteEvent( es->pos.trBase, cgs.gameSounds[ es->eventParm ] );
+
+				if ( generalSound ) {
+					trap->S_StartSound (NULL, es->number, es->saberEntityNum, generalSound );
+				}
 			} else {
 				s = CG_ConfigString( CS_SOUNDS + es->eventParm );
 				trap->S_StartSound (NULL, es->number, es->saberEntityNum, CG_CustomSound( es->number, s ) );

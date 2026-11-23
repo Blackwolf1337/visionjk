@@ -653,6 +653,18 @@ LANG_ENGLISH        "Doppler Effect"
 REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 
+REFERENCE           SMOOTH_SWING
+LANG_ENGLISH        "Smooth Swing"
+
+REFERENCE           THE_HUM_OF_A_BLADE_FOLLOWS_HOW_FAST
+LANG_ENGLISH        "The hum of a blade follows how fast it moves, and each stance has swings of its own."
+
+REFERENCE           NEAR_MISS
+LANG_ENGLISH        "Near Miss"
+
+REFERENCE           A_SOUND_WHEN_THE_BLADE_OF_ANOTHER_PL
+LANG_ENGLISH        "A sound when the blade of another player passes close to your head."
+
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
 
@@ -778,6 +790,54 @@ LANG_ENGLISH        "Blade Glow"
 
 REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
+
+REFERENCE           IGNITION
+LANG_ENGLISH        "Ignition"
+
+REFERENCE           THE_BLADE_FLICKERS_AS_IT_COMES_OUT_A
+LANG_ENGLISH        "The blade flickers as it comes out and goes in, its light grows with it, and each hilt sounds different."
+
+REFERENCE           BLADE_CLASH
+LANG_ENGLISH        "Blade Clash"
+
+REFERENCE           A_CLASH_LIGHTS_THE_ROOM_AND_THROWS_G
+LANG_ENGLISH        "A clash lights the room and throws glowing drops that fall and cool. Stronger while blades are locked."
+
+REFERENCE           BURN_WOUNDS
+LANG_ENGLISH        "Burn Wounds"
+
+REFERENCE           A_BLADE_LEAVES_A_GLOWING_CUT_ON_THE
+LANG_ENGLISH        "A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn."
+
+REFERENCE           DRAGGING_BLADE
+LANG_ENGLISH        "Dragging Blade"
+
+REFERENCE           A_BLADE_DRAGGED_ALONG_THE_FLOOR_OR_A
+LANG_ENGLISH        "A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks."
+
+REFERENCE           DROPPED_HILT
+LANG_ENGLISH        "Dropped Hilt"
+
+REFERENCE           WHEN_A_PLAYER_DIES_THE_BLADE_GOES_IN
+LANG_ENGLISH        "When a player dies the blade goes in and the hilt falls to the floor and rolls."
+
+REFERENCE           HILT_ON_THE_BELT
+LANG_ENGLISH        "Hilt on the Belt"
+
+REFERENCE           A_SABER_THAT_IS_SWITCHED_OFF_HANGS_O
+LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk. The hand puts it there and takes it. Not for the staff."
+
+REFERENCE           BLADE_IN_SMOKE
+LANG_ENGLISH        "Blade in Smoke"
+
+REFERENCE           A_BLADE_LIGHTS_THE_SMOKE_AND_DUST_AR
+LANG_ENGLISH        "A blade lights the smoke and dust around it. Vulkan only."
+
+REFERENCE           DEFLECT_FLICKER
+LANG_ENGLISH        "Deflect Flicker"
+
+REFERENCE           A_BLADE_THAT_DEFLECTS_A_SHOT_FLICKER
+LANG_ENGLISH        "A blade that deflects a shot flickers for a moment and throws sparks where it was hit."
 
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
@@ -1637,6 +1697,9 @@ LANG_ENGLISH        "Particles"
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
+
 REFERENCE           HITS
 LANG_ENGLISH        "Hits"
 
@@ -1652,14 +1715,14 @@ LANG_ENGLISH        "Duels"
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
-
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -3007,9 +3070,6 @@ LANG_ENGLISH        "Renamed to %s"
 
 REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
 LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
-
-REFERENCE           SABERS
-LANG_ENGLISH        "Sabers"
 
 REFERENCE           KILLFEED_SIZE
 LANG_ENGLISH        "Killfeed Size"

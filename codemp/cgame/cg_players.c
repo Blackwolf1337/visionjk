@@ -26,6 +26,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "ui/ui_saberfx.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberignite.h"
+#include "cgame/saber/cg_saberdrawn.h"
+#include "cgame/saber/cg_saberwound.h"
+#include "cgame/saber/cg_saberdrag.h"
+#include "cgame/saber/cg_saberdrop.h"
+#include "cgame/saber/cg_saberbelt.h"
 #include "ghoul2/G2.h"
 #include "game/bg/bg_saga.h"
 
@@ -2361,7 +2368,9 @@ void CG_PlayerAnimEventDo( centity_t *cent, animevent_t *animEvent )
 				randomSwing = Q_irand( 7, 9 );
 				break;
 			}
-			swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", randomSwing));
+			swingSound = CG_SaberSwingSound( animEvent->eventData[AED_SABER_SWING_TYPE] );
+			if ( !swingSound )
+				swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", randomSwing));
 		}
 		trap->S_StartSound(cent->currentState.pos.trBase, cent->currentState.number, CHAN_AUTO, swingSound );
 		break;
@@ -5761,7 +5770,7 @@ static float CG_SaberHum( void )
 // the renderer has none, v_saber3D is off, or the blade is black (light can only be added, a black blade keeps its
 // texture); draw it as before.
 static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius,
-	saber_colors_t color, const saberPast_t *past, qboolean trailMove, float hum, int renderfx )
+	saber_colors_t color, const saberPast_t *past, qboolean trailMove, float hum, int renderfx, float ignite )
 {
 	saberBlade3D_t	blade;
 	vec3_t			rgb = { 1.0f, 1.0f, 1.0f };
@@ -5781,11 +5790,11 @@ static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float
 	VectorMA( origin, length, dir, blade.end );
 	CG_SaberSweep( past, trailMove, &blade );
 	// (the halo as the blade comes out, as the flat glow had it)
-	flare = length < lengthMax ? 1.0f + 2.0f / length : 1.0f;
+	flare = ( length < lengthMax ? 1.0f + 2.0f / length : 1.0f ) * ignite;
 	h = Com_Clamp( 0.0f, 1.0f, ( hum - 0.82f ) / 0.18f );
 	blade.core = radius * 0.22f * CG_SaberScale( &v_saberCoreScale ) * flare * ( 0.95f + 0.1f * h );
 	blade.glow = radius * 1.5f * CG_SaberScale( &v_saberGlowScale ) * flare * ( 0.97f + 0.06f * h ) * ( 1.0f + 0.3f * blade.sweep );
-	VectorScale( rgb, ( 0.88f + 0.12f * h ) * ( 1.0f + 0.25f * blade.sweep ), blade.rgb );
+	VectorScale( rgb, ignite * ( 0.88f + 0.12f * h ) * ( 1.0f + 0.25f * blade.sweep ), blade.rgb );
 	blade.renderfx = renderfx & ( RF_THIRD_PERSON | RF_FIRST_PERSON );
 	trap->ext.R_AddSaberBlade( &blade );
 	return qtrue;
@@ -5793,7 +5802,7 @@ static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float
 
 // past and trailMove: see CG_AddSaberBlade3D
 void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight,
-	const saberPast_t *past, qboolean trailMove )
+	const saberPast_t *past, qboolean trailMove, float ignite )
 {
 	const float	hum = CG_SaberHum();
 	vec3_t		mid;
@@ -5821,10 +5830,11 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 		// (VisionJK: its brightness hums with the 3D blade)
 		if ( CG_Saber3D() )
 			VectorScale( rgb, hum, rgb );
+		VectorScale( rgb, ignite, rgb );
 		trap->R_AddLightToScene( mid, (length*1.4f) + (Q_flrand(0.0f, 1.0f)*3.0f), rgb[0], rgb[1], rgb[2] );
 	}
 
-	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color, past, trailMove, hum, rfx ) )
+	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color, past, trailMove, hum, rfx, ignite ) )
 	{
 		return;
 	}
@@ -5845,6 +5855,7 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	{
 		radiusmult = 1.0;
 	}
+	radiusmult *= ignite;
 
 	if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 	{ //draw the blade as a post-render so it doesn't get in the cap...
@@ -5891,6 +5902,15 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 	trap->R_AddRefEntityToScene( &saber );
+}
+
+void CG_SaberLooseBlade( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius, int color, float ignite )
+{
+	vec3_t o, d;
+
+	VectorCopy( origin, o );
+	VectorCopy( dir, d );
+	CG_DoSaber( o, d, length, lengthMax, radius, (saber_colors_t)color, 0, qtrue, NULL, qfalse, ignite );
 }
 
 // the colour of the trail of a saber, 0 to 255: the classic one and the inside of the SFX one
@@ -5962,7 +5982,7 @@ static void CG_SFXSaberTrailFill( const saberFX_t *fx, saber_colors_t color )
 // v_saberStyle 1 (ui/ui_saberfx.c). trail NULL: the blade without the place it was a moment ago.
 // past and trailMove: see CG_AddSaberBlade3D
 static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, saber_colors_t color, const vec3_t muzzle,
-	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx, const saberPast_t *past, qboolean trailMove )
+	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx, const saberPast_t *past, qboolean trailMove, float ignite )
 {
 	const float			hum = CG_SaberHum();
 	const bladeInfo_t	*blade = &client->saber[saberNum].blade[bladeNum];
@@ -5988,12 +6008,12 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 		fx.rgb[2] = (byte)rgb[2];
 	}
 	fx.renderfx = rfx;
-	fx.coreScale = CG_SaberScale( &v_saberCoreScale );
-	fx.glowScale = CG_SaberScale( &v_saberGlowScale );
+	fx.coreScale = CG_SaberScale( &v_saberCoreScale ) * ignite;
+	fx.glowScale = CG_SaberScale( &v_saberGlowScale ) * ignite;
 	// (the 3D blade ends where it strikes a wall, as the flat one; end is a unit past the tip, see CG_AddSaberBlade; and
 	// it glows over the place it swept itself, the flat fill of that place is not drawn then)
 	if ( !CG_AddSaberBlade3D( muzzle, dir, Distance( muzzle, end ) - 1.0f, blade->lengthMax, blade->radius, color, past, trailMove,
-		hum, rfx ) )
+		hum, rfx, ignite ) )
 	{
 		SaberFX_Draw( &fx );
 		if ( trail )
@@ -6003,7 +6023,7 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 	if ( client->saber[saberNum].numBlades < 3 && !( client->saber[saberNum].saberFlags2 & SFL2_NO_DLIGHT ) && blade->length >= 0.5f )
 	{
 		CG_RGBForSaberColor( color, rgb );
-		VectorScale( rgb, 0.66f, rgb );
+		VectorScale( rgb, 0.66f * ignite, rgb );
 		if ( CG_HasLineLight() )
 		{
 			// VisionJK: the blade as a tube of light, so the light runs along it on the walls and the floor and
@@ -6490,9 +6510,11 @@ void CG_SaberCompWork(vec3_t start, vec3_t end, centity_t *owner, int saberNum, 
 										}
 									}
 								}
-								CG_AddGhoul2Mark(markShader, flrand(3.0f, 4.0f),
-									trace.endpos, ePos, trace.entityNum, trEnt->lerpOrigin, trEnt->lerpAngles[YAW],
-									trEnt->ghoul2, trEnt->modelScale, Q_irand(5000, 10000));
+								// (a hilt with a mark of its own keeps it)
+								if ( markShader != cgs.media.bdecal_saberglow || !CG_SaberWound( trEnt, trace.endpos, ePos ) )
+									CG_AddGhoul2Mark(markShader, flrand(3.0f, 4.0f),
+										trace.endpos, ePos, trace.entityNum, trEnt->lerpOrigin, trEnt->lerpAngles[YAW],
+										trEnt->ghoul2, trEnt->modelScale, Q_irand(5000, 10000));
 								if ( weaponMarkShader )
 								{
 									vec3_t splashBackDir;
@@ -6736,6 +6758,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	int i = 0;
 	int trailDur;
 	float saberLen;
+	float ignite;
 	float diff;
 	clientInfo_t *client;
 	centity_t *saberEnt;
@@ -6972,6 +6995,10 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 						CG_SaberScarContact( &client->saber[saberNum].blade[bladeNum].trail, i, trace.endpos, trace.plane.normal,
 							client->saber[saberNum].blade[bladeNum].radius );
 					}
+					if ( architecture && !fromSaber )
+					{
+						CG_SaberDrag( cent, saberNum, bladeNum, trace.endpos, trace.plane.normal, trace.surfaceFlags );
+					}
 					// All I need is a bool to mark whether I have a previous point to work with.
 					//....come up with something better..
 					if ( client->saber[saberNum].blade[bladeNum].trail.haveOldPos[i] )
@@ -7030,6 +7057,12 @@ CheckTrail:
 
 		VectorMA( org_, saberLen, axis_[0], tip );
 		past = CG_SaberPast( &client->saber[saberNum].blade[bladeNum].trail, org_, tip );
+		if ( !fromSaber )
+		{
+			CG_SaberSoundBlade( cent, saberNum, bladeNum, axis_[0] );
+			CG_SaberDrawnAdd( cent->currentState.number, saberNum, bladeNum, org_, axis_[0], saberLen,
+				client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius, scolor );
+		}
 		trailMove = (qboolean)( ( move >= 0 && move < LS_MOVE_MAX && saberMoveData[move].trailLength > 0 )
 			|| BG_SuperBreakWinAnim( cent->currentState.torsoAnim ) || ( cent->currentState.saberInFlight && saberNum == 0 ) );
 	}
@@ -7282,16 +7315,17 @@ JustDoIt:
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
 	// (the blade of a player with an outline is drawn after his figure, which is drawn after everything else then)
 	bladeRenderfx = renderfx | ( CG_SelectOutlined( cent->currentState.number ) ? ( RF_FORCEPOST | RF_AFTERGLOW ) : 0 );
+	ignite = CG_SaberIgniteFlicker( &client->saber[saberNum].blade[bladeNum], cent->currentState.number, saberNum, bladeNum );
 	if ( sfxStyle )
 	{
 		CG_DoSFXSaber( client, saberNum, bladeNum, (saber_colors_t)scolor, org_, end, axis_[0], sfxTrail ? saberTrail : NULL,
-			bladeRenderfx, trailShown ? past : NULL, trailMove );
+			bladeRenderfx, trailShown ? past : NULL, trailMove, ignite );
 		return;
 	}
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 		scolor, bladeRenderfx,
 		(qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)),
-		trailShown ? past : NULL, trailMove );
+		trailShown ? past : NULL, trailMove, ignite );
 }
 
 int CG_IsMindTricked(int trickIndex1, int trickIndex2, int trickIndex3, int trickIndex4, int client)
@@ -9773,14 +9807,14 @@ void CG_Player( centity_t *cent ) {
 					if (ci->saber[0].soundOff
 						&& !cent->currentState.saberHolstered)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[0].soundOff);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[0], qfalse));
 					}
 
 					if (ci->saber[1].soundOff &&
 						ci->saber[1].model[0] &&
 						!cent->currentState.saberHolstered)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[1].soundOff);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[1], qfalse));
 					}
 
 				}
@@ -9791,12 +9825,12 @@ void CG_Player( centity_t *cent ) {
 					//trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, trap->S_RegisterSound( "sound/weapons/saber/saberon.wav" ));
 					if (ci->saber[0].soundOn)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[0].soundOn);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[0], qtrue));
 					}
 
-					if (ci->saber[1].soundOn)
+					if (ci->saber[1].soundOn && ci->saber[1].model[0])
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[1].soundOn);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[1], qtrue));
 					}
 
 					BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
@@ -10776,7 +10810,11 @@ void CG_Player( centity_t *cent ) {
 		CG_DrawPlayerSphere(cent, cent->lerpOrigin, 1.0f, cgs.media.invulnerabilityShader );
 	}
 stillDoSaber:
-	if ((cent->currentState.eFlags & EF_DEAD) && cent->currentState.weapon == WP_SABER)
+	if ( CG_SaberDropUpdate( cent, ci ) )
+	{ // VisionJK: the hilt fell out of the dead hand (saber/cg_saberdrop.c)
+		g2HasWeapon = qfalse;
+	}
+	else if ((cent->currentState.eFlags & EF_DEAD) && cent->currentState.weapon == WP_SABER)
 	{
 		//cent->saberLength = 0;
 		BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
@@ -10826,8 +10864,7 @@ stillDoSaber:
 
 				if (hasLen)
 				{
-					trap->S_AddLoopingSound( cent->currentState.number, soundSpot, vec3_origin,
-						ci->saber[0].soundLoop );
+					CG_SaberSoundHum( cent, soundSpot, ci->saber[0].soundLoop );
 					didFirstSound = qtrue;
 				}
 			}
@@ -10850,8 +10887,7 @@ stillDoSaber:
 
 				if (hasLen)
 				{
-					trap->S_AddLoopingSound( cent->currentState.number, soundSpot, vec3_origin,
-						ci->saber[1].soundLoop );
+					CG_SaberSoundHum( cent, soundSpot, ci->saber[1].soundLoop );
 				}
 			}
 		}
@@ -11228,7 +11264,8 @@ stillDoSaber:
 		BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
 		BG_SI_SetDesiredLength(&ci->saber[1], 0, -1);
 
-		drawPlayerSaber = qtrue;
+		// (VisionJK: not in the hand while it hangs on the belt, saber/cg_saberbelt.c)
+		drawPlayerSaber = (qboolean)!CG_SaberBeltHolds( cent );
 	}
 	else
 	{

@@ -26,6 +26,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // for a 3D rendering
 #include "cg_local.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/saber/cg_saberclash.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberdrop.h"
 #include "game/bg/bg_saga.h"
 
 #define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
@@ -2717,6 +2720,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 		CG_SaberScarsAdd();
+		CG_SaberClashAdd();
+		CG_SaberSoundNearMiss();
+		CG_SaberDropAdd();
 		CG_FxTestFrame();
 		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
 		CG_BoomboxScene();
