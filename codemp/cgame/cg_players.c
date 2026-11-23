@@ -30,7 +30,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberignite.h"
 #include "cgame/saber/cg_saberdrawn.h"
 #include "cgame/saber/cg_saberwound.h"
-#include "cgame/saber/cg_saberdrag.h"
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/saber/cg_saberbelt.h"
 #include "ghoul2/G2.h"
@@ -6994,10 +6993,6 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 					{
 						CG_SaberScarContact( &client->saber[saberNum].blade[bladeNum].trail, i, trace.endpos, trace.plane.normal,
 							client->saber[saberNum].blade[bladeNum].radius );
-					}
-					if ( architecture && !fromSaber )
-					{
-						CG_SaberDrag( cent, saberNum, bladeNum, trace.endpos, trace.plane.normal, trace.surfaceFlags );
 					}
 					// All I need is a bool to mark whether I have a previous point to work with.
 					//....come up with something better..

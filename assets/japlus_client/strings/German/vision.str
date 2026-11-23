@@ -1077,14 +1077,6 @@ REFERENCE           A_BLADE_LEAVES_A_GLOWING_CUT_ON_THE
 LANG_ENGLISH        "A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn."
 LANG_GERMAN         "Eine Klinge hinterlässt einen glühenden Schnitt am Körper, der abkühlt und bis zum Respawn als dunkle Spur bleibt."
 
-REFERENCE           DRAGGING_BLADE
-LANG_ENGLISH        "Dragging Blade"
-LANG_GERMAN         "Schleifende Klinge"
-
-REFERENCE           A_BLADE_DRAGGED_ALONG_THE_FLOOR_OR_A
-LANG_ENGLISH        "A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks."
-LANG_GERMAN         "Eine Klinge, die im Laufen über Boden oder Wand schleift, wirft Funken je nach Material. Braucht GPU-Funken."
-
 REFERENCE           DROPPED_HILT
 LANG_ENGLISH        "Dropped Hilt"
 LANG_GERMAN         "Fallender Griff"

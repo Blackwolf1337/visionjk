@@ -809,12 +809,6 @@ LANG_ENGLISH        "Burn Wounds"
 REFERENCE           A_BLADE_LEAVES_A_GLOWING_CUT_ON_THE
 LANG_ENGLISH        "A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn."
 
-REFERENCE           DRAGGING_BLADE
-LANG_ENGLISH        "Dragging Blade"
-
-REFERENCE           A_BLADE_DRAGGED_ALONG_THE_FLOOR_OR_A
-LANG_ENGLISH        "A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks."
-
 REFERENCE           DROPPED_HILT
 LANG_ENGLISH        "Dropped Hilt"
 

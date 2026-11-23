@@ -189,8 +189,6 @@ MORE = {
     'A sound when the blade of another player passes close to your head.': ("Un son quand la lame d'un autre joueur passe tout près de votre tête.", 'Un sonido cuando la hoja de otro jugador pasa muy cerca de tu cabeza.'),
     'Burn Wounds': ('Brûlures', 'Quemaduras'),
     'A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn.': ("Une lame laisse sur le corps une entaille incandescente qui refroidit et reste en marque sombre jusqu'à la réapparition.", 'Una hoja deja en el cuerpo un corte incandescente que se enfría y queda como marca oscura hasta reaparecer.'),
-    'Dragging Blade': ('Lame traînante', 'Hoja arrastrada'),
-    'A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks.': ("Une lame traînée au sol ou sur un mur pendant que vous bougez projette des étincelles selon le matériau. Nécessite les étincelles GPU.", 'Una hoja arrastrada por el suelo o una pared mientras te mueves lanza chispas según el material. Necesita chispas GPU.'),
     'Dropped Hilt': ('Poignée qui tombe', 'Empuñadura caída'),
     'When a player dies the blade goes in and the hilt falls to the floor and rolls.': ("Quand un joueur meurt, la lame se rétracte et la poignée tombe au sol et roule.", 'Cuando un jugador muere, la hoja se retrae y la empuñadura cae al suelo y rueda.'),
     'Hilt on the Belt': ('Poignée à la ceinture', 'Empuñadura al cinturón'),

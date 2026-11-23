@@ -3495,32 +3495,13 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_saberdrag
-			type					ITEM_TYPE_YESNO
-			text					@VISION_DRAGGING_BLADE
-			descText				@VISION_A_BLADE_DRAGGED_ALONG_THE_FLOOR_OR_A
-			cvar					"v_saberDrag"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 858 392 52
-			page					5
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
 			name					vision_yesno_v_saberdrophilt
 			type					ITEM_TYPE_YESNO
 			text					@VISION_DROPPED_HILT
 			descText				@VISION_WHEN_A_PLAYER_DIES_THE_BLADE_GOES_IN
 			cvar					"v_saberDropHilt"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 910 392 52
+			rect					742 858 392 52
 			page					5
 			scroll					1
 			row						1
@@ -3539,7 +3520,7 @@
 			descText				@VISION_A_SABER_THAT_IS_SWITCHED_OFF_HANGS_O
 			cvar					"v_saberBelt"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 962 392 52
+			rect					742 910 392 52
 			page					5
 			scroll					1
 			row						1
@@ -3558,7 +3539,7 @@
 			descText				@VISION_A_BLADE_LIGHTS_THE_SMOKE_AND_DUST_AR
 			cvar					"v_saberSmoke"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 1014 392 52
+			rect					742 962 392 52
 			page					5
 			scroll					1
 			row						1
@@ -3577,7 +3558,7 @@
 			descText				@VISION_A_BLADE_THAT_DEFLECTS_A_SHOT_FLICKER
 			cvar					"v_saberDeflect"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 1066 392 52
+			rect					742 1014 392 52
 			page					5
 			scroll					1
 			row						1
@@ -3596,7 +3577,7 @@
 			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 			cvar					"tay_saberTeamColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 1118 392 52
+			rect					742 1066 392 52
 			page					5
 			scroll					1
 			row						1
@@ -3615,7 +3596,7 @@
 			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 			cvar					"tay_saberStaffColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 1170 392 52
+			rect					742 1118 392 52
 			page					5
 			scroll					1
 			row						1

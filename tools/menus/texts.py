@@ -170,8 +170,6 @@ TR = {
     'A sound when the blade of another player passes close to your head.': 'Ein Geräusch, wenn die Klinge eines anderen Spielers knapp an deinem Kopf vorbeizieht.',
     'Burn Wounds': 'Brandwunden',
     'A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn.': 'Eine Klinge hinterlässt einen glühenden Schnitt am Körper, der abkühlt und bis zum Respawn als dunkle Spur bleibt.',
-    'Dragging Blade': 'Schleifende Klinge',
-    'A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks.': 'Eine Klinge, die im Laufen über Boden oder Wand schleift, wirft Funken je nach Material. Braucht GPU-Funken.',
     'Dropped Hilt': 'Fallender Griff',
     'When a player dies the blade goes in and the hilt falls to the floor and rolls.': 'Stirbt ein Spieler, fährt die Klinge ein, und der Griff fällt zu Boden und rollt.',
     'Hilt on the Belt': 'Griff am Gürtel',

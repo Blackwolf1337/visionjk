@@ -1368,7 +1368,7 @@ qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, 
 		b.gravity = 800.0f; b.drag = 0.35f; b.bounce = 0.15f; b.cooling = 0.75f; b.rest = 4.0f;
 		VectorSet( b.color, 5.0f, 2.6f, 0.9f );
 		break;
-	// a blade dragged along a surface (saber/cg_saberdrag.c), a little at a time and by what it touches
+	// what a shot knocks off a surface, by what it is made of (weapons/cg_impact.c)
 	case GPUSPARKS_DRAG_METAL:
 		// long white streaks that bounce
 		b.count = 7; b.speed = 340.0f; b.spread = 0.55f; b.life = 0.7f; b.size = 0.3f;

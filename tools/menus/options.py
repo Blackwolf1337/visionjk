@@ -207,7 +207,6 @@ SETUP = [
         ('yesno', 'Ignition', 'v_saberIgnition', 'The blade flickers as it comes out and goes in, its light grows with it, and each hilt sounds different.'),
         ('yesno', 'Blade Clash', 'v_saberClash', 'A clash lights the room and throws glowing drops that fall and cool. Stronger while blades are locked.'),
         ('yesno', 'Burn Wounds', 'v_saberBurns', 'A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn.'),
-        ('yesno', 'Dragging Blade', 'v_saberDrag', 'A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks.'),
         ('yesno', 'Dropped Hilt', 'v_saberDropHilt', 'When a player dies the blade goes in and the hilt falls to the floor and rolls.'),
         ('yesno', 'Hilt on the Belt', 'v_saberBelt', 'A saber that is switched off hangs on the belt and swings with the walk. The hand puts it there and takes it. Not for the staff.'),
         ('yesno', 'Blade in Smoke', 'v_saberSmoke', 'A blade lights the smoke and dust around it. Vulkan only.'),

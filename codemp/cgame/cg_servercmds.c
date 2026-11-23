@@ -33,7 +33,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberclash.h"
 #include "cgame/saber/cg_saberdrawn.h"
 #include "cgame/saber/cg_saberwound.h"
-#include "cgame/saber/cg_saberdrag.h"
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/saber/cg_saberbelt.h"
 #include "game/bg/bg_public.h"
@@ -959,7 +958,6 @@ static void CG_MapRestart( void ) {
 	CG_SaberClashInit();
 	CG_SaberDrawnInit();
 	CG_SaberWoundsInit();
-	CG_SaberDragInit();
 	CG_SaberDropInit();
 	CG_SaberBeltInit();
 	CG_KillCEntityInstances();

@@ -1077,14 +1077,6 @@ REFERENCE           A_BLADE_LEAVES_A_GLOWING_CUT_ON_THE
 LANG_ENGLISH        "A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn."
 LANG_FRENCH         "Une lame laisse sur le corps une entaille incandescente qui refroidit et reste en marque sombre jusqu'à la réapparition."
 
-REFERENCE           DRAGGING_BLADE
-LANG_ENGLISH        "Dragging Blade"
-LANG_FRENCH         "Lame traînante"
-
-REFERENCE           A_BLADE_DRAGGED_ALONG_THE_FLOOR_OR_A
-LANG_ENGLISH        "A blade dragged along the floor or a wall while you move throws sparks that depend on the material. Needs GPU Sparks."
-LANG_FRENCH         "Une lame traînée au sol ou sur un mur pendant que vous bougez projette des étincelles selon le matériau. Nécessite les étincelles GPU."
-
 REFERENCE           DROPPED_HILT
 LANG_ENGLISH        "Dropped Hilt"
 LANG_FRENCH         "Poignée qui tombe"

@@ -284,8 +284,6 @@ set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/saber/cg_saberbelt.h"
 	"${MPDir}/cgame/saber/cg_saberclash.c"
 	"${MPDir}/cgame/saber/cg_saberclash.h"
-	"${MPDir}/cgame/saber/cg_saberdrag.c"
-	"${MPDir}/cgame/saber/cg_saberdrag.h"
 	"${MPDir}/cgame/saber/cg_saberdrop.c"
 	"${MPDir}/cgame/saber/cg_saberdrop.h"
 	"${MPDir}/cgame/saber/cg_saberdrawn.c"
