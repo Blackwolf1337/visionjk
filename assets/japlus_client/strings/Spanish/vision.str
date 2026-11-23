@@ -2601,6 +2601,22 @@ REFERENCE           MAKE_S_THE_TEAM_LEADER
 LANG_ENGLISH        "Make %s the team leader"
 LANG_SPANISH        "Hacer a %s líder del equipo"
 
+REFERENCE           S_WANTS_TO_JOIN
+LANG_ENGLISH        "%s wants to join"
+LANG_SPANISH        "%s quiere unirse"
+
+REFERENCE           ACCEPT
+LANG_ENGLISH        "Accept"
+LANG_SPANISH        "Aceptar"
+
+REFERENCE           DECLINE
+LANG_ENGLISH        "Decline"
+LANG_SPANISH        "Rechazar"
+
+REFERENCE           ANSWER_THE_VOTE_FIRST
+LANG_ENGLISH        "Answer the vote first"
+LANG_SPANISH        "Primero la votación"
+
 REFERENCE           U_S
 LANG_ENGLISH        "u/s"
 LANG_SPANISH        "#same"

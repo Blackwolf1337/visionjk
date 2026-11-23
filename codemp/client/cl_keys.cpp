@@ -1773,6 +1773,10 @@ void CL_KeyDownEvent( int key, unsigned time )
 			Cvar_Set( "v_voteKeys", "0" );
 			return;
 		}
+		// then a friend who asks on Discord to join (a key held down from before answers nothing)
+		if ( kg.keys[keynames[key].upper].repeats == 1 && CL_DiscordAnswer( (qboolean)( key == A_F1 ) ) ) {
+			return;
+		}
 	}
 
 	// send the bound action
