@@ -591,10 +591,12 @@ static inline void CL_TVClose( void ) {}
 void CL_DiscordInit( void );
 void CL_DiscordFrame( void );
 void CL_DiscordShutdown( void );
+qboolean CL_DiscordAnswer( qboolean yes );
 #else
 static inline void CL_DiscordInit( void ) {}
 static inline void CL_DiscordFrame( void ) {}
 static inline void CL_DiscordShutdown( void ) {}
+static inline qboolean CL_DiscordAnswer( qboolean yes ) { return qfalse; }
 #endif
 
 void CL_InitDownloads(void);
