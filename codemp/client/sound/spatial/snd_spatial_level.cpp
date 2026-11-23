@@ -167,6 +167,10 @@ static int S_SpatialTableMaterial( const char *shader ) {
 	return entry ? entry->material : MATERIAL_NONE;
 }
 
+int S_SpatialShaderMaterial( const char *shader ) {
+	return S_SpatialTableMaterial( shader );
+}
+
 // The material (SPATIAL_*) of a triangle of a shader. The sky first. Then the table, before what the level says: a
 // line of the table can put a level right. byTable: the table named it.
 int S_SpatialTriangleMaterial( spatialShaderCache_t *cache, const char *shader, int surfaceFlags, qboolean *byTable ) {

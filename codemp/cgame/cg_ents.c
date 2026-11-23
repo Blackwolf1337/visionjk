@@ -33,6 +33,8 @@ Ghoul2 Insert Start
 */
 #include "qcommon/q_shared.h"
 #include "ghoul2/G2.h"
+#include "cgame/weapons/cg_impact.h"
+#include "cgame/weapons/cg_boltlight.h"
 /*
 Ghoul2 Insert end
 */
@@ -2495,6 +2497,7 @@ static void CG_Missile( centity_t *cent ) {
 	{
 		CG_AddRadarEnt(cent);
 	}
+	CG_BoltTrack( cent );
 
 	if (s1->weapon == WP_SABER)
 	{
@@ -2585,7 +2588,7 @@ static void CG_Missile( centity_t *cent ) {
 		}
 
 		// add dynamic light
-		if ( weapon->altMissileDlight )
+		if ( !CG_BoltLight( cent ) && weapon->altMissileDlight )
 		{
 			trap->R_AddLightToScene(cent->lerpOrigin, weapon->altMissileDlight,
 				weapon->altMissileDlightColor[0], weapon->altMissileDlightColor[1], weapon->altMissileDlightColor[2] );
@@ -2613,7 +2616,7 @@ static void CG_Missile( centity_t *cent ) {
 		}
 
 		// add dynamic light
-		if ( weapon->missileDlight )
+		if ( !CG_BoltLight( cent ) && weapon->missileDlight )
 		{
 			trap->R_AddLightToScene(cent->lerpOrigin, weapon->missileDlight,
 				weapon->missileDlightColor[0], weapon->missileDlightColor[1], weapon->missileDlightColor[2] );

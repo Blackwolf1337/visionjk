@@ -362,3 +362,19 @@ gfx/vision/burn_char
 		alphaGen vertex
 	}
 }
+
+gfx/vision/impact_dust
+{
+	nopicmip
+	nomipmaps
+	surfaceparm	nomarks
+	surfaceparm	trans
+	cull	none
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/impact_dust
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}

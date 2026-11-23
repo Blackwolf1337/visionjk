@@ -1201,6 +1201,30 @@ REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_SPANISH        "Cada compañero se muestra con el modelo que elijas. Su elección: cada uno conserva el suyo."
 
+REFERENCE           IMPACTS_BY_MATERIAL
+LANG_ENGLISH        "Impacts by Material"
+LANG_SPANISH        "Impactos según material"
+
+REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit. Sparks need GPU Sparks."
+LANG_SPANISH        "Los disparos lanzan chispas, astillas o polvo y suenan según lo que golpean. Las chispas necesitan GPU Sparks."
+
+REFERENCE           BOLTS_AS_LIGHTS
+LANG_ENGLISH        "Bolts as Lights"
+LANG_SPANISH        "Disparos como luz"
+
+REFERENCE           BOLTS_LIGHT_WHAT_THEY_FLY_PAST_THE_N
+LANG_ENGLISH        "Bolts light what they fly past, the nearest eight, and flash at a blade that deflects them."
+LANG_SPANISH        "Los disparos iluminan aquello junto a lo que pasan (los ocho más cercanos) y destellan en la hoja que los desvía."
+
+REFERENCE           RICOCHETS
+LANG_ENGLISH        "Ricochets"
+LANG_SPANISH        "Rebotes"
+
+REFERENCE           A_BOLT_THAT_BOUNCES_OFF_METAL_WHINES
+LANG_ENGLISH        "A bolt that bounces off metal whines away."
+LANG_SPANISH        "Un disparo que rebota en el metal se aleja silbando."
+
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 LANG_SPANISH        "Disparos como en Jedi Outcast"

@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cgame/cg_local.h"
 #include "cgame/saber/cg_saberdrag.h"
+#include "cgame/weapons/cg_impact.h"
 
 #define DRAG_PLAYER_SPEED	50.0f		// units a second of the player: standing still and leaning the blade on a wall is no drag
 #define DRAG_BLADE_SPEED	60.0f		// of the point of contact
@@ -43,40 +44,10 @@ void CG_SaberDragInit( void ) {
 }
 
 static gpuSparks_t Drag_Kind( int surfaceFlags ) {
-	switch ( surfaceFlags & MATERIAL_MASK ) {
-	case MATERIAL_SOLIDMETAL:
-	case MATERIAL_HOLLOWMETAL:
-	case MATERIAL_ARMOR:
-	case MATERIAL_COMPUTER:
-		return GPUSPARKS_DRAG_METAL;
-	case MATERIAL_SOLIDWOOD:
-	case MATERIAL_HOLLOWWOOD:
-		return GPUSPARKS_DRAG_WOOD;
-	case MATERIAL_GLASS:
-	case MATERIAL_BPGLASS:
-	case MATERIAL_SHATTERGLASS:
-		return GPUSPARKS_DRAG_GLASS;
-	case MATERIAL_WATER:
-	case MATERIAL_SNOW:
-	case MATERIAL_ICE:
-		return GPUSPARKS_DRAG_COLD;
-	case MATERIAL_SHORTGRASS:
-	case MATERIAL_LONGGRASS:
-	case MATERIAL_DIRT:
-	case MATERIAL_SAND:
-	case MATERIAL_MUD:
-	case MATERIAL_FLESH:
-	case MATERIAL_DRYLEAVES:
-	case MATERIAL_GREENLEAVES:
-	case MATERIAL_FABRIC:
-	case MATERIAL_CANVAS:
-	case MATERIAL_RUBBER:
-	case MATERIAL_PLASTIC:
-	case MATERIAL_CARPET:
-		return GPUSPARKS_DRAG_SOFT;
-	default:	// stone and what nobody named
-		return GPUSPARKS_DRAG_STONE;
-	}
+	static const gpuSparks_t kinds[IMPACT_KINDS] = { GPUSPARKS_DRAG_STONE, GPUSPARKS_DRAG_METAL, GPUSPARKS_DRAG_WOOD,
+		GPUSPARKS_DRAG_GLASS, GPUSPARKS_DRAG_COLD, GPUSPARKS_DRAG_SOFT };
+
+	return kinds[CG_ImpactKindOf( surfaceFlags & MATERIAL_MASK )];
 }
 
 void CG_SaberDrag( const centity_t *cent, int saberNum, int bladeNum, const vec3_t pos, const vec3_t normal, int surfaceFlags ) {

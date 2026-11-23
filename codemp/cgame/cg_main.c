@@ -38,6 +38,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberdrag.h"
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/saber/cg_saberbelt.h"
+#include "cgame/weapons/cg_impact.h"
+#include "cgame/weapons/cg_boltlight.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -2698,6 +2700,7 @@ Ghoul2 Insert End
 	CG_SaberClashRegister();
 	CG_SaberWoundsRegister();
 	CG_SaberDropRegister();
+	CG_ImpactRegister();
 
 	CG_RegisterCvars();
 
@@ -2790,6 +2793,8 @@ Ghoul2 Insert End
 	CG_SaberDragInit();
 	CG_SaberDropInit();
 	CG_SaberBeltInit();
+	CG_ImpactInit();
+	CG_BoltLightsInit();
 
 	// remove the last loading update
 	cg.infoScreenText[0] = 0;

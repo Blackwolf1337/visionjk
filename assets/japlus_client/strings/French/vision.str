@@ -1201,6 +1201,30 @@ REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_FRENCH         "Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien."
 
+REFERENCE           IMPACTS_BY_MATERIAL
+LANG_ENGLISH        "Impacts by Material"
+LANG_FRENCH         "Impacts selon le matériau"
+
+REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit. Sparks need GPU Sparks."
+LANG_FRENCH         "Les tirs projettent étincelles, éclats ou poussière et sonnent selon ce qu'ils touchent. Les étincelles exigent GPU Sparks."
+
+REFERENCE           BOLTS_AS_LIGHTS
+LANG_ENGLISH        "Bolts as Lights"
+LANG_FRENCH         "Tirs lumineux"
+
+REFERENCE           BOLTS_LIGHT_WHAT_THEY_FLY_PAST_THE_N
+LANG_ENGLISH        "Bolts light what they fly past, the nearest eight, and flash at a blade that deflects them."
+LANG_FRENCH         "Les tirs éclairent ce qu'ils frôlent (les huit plus proches) et brillent sur la lame qui les dévie."
+
+REFERENCE           RICOCHETS
+LANG_ENGLISH        "Ricochets"
+LANG_FRENCH         "#same"
+
+REFERENCE           A_BOLT_THAT_BOUNCES_OFF_METAL_WHINES
+LANG_ENGLISH        "A bolt that bounces off metal whines away."
+LANG_FRENCH         "Un tir qui rebondit sur le métal part en sifflant."
+
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 LANG_FRENCH         "Tirs comme dans Jedi Outcast"

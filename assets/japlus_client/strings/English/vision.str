@@ -902,6 +902,24 @@ LANG_ENGLISH        "Ally Model"
 REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 
+REFERENCE           IMPACTS_BY_MATERIAL
+LANG_ENGLISH        "Impacts by Material"
+
+REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit. Sparks need GPU Sparks."
+
+REFERENCE           BOLTS_AS_LIGHTS
+LANG_ENGLISH        "Bolts as Lights"
+
+REFERENCE           BOLTS_LIGHT_WHAT_THEY_FLY_PAST_THE_N
+LANG_ENGLISH        "Bolts light what they fly past, the nearest eight, and flash at a blade that deflects them."
+
+REFERENCE           RICOCHETS
+LANG_ENGLISH        "Ricochets"
+
+REFERENCE           A_BOLT_THAT_BOUNCES_OFF_METAL_WHINES
+LANG_ENGLISH        "A bolt that bounces off metal whines away."
+
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 

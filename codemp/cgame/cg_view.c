@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberclash.h"
 #include "cgame/saber/cg_sabersound.h"
 #include "cgame/saber/cg_saberdrop.h"
+#include "cgame/weapons/cg_boltlight.h"
 #include "game/bg/bg_saga.h"
 
 #define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
@@ -1811,6 +1812,7 @@ void CG_DrawSkyBoxPortal(const char *cstr)
 
 	CG_AddPacketEntities(qtrue); //rww - There was no proper way to put real entities inside the portal view before.
 									//This will put specially flagged entities in the render.
+	CG_BoltLightsAdd( qtrue );
 
 	if (cg_skyOri)
 	{ //ok, we want to orient the sky refdef vieworg based on the normal vieworg's relation to the ori pos
@@ -2721,6 +2723,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_AddMarks();
 		CG_SaberScarsAdd();
 		CG_SaberClashAdd();
+		CG_BoltLightsAdd( qfalse );
 		CG_SaberSoundNearMiss();
 		CG_SaberDropAdd();
 		CG_FxTestFrame();

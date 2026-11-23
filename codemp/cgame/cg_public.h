@@ -856,6 +856,10 @@ typedef struct cgameImport_s {
 		// its number, 0: none; Con_FeedNewest the number of the newest. A cgame that draws them sets v_feedHandler.
 		int				(*Con_FeedRead)							( int after, int *level, char *out, int outSize );
 		int				(*Con_FeedNewest)						( void );
+		// Only where the ROM cvar v_cgameSurfaceMaterial is 1, an older engine ends this table before. What the texture
+		// the ray from start to end meets is made of by steamaudio/materials.txt (MATERIAL_*), MATERIAL_NONE: not known.
+		// Walks the surfaces of the level, so not many a frame.
+		int				(*R_SurfaceMaterial)					( const vec3_t start, const vec3_t end );
 	} ext;
 } cgameImport_t;
 

@@ -35,6 +35,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/G2.h"
 #include "cgame/saber/cg_sabersound.h"
 #include "cgame/saber/cg_saberignite.h"
+#include "cgame/weapons/cg_impact.h"
+#include "cgame/weapons/cg_boltlight.h"
 #include "cgame/saber/cg_saberclash.h"
 #include "cgame/saber/cg_saberwound.h"
 //==========================================================================
@@ -2425,6 +2427,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				}
 				trap->FX_PlayEffectID(cgs.effects.mBlasterDeflect, es->origin, fxDir, -1, -1, qfalse);
 				CG_SaberDeflect( es->origin, fxDir );
+				CG_BoltLightFlash( es->origin );
 			}
 		}
 		break;
@@ -2546,6 +2549,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 	case EV_DISRUPTOR_SNIPER_MISS:
 		DEBUGNAME("EV_DISRUPTOR_SNIPER_MISS");
 		ByteToDir( es->eventParm, dir );
+		CG_BoltImpact( WP_DISRUPTOR, qfalse, cent->lerpOrigin, dir, qfalse );
 		if (es->weapon)
 		{ //primary
 			FX_DisruptorHitWall( cent->lerpOrigin, dir );
@@ -2566,6 +2570,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		else
 		{ //non-client
 			FX_DisruptorHitWall( cent->lerpOrigin, dir );
+			CG_BoltImpact( WP_DISRUPTOR, qfalse, cent->lerpOrigin, dir, qfalse );
 		}
 		break;
 

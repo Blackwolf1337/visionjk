@@ -1201,6 +1201,30 @@ REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_GERMAN         "Jeder Mitspieler wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes."
 
+REFERENCE           IMPACTS_BY_MATERIAL
+LANG_ENGLISH        "Impacts by Material"
+LANG_GERMAN         "Treffer nach Material"
+
+REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit. Sparks need GPU Sparks."
+LANG_GERMAN         "Schüsse werfen Funken, Splitter oder Staub und klingen nach dem, was sie treffen. Funken brauchen GPU Sparks."
+
+REFERENCE           BOLTS_AS_LIGHTS
+LANG_ENGLISH        "Bolts as Lights"
+LANG_GERMAN         "Schüsse als Licht"
+
+REFERENCE           BOLTS_LIGHT_WHAT_THEY_FLY_PAST_THE_N
+LANG_ENGLISH        "Bolts light what they fly past, the nearest eight, and flash at a blade that deflects them."
+LANG_GERMAN         "Schüsse beleuchten, woran sie vorbeifliegen (die nächsten acht), und blitzen an einer Klinge auf, die sie abwehrt."
+
+REFERENCE           RICOCHETS
+LANG_ENGLISH        "Ricochets"
+LANG_GERMAN         "Querschläger"
+
+REFERENCE           A_BOLT_THAT_BOUNCES_OFF_METAL_WHINES
+LANG_ENGLISH        "A bolt that bounces off metal whines away."
+LANG_GERMAN         "Ein Schuss, der von Metall abprallt, jault davon."
+
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 LANG_GERMAN         "Jedi-Outcast-Schüsse"
