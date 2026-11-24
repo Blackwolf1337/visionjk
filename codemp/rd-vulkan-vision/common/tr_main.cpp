@@ -1252,6 +1252,24 @@ void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader,
 
 /*
 =================
+R_AddModelDrawSurf
+
+VisionJK: a surface of a model (MD3, Ghoul2) with the moving lights that reach its entity (R_ModelDlights): it gets
+their light passes as the level does (vk_shade.cpp VK_DynamicLights), lit by pixel with its normals, not only by the
+one direction of the entity's light.
+=================
+*/
+void R_AddModelDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, const trRefEntity_t *ent ) {
+	const int before = tr.refdef.numDrawSurfs;
+
+	R_AddDrawSurf( surface, shader, fogIndex, qfalse );
+	if ( tr.refdef.numDrawSurfs != before ) {
+		tr.refdef.drawSurfs[before & DRAWSURF_MASK].dlightBits = ent->dlightBits;
+	}
+}
+
+/*
+=================
 R_DecomposeSort
 =================
 */

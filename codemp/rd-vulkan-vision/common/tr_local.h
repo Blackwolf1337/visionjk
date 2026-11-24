@@ -136,7 +136,7 @@ typedef struct trRefEntity_s {
 
 	float		axisLength;		// compensate for non-normalized axis
 
-	qboolean	needDlights;	// true for bmodels that touch a dlight
+	qboolean	needDlights;	// true for bmodels and models (R_ModelDlights) that touch a dlight
 	qboolean	lightingCalculated;
 	vec3_t		lightDir;		// normalized direction towards light
 	vec3_t		ambientLight;	// color normalized to 0-255
@@ -1441,6 +1441,8 @@ void R_AddPolygonSurfaces( void );
 void R_DecomposeSort( uint64_t sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
 
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
+void R_AddModelDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, const trRefEntity_t *ent );
+void R_ModelDlights( trRefEntity_t *ent, float radius );
 
 
 #define	CULL_IN		0		// completely unclipped

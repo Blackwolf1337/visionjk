@@ -431,10 +431,14 @@ vec4 DynamicLight( Draw d ) {
 	if ( dot( plane, toEye ) < 0.0 ) {
 		plane = -plane;
 	}
+	// A model (grid1.w negative, vk_shade.cpp VK_DynamicLights) has its normals smoothed round its sides: at its
+	// outline they turn a little away from the eye without the surface being seen from its back, and turned round
+	// there they faced a light behind the model, which lit his outline (their pictures 2026-11-24, the boots).
+	bool model = d.grid1.w < -0.5;
 	vec3 flat_ = plane;
 	if ( dot( v_normal, v_normal ) > 0.25 ) {
 		flat_ = normalize( v_normal );
-		if ( dot( flat_, plane ) < 0.0 ) {
+		if ( dot( flat_, plane ) < ( model ? -0.5 : 0.0 ) ) {
 			flat_ = -flat_;		// a surface seen from its back
 		}
 	}
@@ -447,23 +451,29 @@ vec4 DynamicLight( Draw d ) {
 		discard;
 	}
 	// A light a little below the plane still lights it: the light of an explosion lies just under the floor it hit,
-	// a blade on the floor lies in it. It is taken as standing a hand above the plane for the angle.
+	// a blade on the floor lies in it. It is taken as standing a hand above the plane for the angle. Not on a model
+	// (grid1.w -1, vk_shade.cpp VK_DynamicLights): its sides round away from the light, and lit from above the plane
+	// they took the light where they turn from it and ended in a hard line 12 units behind it (their picture
+	// 2026-11-24, a blade at a player's legs). The angle alone fades it there.
 	float above = dot( flat_, toLight );
-	if ( above <= -12.0 ) {
+	if ( !model && above <= -12.0 ) {
 		discard;
 	}
-	vec3 l = normalize( toLight + flat_ * max( 16.0 - above, 0.0 ) );
+	vec3 l = model ? toLight / max( dist, 0.001 ) : normalize( toLight + flat_ * max( 16.0 - above, 0.0 ) );
 
 	float x = dist / range;
 	float window = clamp( 1.0 - x * x * x * x, 0.0, 1.0 );
-	// (about what the round light image of rd-vanilla gave halfway out, brighter close by)
-	float fall = window * window / ( 1.0 + 4.0 * x * x ) * 1.6;
+	// (about what the round light image of rd-vanilla gave halfway out, brighter close by). Not on a model: the light
+	// of a weapon sits in it and in the hand that holds it, which turned white and covered the glow of the charge
+	// (their picture 2026-11-24, the bowcaster); it is taken as at least a hand away.
+	float xa = model ? max( dist, 24.0 ) / range : x;
+	float fall = window * window / ( 1.0 + 4.0 * xa * xa ) * ( model ? 1.0 : 1.6 );
 	vec3 radiance = pow( d.baseColor.rgb * fall, vec3( 2.2 ) );
 #ifndef VK_GLES
 	// The shadows of the players from this light, made a frame ago into a mask (vk_rt.cpp, smlights.frag): grid1.w
 	// says the channel, tex1 shows the mask; the point is looked up where it was in the view the mask was made in
 	// (globals.rt 42-45, its rect 46).
-	int channel = int( d.grid1.w + 0.5 );
+	int channel = model ? int( -d.grid1.w + 0.5 ) - 1 : int( d.grid1.w + 0.5 );
 	if ( channel > 0 ) {
 		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
 		vec4 clip = mat4( globals.rt[42], globals.rt[43], globals.rt[44], globals.rt[45] ) * vec4( world, 1.0 );
@@ -556,7 +566,7 @@ vec4 DynamicLight( Draw d ) {
 		vec3 unused = vec3( 0.0 );
 		vec3 r = reflect( -toEye, s.n );
 		vec3 specPos = NearestToRay( d.grid0.xyz, d.grid1.xyz, v_position, r );
-		vec3 ls = normalize( specPos - v_position + flat_ * max( 16.0 - dot( flat_, specPos - v_position ), 0.0 ) );
+		vec3 ls = normalize( specPos - v_position + ( model ? vec3( 0.0 ) : flat_ * max( 16.0 - dot( flat_, specPos - v_position ), 0.0 ) ) );
 		SurfaceLight( s, l, radiance, 0.0, diffuse );
 		shine = SurfaceLight( s, ls, radiance, 0.15, unused );
 	} else {

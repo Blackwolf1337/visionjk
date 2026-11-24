@@ -1075,6 +1075,11 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		}
 	}
 
+	// A model (MD3, Ghoul2: R_AddModelDrawSurf) is lit by the angle alone (grid1.w -1, generic.frag DynamicLight), and it
+	// takes no shadow mask: that is made for the points of the level, and on a player it would lay the shadow of his
+	// own body onto him.
+	const qboolean model = (qboolean)( bones || ( backEnd.currentEntity != &tr.worldEntity
+		&& R_GetModelByHandle( backEnd.currentEntity->e.hModel )->type != MOD_BRUSH ) );
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
@@ -1112,19 +1117,21 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			VectorCopy( dl->lineEndTransformed, draw.grid1 );
 		}
 		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
-		// and tex1; only in the view of the level itself, the one the mask was made for
-		draw.grid1[3] = 0.0f;
+		// and tex1; only in the view of the level itself, the one the mask was made for. A model has it negative,
+		// -1 - the channel (generic.frag DynamicLight): the mask is made at the pixels of the scene, his own among them,
+		// so a leg behind his body is in its shadow.
+		int channel = 0;
 #ifndef RD_VISION_GLES
 		if ( levelView ) {
 			uint32_t slot;
-			const int channel = VK_RT_LightChannel( dl, &slot );
 
+			channel = VK_RT_LightChannel( dl, &slot );
 			if ( channel ) {
 				draw.tex1 = slot;
-				draw.grid1[3] = (float)channel;
 			}
 		}
 #endif
+		draw.grid1[3] = model ? -1.0f - (float)channel : (float)channel;
 		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}

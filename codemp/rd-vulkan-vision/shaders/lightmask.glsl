@@ -40,9 +40,10 @@ float PlaneDepth( vec2 at, vec3 ahead, vec3 right, vec3 up, vec3 normal, float p
 	return a + b / there;
 }
 
-// how much of a cube (its six tiles from first on, around center) lies in front of the point q on a surface facing normal;
-// close: how strong the shadow is of what stands right at the light
-float CubeShadow( int first, vec3 center, vec3 q, vec3 normal, float close ) {
+// how much of a cube (the views of its six tiles from first on, around center; the depth from the tiles from atlas on, the
+// same as first but for the tiles of the shooter alone) lies in front of the point q on a surface facing normal;
+// close: how strong the shadow is of what stands right at the light; playersOnly: the cube holds players and not the level
+float CubeShadow( int first, int atlas, vec3 center, vec3 q, vec3 normal, float close, bool playersOnly ) {
 #ifdef LEVEL_RAYS
 	// (with rays only the players are in the cubes)
 	if ( W[21].x <= 0.0 ) {
@@ -68,7 +69,8 @@ float CubeShadow( int first, vec3 center, vec3 q, vec3 normal, float close ) {
 	if ( ndc.z >= 1.0 ) {
 		return 0.0;
 	}
-	vec2 corner = vec2( float( t % COLUMNS ), float( t / COLUMNS ) ) * TILE;
+	int ta = atlas + face;
+	vec2 corner = vec2( float( ta % COLUMNS ), float( ta / COLUMNS ) ) * TILE;
 	ivec2 lo = ivec2( corner ), hi = ivec2( corner ) + ivec2( int( TILE ) - 1 );
 	// The depth goes with 1 / distance (near plane 4): a fixed margin in it was 1 unit at 100 from the light and 19 at
 	// 400, so what stands just behind a ledge kept the light. In units: about what a texel spans at that distance.
@@ -110,17 +112,17 @@ float CubeShadow( int first, vec3 center, vec3 q, vec3 normal, float close ) {
 		blocked += ( depth < PlaneDepth( at, ahead, right, up, normal, plane, clip.w, a, b ) - margin ) ? 1.0 : 0.0;
 	}
 	blocked /= float( SOFT_SAMPLES );
-#ifdef LEVEL_RAYS
-	// (the shadow of a player thins out far behind him; without rays the level is in these cubes too, and a wall must
-	// go on hiding what is far behind it)
-	float strength = 1.0 - 0.7 * smoothstep( 64.0, 256.0, behind );
-	// (the body of the shooter right at a muzzle flash would black out half the room: it keeps a light shadow. This is in
-	// linear light: 0.65 takes about 40% of what the eye sees)
-	if ( close < 1.0 ) {
-		strength = mix( close, strength, smoothstep( 48.0, 112.0, nearer ) );
+	if ( playersOnly ) {
+		// (the shadow of a player thins out far behind him; a cube with the level in it (no rays) does not, a wall must go on
+		// hiding what is far behind it)
+		float strength = 1.0 - 0.7 * smoothstep( 64.0, 256.0, behind );
+		// (the body of the shooter right at a muzzle flash would black out half the room: it keeps a light shadow. This is in
+		// linear light: 0.8 takes about half of what the eye sees, their word 2026-11-24: 0.65 was too faint when charging)
+		if ( close < 1.0 ) {
+			strength = mix( close, strength, smoothstep( 48.0, 112.0, nearer ) );
+		}
+		blocked *= strength;
 	}
-	blocked *= strength;
-#endif
 	return blocked;
 }
 
@@ -209,12 +211,26 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 	vec3 q = p + normal * ( 3.0 + distance( nearest, p ) / 128.0 );
 	float players = 0.0;
 	if ( b.w <= 0.0 ) {
-		players = CubeShadow( k < 2 ? 16 + k * 18 : 52 + ( k - 2 ) * 6, a.xyz, q, normal, 0.65 );
+		int first = k < 2 ? 16 + k * 18 : 52 + ( k - 2 ) * 6;
+#ifdef LEVEL_RAYS
+		players = CubeShadow( first, first, a.xyz, q, normal, 0.8, true );
+#else
+		// The level is in this cube, so the shooter right at the light is not (vk_rt.cpp VK_SM_DrawAtlas): he is in
+		// tiles of his own (64 + 6 k, empty for anyone else's light), and only his shadow is made a light one there.
+		players = CubeShadow( first, first, a.xyz, q, normal, 1.0, false );
+		players = 1.0 - ( 1.0 - players ) * ( 1.0 - CubeShadow( first, 64 + k * 6, a.xyz, q, normal, 0.8, true ) );
+#endif
 		return 1.0 - ( 1.0 - players ) * ( 1.0 - LevelTaken( q, p, normal, a.xyz, a.xyz, b.w < 0.0 ) );
 	}
 	// (where along the blade the three are this frame: rows[21] y, z, w, they jump every frame, VK_SM_DrawAtlas)
 	for ( int i = 0; i < 3; i++ ) {
-		players += CubeShadow( 16 + ( k * 3 + i ) * 6, mix( a.xyz, b.xyz, W[21][1 + i] ), q, normal, 1.0 );
+		int first = 16 + ( k * 3 + i ) * 6;
+
+#ifdef LEVEL_RAYS
+		players += CubeShadow( first, first, mix( a.xyz, b.xyz, W[21][1 + i] ), q, normal, 1.0, true );
+#else
+		players += CubeShadow( first, first, mix( a.xyz, b.xyz, W[21][1 + i] ), q, normal, 1.0, false );
+#endif
 	}
 	return 1.0 - ( 1.0 - players / 3.0 ) * ( 1.0 - LevelTaken( q, p, normal, a.xyz, b.xyz, true ) );
 }

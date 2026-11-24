@@ -113,6 +113,19 @@ static const uint32_t vk_rtLampsComp[] =
 #define VK_SM_LIGHT_TILE( k, point )	( VK_RT_MAX_CASTERS + ( ( k ) < VK_RT_TUBES ? ( ( k ) * VK_SM_POINTS + ( point ) ) * 6 \
 										: VK_RT_TUBES * VK_SM_POINTS * 6 + ( ( k ) - VK_RT_TUBES ) * 6 ) )
 #define VK_SM_ROWS					( ( VK_SM_TILES + VK_SM_COLUMNS - 1 ) / VK_SM_COLUMNS )
+// Without rays, after those: six for each moving light with the player right at it alone (his own weapon: the level is
+// in the cubes of the light, so he is not, VK_SM_DrawAtlas). They take the views of the cube of their light, so they
+// have no rows; lightmask.glsl LightShadow reads them at 64 + 6 k.
+#define VK_SM_OWN_TILE( k )			( VK_SM_TILES + ( k ) * 6 )
+#define VK_RT_LAMP_ROWS				4
+#define VK_RT_LAMP_ROW				( VK_RT_VEC4S - VK_RT_CASTERS * VK_RT_LAMP_ROWS )	// the panels of each player (VK_RT_PickLamps)
+#define VK_RT_LAMP_SHOWN			3		// panels a player casts from in the shader
+// Without rays, after those: a tile for each panel the first players cast from (VK_RT_PickLamps), looking from the panel
+// at him (VK_SM_LampView). The shader works their views out from the rows of the panels, so they have no rows either;
+// smshadow.frag reads them at 88 + 3 i + k.
+#define VK_SM_LAMP_CASTERS			8
+#define VK_SM_LAMP_TILE( i, k )		( VK_SM_TILES + VK_RT_LIGHTS * 6 + ( i ) * VK_RT_LAMP_SHOWN + ( k ) )
+#define VK_SM_MAPS_ROWS				( ( VK_SM_TILES + VK_RT_LIGHTS * 6 + VK_SM_LAMP_CASTERS * VK_RT_LAMP_SHOWN + VK_SM_COLUMNS - 1 ) / VK_SM_COLUMNS )
 #define VK_SM_FIRST_ROW				47				// of the rt globals: four a tile, its view and projection
 #define VK_RT_POWER_ROW				( VK_SM_FIRST_ROW + VK_SM_TILES * 4 + 4 )	// how strong each moving light is (rtresolve.frag)
 #define VK_SM_OWN_LIGHT				56.0f			// a point of light this near a player can be his own weapon (VK_SM_DrawAtlas)
@@ -1150,6 +1163,89 @@ static VkDeviceSize VK_RT_PrepareBrushes( void ) {
 
 /*
 ===============
+VK_SM_Seen
+
+Without rays: whether a player at from sees the middle of a panel, by a trace against the solid brushes of the level
+(the collision map of the client; doors and lifts are not in it). Kept by the panel and the place in steps of 64
+units, as the rays of rtlamps.comp are found again, until the next level: a player standing still asks nothing.
+===============
+*/
+#define VK_SM_SEEN_SLOTS	1024
+
+static void VK_RT_LampLight( const vkPatch_t *patch, const vec3_t middle, const vec3_t dir, float *light, float *side );
+
+typedef struct {
+	int		patch;		// -1 empty
+	int		at[3];
+	float	seen;
+} vkSeen_t;
+
+static vkSeen_t	vk_seen[VK_SM_SEEN_SLOTS];
+
+static void VK_SM_ClearSeen( void ) {
+	for ( int i = 0; i < VK_SM_SEEN_SLOTS; i++ ) {
+		vk_seen[i].patch = -1;
+	}
+}
+
+static float VK_SM_Seen( int patch, const vec3_t from ) {
+	const vkPatch_t	*p = &( *vk_patches )[patch];
+	int				at[3];
+	vec3_t			to, end;
+	trace_t			tr;
+
+	for ( int k = 0; k < 3; k++ ) {
+		at[k] = (int)floorf( from[k] / 64.0f );
+	}
+	vkSeen_t *slot = &vk_seen[(unsigned)( patch * 73856093 ^ at[0] * 19349663 ^ at[1] * 83492791 ^ at[2] * 50331653 ) % VK_SM_SEEN_SLOTS];
+	if ( slot->patch == patch && slot->at[0] == at[0] && slot->at[1] == at[1] && slot->at[2] == at[2] ) {
+		return slot->seen;
+	}
+	// (to just before the panel: the surface it lies on would stop the trace at its end)
+	VectorSubtract( from, p->origin, to );
+	const float d = VectorNormalize( to );
+	VectorMA( p->origin, Q_min( 8.0f, d ), to, end );
+	ri.CM_BoxTrace( &tr, from, end, NULL, NULL, 0, CONTENTS_SOLID, qfalse );
+	slot->patch = patch;
+	slot->at[0] = at[0]; slot->at[1] = at[1]; slot->at[2] = at[2];
+	slot->seen = ( !tr.startsolid && tr.fraction >= 1.0f ) ? 1.0f : 0.0f;
+	return slot->seen;
+}
+
+// Without rays the cells have no lists (rtcells.comp traces them): the panels that would give the most light at middle,
+// in the order of their light, up to max (VK_RT_LampLight; whether he sees them is asked after, VK_SM_Seen)
+static int VK_SM_NearLamps( const vec3_t middle, const vec3_t dir, int *candidate, int max ) {
+	float	score[8 * VK_RT_CELL_LIST];
+	int		count = 0;
+
+	max = Q_min( max, 8 * VK_RT_CELL_LIST );
+	for ( int n = 0; n < (int)vk_patches->size(); n++ ) {
+		const vkPatch_t	*p = &( *vk_patches )[n];
+		float			light, side;
+
+		// (beyond that a panel gives a player next to nothing, and the trace would cost more than it brings)
+		if ( DistanceSquared( p->origin, middle ) > 1536.0f * 1536.0f ) {
+			continue;
+		}
+		VK_RT_LampLight( p, middle, dir, &light, &side );
+		const float sc = light * side;
+		if ( sc <= 0.0f || ( count == max && sc <= score[count - 1] ) ) {
+			continue;
+		}
+		int at = count < max ? count++ : count - 1;
+		while ( at > 0 && score[at - 1] < sc ) {
+			score[at] = score[at - 1];
+			candidate[at] = candidate[at - 1];
+			at--;
+		}
+		score[at] = sc;
+		candidate[at] = n;
+	}
+	return count;
+}
+
+/*
+===============
 VK_RT_PrepareLevel
 
 Once per level: the triangles of the level and their acceleration structure, whose build VK_RT_RecordLevel()
@@ -1172,11 +1268,14 @@ static void VK_RT_PrepareLevel( void ) {
 	rt.worldLoads = r_worldLoads;
 	rt.levelScratch = 0;
 	rt.previousValid = qfalse;
+	vk_patches->clear();
+	VK_SM_ClearSeen();
 	if ( rt.maps ) {
 		VK_SM_BuildLevel();		// no structure to build: the cubes of the moving lights draw it
+		// the panels that glow, for the shadows from them (VK_RT_PickLamps finds them near each player itself)
+		VK_RT_Patches( *vk_patches );
 		return;
 	}
-	vk_patches->clear();
 
 	VK_RT_LevelTriangles( positions, indexes );
 	rt.numVertexes = (uint32_t)( positions.size() / 3 );
@@ -1352,7 +1451,8 @@ void VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface ) {
 	const trRefEntity_t *ent = backEnd.currentEntity;
 
 	// (a body cut in two is no caster: each half would cast the whole body)
-	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE ) || ent->cut
+	// (nor a surface drawn again for the light passes after the shadows, rb_dlightsOnly: it is in already)
+	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE ) || ent->cut || rb_dlightsOnly
 		|| backEnd.viewParms.isPortal || ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		return;
 	}
@@ -1764,8 +1864,6 @@ static void VK_RT_CreateCasters( void ) {
 
 // shaders/rtcells.comp
 static void VK_RT_CreateLights( void ) {
-	vk_patches = new std::vector<vkPatch_t>;
-
 	// the top level from the set of the frame, the rest by address and in numbers in the push constants
 	rt.cellsLayout = VK_CreateComputeLayout( sizeof( uint32_t ) * 24, &rt.setLayout );
 	rt.cellsShader = VK_CreateShader( vk_rtCellsComp, sizeof( vk_rtCellsComp ) );
@@ -1885,6 +1983,7 @@ void VK_RT_Init( void ) {
 		return;
 	}
 	rt.maps = (qboolean)!vk.rayTracing;
+	vk_patches = new std::vector<vkPatch_t>;
 	VK_RT_CreateLayouts();
 	VK_RT_CreateCasters();
 	rt.resolveFragment = VK_CreateShader( vk_rtResolveFrag, sizeof( vk_rtResolveFrag ) );
@@ -2124,6 +2223,30 @@ static void VK_SM_PlayerView( const vec3_t center, const vec3_t dir, float *m ) 
 	VK_SM_FromRows( r0, r1, r2, r3, m );
 }
 
+// the tile of a player in the light of a panel, without rays: as VK_SM_PlayerView, with sides the shader can find
+// again from the direction alone (smshadow.frag LampShadow)
+static void VK_SM_LampView( const vec3_t center, const vec3_t dir, float *m ) {
+	vec3_t	f, r, u, a;
+	float	r0[4], r1[4], r2[4], r3[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	VectorNegate( dir, f );
+	VectorNormalize( f );
+	VectorSet( a, 0.0f, 0.0f, 1.0f );
+	if ( fabsf( f[2] ) > 0.99f ) {
+		VectorSet( a, 1.0f, 0.0f, 0.0f );
+	}
+	CrossProduct( f, a, r );
+	VectorNormalize( r );
+	CrossProduct( r, f, u );
+	VectorScale( r, 1.0f / VK_SM_EXTENT, r0 );
+	r0[3] = -DotProduct( center, r ) / VK_SM_EXTENT;
+	VectorScale( u, 1.0f / VK_SM_EXTENT, r1 );
+	r1[3] = -DotProduct( center, u ) / VK_SM_EXTENT;
+	VectorScale( f, 0.5f / VK_SM_DEPTH, r2 );
+	r2[3] = ( -DotProduct( center, f ) + VK_SM_DEPTH ) * 0.5f / VK_SM_DEPTH;
+	VK_SM_FromRows( r0, r1, r2, r3, m );
+}
+
 // face of a cube around center (0 +x, 1 -x, 2 +y, 3 -y, 4 +z, 5 -z, as smlights.frag picks them), 90 degrees
 static void VK_SM_FaceView( const vec3_t center, int face, float zFar, float *m ) {
 	const float	zNear = 4.0f;
@@ -2173,7 +2296,7 @@ static void VK_SM_Create( void ) {
 	VkPipelineRenderingCreateInfo					rendering = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	VkGraphicsPipelineCreateInfo					info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
 
-	VK_CreateTarget( &rt.atlas, VK_SM_COLUMNS * VK_SM_TILE, VK_SM_ROWS * VK_SM_TILE, VK_FORMAT_D32_SFLOAT,
+	VK_CreateTarget( &rt.atlas, VK_SM_COLUMNS * VK_SM_TILE, ( rt.maps ? VK_SM_MAPS_ROWS : VK_SM_ROWS ) * VK_SM_TILE, VK_FORMAT_D32_SFLOAT,
 		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, VK_SAMPLE_COUNT_1_BIT );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		VK_WriteSetBinding( rt.sets[i], 4, vk.postSampler, rt.atlas.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -2357,6 +2480,21 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 		memcpy( rows[VK_SM_FIRST_ROW + c * 4], view, sizeof( view ) );
 		VK_SM_Tile( cmd, c );
 		VK_SM_DrawCaster( cmd, c, view );
+		// and in the light of each of his panels (VK_RT_PickLamps filled their rows); rays trace those
+		for ( int k = 0; rt.maps && c < VK_SM_LAMP_CASTERS && k < VK_RT_LAMP_SHOWN; k++ ) {
+			const float *lamp = rows[VK_RT_LAMP_ROW + c * VK_RT_LAMP_ROWS + k];
+
+			if ( rows[VK_RT_LAMP_ROW + c * VK_RT_LAMP_ROWS + 3][k] <= 0.01f ) {
+				continue;
+			}
+			VectorSubtract( lamp, center, dir );
+			if ( VectorNormalize( dir ) < 1.0f ) {
+				continue;
+			}
+			VK_SM_LampView( center, dir, view );
+			VK_SM_Tile( cmd, VK_SM_LAMP_TILE( c, k ) );
+			VK_SM_DrawCaster( cmd, c, view );
+		}
 	}
 	// every player that a moving light reaches into the cubes along it: a blade casts from three points along it, so
 	// the shadow is soft along the blade and sweeps as it turns (smlights.frag blends the three). Each point jumps to
@@ -2382,8 +2520,9 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 			VectorMA( light->start, light->tube ? along[point] : 0.0f, center, center );
 			// A muzzle flash or the charge of a shot right at a body threw a huge second shadow of the shooter across the
 			// room. With rays the shader makes it a light one (lightmask.glsl CubeShadow). Without them the level is in
-			// these cubes too and must stay dark behind a wall, so the player nearest to such a point casts nothing from
-			// it, anyone else does. A blade keeps its shadow.
+			// these cubes too and must stay dark behind a wall, so the player nearest to such a point is drawn into
+			// tiles of his own (VK_SM_OWN_TILE), where the shader makes his shadow a light one; anyone else casts into
+			// the cube. A blade keeps its shadow.
 			int own = -1;
 			if ( rt.maps && !light->tube ) {
 				float nearest = VK_SM_OWN_LIGHT;
@@ -2411,6 +2550,10 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 					if ( c != own && Distance( rt.casters[c].origin, center ) < zFar ) {
 						VK_SM_DrawCaster( cmd, c, view );
 					}
+				}
+				if ( own >= 0 ) {
+					VK_SM_Tile( cmd, VK_SM_OWN_TILE( k ) + face );
+					VK_SM_DrawCaster( cmd, own, view );
 				}
 			}
 		}
@@ -2577,11 +2720,11 @@ the shadows have the length a lamp gives and spread under one above him. Where n
   that cell sees it).
 - The shares follow over about 0.15 s, so the shadows hand over from lamp to lamp; one panel for all of the light
   made the shadow jump as he walked (2026-11-08).
+- Without rays (shadow maps, their word 2026-11-24) the cells have no lists and nothing traces: the panels near him
+  come from VK_SM_NearLamps, whether he sees them from a trace against the collision map (VK_SM_Seen), and the
+  first VK_SM_LAMP_CASTERS players are drawn into a tile for each of their panels (VK_SM_DrawAtlas).
 ===============
 */
-#define VK_RT_LAMP_ROWS		4
-#define VK_RT_LAMP_ROW		( VK_RT_VEC4S - VK_RT_CASTERS * VK_RT_LAMP_ROWS )
-#define VK_RT_LAMP_SHOWN	3		// panels a player casts from in the shader
 #define VK_RT_LAMP_KEPT		6		// panels he remembers with their shares
 #define VK_RT_LAMP_CANDIDATES	( 8 * VK_RT_CELL_LIST + VK_RT_LAMP_KEPT )
 
@@ -2689,8 +2832,9 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 	const world_t			*world = tr.world;
 	const int				count = Q_min( rt.numCasters, VK_RT_CASTERS );
 	const int				f = vk.frameIndex;
-	const qboolean			ready = (qboolean)( v_rtLamps->integer && !rt.maps && world && world->lightGridData && vk_patches
-		&& !vk_patches->empty() && vk_patchScale > 0.0f && rt.cellState == 0 && rt.cellLists.mapped && rt.lampRays[f].mapped );
+	// (without rays: the panels near each player and what he sees of them are found here, VK_SM_NearLamps, VK_SM_Seen)
+	const qboolean			ready = (qboolean)( v_rtLamps->integer && world && world->lightGridData && vk_patches && !vk_patches->empty()
+		&& ( rt.maps || ( vk_patchScale > 0.0f && rt.cellState == 0 && rt.cellLists.mapped && rt.lampRays[f].mapped ) ) );
 	const float				dt = Com_Clamp( 0.0f, 0.25f, backEnd.refdef.floatTime - lastTime );
 	const float				follow = 1.0f - expf( -dt / 0.15f );
 
@@ -2730,7 +2874,10 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 		for ( int k = 0; k < 3; k++ ) {
 			base[k] = (int)floorf( g[k] * world->lightGridInverseSize[k] );
 		}
-		for ( int corner = 0; corner < 8; corner++ ) {
+		if ( rt.maps ) {
+			numCandidates = VK_SM_NearLamps( middle, dir, candidate, 8 * VK_RT_CELL_LIST );
+		}
+		for ( int corner = 0; corner < 8 && !rt.maps; corner++ ) {
 			int c[3];
 
 			for ( int k = 0; k < 3; k++ ) {
@@ -2764,13 +2911,10 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 			}
 		}
 
-		// their light where he stands, by how much he sees of them
+		// their light where he stands
 		for ( int c = 0; c < numCandidates; c++ ) {
-			const float seen = VK_RT_Seen( candidate[c], eye );
-
 			VK_RT_LampLight( &( *vk_patches )[candidate[c]], middle, dir, &light[c], &side[c] );
 			score[c] = light[c] * side[c];		// (what is asked of the device below goes by this)
-			light[c] *= seen < 0.0f ? 1.0f : seen;
 		}
 		// sorted by what they would give him if he saw them all
 		for ( int a = 0; a < numCandidates; a++ ) {
@@ -2790,8 +2934,20 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 				}
 			}
 		}
-		// the best of them are asked of the device for the frames after
-		for ( int c = 0; c < numCandidates && c < VK_RT_LAMP_ASKED && score[c] > 0.0f; c++ ) {
+		// by how much he sees of them: the device answered for the frames before, and the best are asked of it for the
+		// frames after; without rays the best are traced now and the others count as hidden
+		for ( int c = 0; c < numCandidates; c++ ) {
+			float seen;
+
+			if ( rt.maps ) {
+				seen = ( c < VK_RT_LAMP_ASKED && score[c] > 0.0f ) ? VK_SM_Seen( candidate[c], eye ) : 0.0f;
+			} else {
+				seen = VK_RT_Seen( candidate[c], eye );
+				seen = seen < 0.0f ? 1.0f : seen;
+			}
+			light[c] *= seen;
+		}
+		for ( int c = 0; !rt.maps && c < numCandidates && c < VK_RT_LAMP_ASKED && score[c] > 0.0f; c++ ) {
 			VK_RT_AskSeen( candidate[c], eye );
 		}
 		// the shares asked for now: the three best by what he sees of them, of the light they give him together; one
@@ -3010,6 +3166,12 @@ qboolean VK_RT_Ready( void ) {
 	return (qboolean)( rt.layout != VK_NULL_HANDLE );
 }
 
+// the shadows are traced by rays, not drawn from shadow maps (v_rayTracing 0 or a device without it); for the names
+// of the profiler, which said "rt" for both
+qboolean VK_RT_Rays( void ) {
+	return (qboolean)( rt.layout != VK_NULL_HANDLE && !rt.maps );
+}
+
 // the view of the level asks for a pass that traces
 qboolean VK_RT_Wanted( void ) {
 	return (qboolean)( rt.layout && tr.world && ( v_rtDebug->integer > 0 || v_rtShadows->integer ) );
@@ -3040,7 +3202,7 @@ static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobal
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	VK_EndTarget();
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_GpuMark( "rt light shadows" );
+	VK_GpuMark( rt.maps ? "light shadows (maps)" : "rt light shadows" );
 	if ( rt.lightShown[rt.lightWrite] != slot ) {
 		VK_ShowTarget( slot, target );
 		rt.lightShown[rt.lightWrite] = slot;
@@ -3121,7 +3283,7 @@ void VK_RT_Pass( void ) {
 			VK_RT_TraceCells( cmd );
 		}
 	}
-	VK_GpuMark( "rt builds" );
+	VK_GpuMark( rt.maps ? "shadow skinning" : "rt builds" );
 
 	memset( rows, 0, sizeof( rows ) );
 	VK_ViewRows( rows, viewport );
@@ -3218,7 +3380,7 @@ void VK_RT_Pass( void ) {
 		VK_RT_WholeTarget( cmd, &rt.raw );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
-		VK_GpuMark( "rt trace" );
+		VK_GpuMark( rt.maps ? "player shadows (maps)" : "rt trace" );
 		VK_TargetLayout( cmd, &rt.raw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		// onto the mask of the frame before, into the mask of this frame (shaders/rtaccum.frag)
 		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );

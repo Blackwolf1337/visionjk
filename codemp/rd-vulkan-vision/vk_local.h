@@ -384,6 +384,7 @@ extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
 extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
 extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
+extern int		rb_surfaceDlights;	// vk_backend.cpp: the moving lights of the surface being added (R_GhoulSurfaceDone)
 extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
 extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
 qboolean	RB_ShaderPrepassed( const shader_t *shader );
