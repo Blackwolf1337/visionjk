@@ -23,6 +23,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 void CG_BoltLightsInit( void );
 // this missile asks for its light; qfalse: it is no bolt or the switch is off, the caller keeps the stock light
 qboolean CG_BoltLight( const centity_t *cent );
+// the same for the shot of a vehicle weapon (its own effect, the weapon of the entity says nothing)
+qboolean CG_VehicleBoltLight( const centity_t *cent, const vehWeaponInfo_t *weapon );
 // a blade deflected a bolt here
 void CG_BoltLightFlash( const vec3_t at );
 // a weapon charging a shot: a light at the end of its barrel that grows with the charge, 0 to 1

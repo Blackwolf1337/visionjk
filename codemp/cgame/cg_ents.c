@@ -2550,6 +2550,7 @@ static void CG_Missile( centity_t *cent ) {
 				|| g_vehWeaponInfo[s1->otherEntityNum2].iModel != NULL_HANDLE) )
 		{ //a vehicle with an override for the weapon trail fx or model
 			trap->FX_PlayEffectID( g_vehWeaponInfo[s1->otherEntityNum2].iShotFX, cent->lerpOrigin, forward, -1, -1, qfalse );
+			CG_VehicleBoltLight( cent, &g_vehWeaponInfo[s1->otherEntityNum2] );
 			if ( g_vehWeaponInfo[s1->otherEntityNum2].iLoopSound )
 			{
 				vec3_t	velocity;
@@ -2565,6 +2566,8 @@ static void CG_Missile( centity_t *cent ) {
 		else
 		{//a regular missile
 			trap->FX_PlayEffectID( cgs.gameEffects[s1->otherEntityNum2], cent->lerpOrigin, forward, -1, -1, qfalse );
+			// (a turret and the like: its weapon says which bolt it is)
+			CG_BoltLight( cent );
 			if ( s1->loopSound )
 			{
 				vec3_t	velocity;

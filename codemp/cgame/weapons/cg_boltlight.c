@@ -100,15 +100,11 @@ static qboolean Bolt_Look( int weapon, qboolean altFire, float *radius, vec3_t c
 	}
 }
 
-qboolean CG_BoltLight( const centity_t *cent ) {
-	const entityState_t	*s = &cent->currentState;
-	boltLight_t			*slot;
-	float				radius, dist;
-	vec3_t				color;
+// a bolt in one of the slots, the nearest ones to the view win
+static void Bolt_Add( const centity_t *cent, float radius, const vec3_t color ) {
+	boltLight_t	*slot;
+	float		dist;
 
-	if ( !Bolt_Look( s->weapon, (qboolean)!!( s->eFlags & EF_ALT_FIRING ), &radius, color ) ) {
-		return qfalse;
-	}
 	dist = DistanceSquared( cent->lerpOrigin, cg.refdef.vieworg );
 	if ( numLights < BOLT_LIGHTS ) {
 		slot = &lights[numLights++];
@@ -122,13 +118,55 @@ qboolean CG_BoltLight( const centity_t *cent ) {
 			}
 		}
 		if ( dist >= slot->dist ) {
-			return qtrue;
+			return;
 		}
 	}
 	VectorCopy( cent->lerpOrigin, slot->at );
 	VectorCopy( color, slot->color );
 	slot->radius = radius * BOLT_REACH;
 	slot->dist = dist;
+}
+
+qboolean CG_BoltLight( const centity_t *cent ) {
+	const entityState_t	*s = &cent->currentState;
+	float				radius;
+	vec3_t				color;
+
+	if ( !Bolt_Look( s->weapon, (qboolean)!!( s->eFlags & EF_ALT_FIRING ), &radius, color ) ) {
+		return qfalse;
+	}
+	Bolt_Add( cent, radius, color );
+	return qtrue;
+}
+
+// The shots of vehicles fly with an effect of their own and the game gives them WP_BLASTER whatever they are, so the
+// colour goes by the weapon file (ext_data/vehicles/weapons/*.vwp): the lasers of the Empire (TIE, imp_laser) green,
+// those of the rebels, the YT-1300, the AT-ST and the swoops red, the ion blaster blue, concussion missiles blue-white,
+// torpedoes and rockets orange and larger. Bombs and mines that drift or lie about have none.
+qboolean CG_VehicleBoltLight( const centity_t *cent, const vehWeaponInfo_t *weapon ) {
+	const char	*name = weapon->name ? weapon->name : "";
+	float		radius = 120.0f;
+	vec3_t		color;
+
+	if ( weapon->bHasGravity || Q_stristr( name, "mine" ) || Q_stristr( name, "bomb" ) ) {
+		return qfalse;
+	}
+	if ( weapon->bIonWeapon ) {
+		radius = 150.0f;
+		VectorSet( color, 0.35f, 0.55f, 1.0f );
+	} else if ( Q_stristr( name, "conc" ) ) {
+		radius = 160.0f;
+		VectorSet( color, 0.4f, 0.6f, 1.0f );
+	} else if ( weapon->fWidth > 0.0f || weapon->fHeight > 0.0f || Q_stristr( name, "torp" ) || Q_stristr( name, "rocket" )
+		|| Q_stristr( name, "missile" ) ) {
+		radius = 180.0f;
+		VectorSet( color, 1.0f, 0.55f, 0.2f );
+	} else if ( Q_stristr( name, "imp" ) || Q_stristr( name, "tie" ) ) {
+		VectorSet( color, 0.25f, 1.0f, 0.25f );
+	} else {
+		VectorSet( color, 1.0f, 0.32f, 0.12f );
+	}
+	Bolt_Add( cent, radius, color );
 	return qtrue;
 }
 
