@@ -869,21 +869,13 @@ REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 LANG_FRENCH         "Ce qui s'approche ou s'éloigne change de hauteur."
 
-REFERENCE           SMOOTH_SWING
-LANG_ENGLISH        "Smooth Swing"
-LANG_FRENCH         "#same"
+REFERENCE           SABER_SOUNDS
+LANG_ENGLISH        "Saber Sounds"
+LANG_FRENCH         "Sons du sabre"
 
 REFERENCE           THE_HUM_OF_A_BLADE_FOLLOWS_HOW_FAST
-LANG_ENGLISH        "The hum of a blade follows how fast it moves, and each stance has swings of its own."
-LANG_FRENCH         "Le bourdonnement d'une lame suit la vitesse de son mouvement, et chaque style a ses propres coups."
-
-REFERENCE           NEAR_MISS
-LANG_ENGLISH        "Near Miss"
-LANG_FRENCH         "Frôlement"
-
-REFERENCE           A_SOUND_WHEN_THE_BLADE_OF_ANOTHER_PL
-LANG_ENGLISH        "A sound when the blade of another player passes close to your head."
-LANG_FRENCH         "Un son quand la lame d'un autre joueur passe tout près de votre tête."
+LANG_ENGLISH        "The hum of a blade follows how fast it moves, each stance has swings of its own, and a blade that passes close to your head is heard."
+LANG_FRENCH         "Le bourdonnement d'une lame suit la vitesse de son mouvement, chaque style a ses propres coups, et une lame qui passe tout près de votre tête s'entend."
 
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
@@ -1058,56 +1050,16 @@ LANG_ENGLISH        "Ignition"
 LANG_FRENCH         "Allumage"
 
 REFERENCE           THE_BLADE_FLICKERS_AS_IT_COMES_OUT_A
-LANG_ENGLISH        "The blade flickers as it comes out and goes in, its light grows with it, and each hilt sounds different."
-LANG_FRENCH         "La lame vacille quand elle sort et rentre, sa lumière grandit avec elle, et chaque poignée a son propre son."
+LANG_ENGLISH        "The blade flickers as it comes out and goes in and when it deflects a shot, its light grows with it, and hilts differ between the ignition sounds of the game."
+LANG_FRENCH         "La lame vacille en sortant et en rentrant et quand elle dévie un tir, sa lumière grandit avec elle, et les poignées se distinguent par les sons d'allumage du jeu."
 
-REFERENCE           BLADE_CLASH
-LANG_ENGLISH        "Blade Clash"
-LANG_FRENCH         "Choc des lames"
-
-REFERENCE           A_CLASH_LIGHTS_THE_ROOM_AND_THROWS_G
-LANG_ENGLISH        "A clash lights the room and throws glowing drops that fall and cool. Stronger while blades are locked."
-LANG_FRENCH         "Un choc éclaire la pièce et projette des gouttes incandescentes qui tombent et refroidissent. Plus fort quand les lames sont bloquées."
-
-REFERENCE           BURN_WOUNDS
-LANG_ENGLISH        "Burn Wounds"
-LANG_FRENCH         "Brûlures"
-
-REFERENCE           A_BLADE_LEAVES_A_GLOWING_CUT_ON_THE
-LANG_ENGLISH        "A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn."
-LANG_FRENCH         "Une lame laisse sur le corps une entaille incandescente qui refroidit et reste en marque sombre jusqu'à la réapparition."
-
-REFERENCE           DROPPED_HILT
-LANG_ENGLISH        "Dropped Hilt"
-LANG_FRENCH         "Poignée qui tombe"
-
-REFERENCE           WHEN_A_PLAYER_DIES_THE_BLADE_GOES_IN
-LANG_ENGLISH        "When a player dies the blade goes in and the hilt falls to the floor and rolls."
-LANG_FRENCH         "Quand un joueur meurt, la lame se rétracte et la poignée tombe au sol et roule."
-
-REFERENCE           HILT_ON_THE_BELT
-LANG_ENGLISH        "Hilt on the Belt"
-LANG_FRENCH         "Poignée à la ceinture"
+REFERENCE           HILTS
+LANG_ENGLISH        "Hilts"
+LANG_FRENCH         "Poignées"
 
 REFERENCE           A_SABER_THAT_IS_SWITCHED_OFF_HANGS_O
-LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk. The hand puts it there and takes it. Not for the staff."
-LANG_FRENCH         "Un sabre éteint pend à la ceinture et se balance à la marche. La main l'y range et le reprend. Pas pour le sabre double."
-
-REFERENCE           BLADE_IN_SMOKE
-LANG_ENGLISH        "Blade in Smoke"
-LANG_FRENCH         "Lame dans la fumée"
-
-REFERENCE           A_BLADE_LIGHTS_THE_SMOKE_AND_DUST_AR
-LANG_ENGLISH        "A blade lights the smoke and dust around it. Vulkan only."
-LANG_FRENCH         "La lame éclaire la fumée et la poussière autour d'elle. Vulkan uniquement."
-
-REFERENCE           DEFLECT_FLICKER
-LANG_ENGLISH        "Deflect Flicker"
-LANG_FRENCH         "Vacillement au blocage"
-
-REFERENCE           A_BLADE_THAT_DEFLECTS_A_SHOT_FLICKER
-LANG_ENGLISH        "A blade that deflects a shot flickers for a moment and throws sparks where it was hit."
-LANG_FRENCH         "Une lame qui dévie un tir vacille un instant et projette des étincelles au point d'impact."
+LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk (not the staff). When a player dies the hilt falls to the floor and rolls."
+LANG_FRENCH         "Un sabre éteint pend à la ceinture et se balance à la marche (pas le sabre double). Quand un joueur meurt, la poignée tombe au sol et roule."
 
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
@@ -1198,24 +1150,8 @@ LANG_ENGLISH        "Impacts by Material"
 LANG_FRENCH         "Impacts selon le matériau"
 
 REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
-LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit. Sparks need GPU Sparks."
-LANG_FRENCH         "Les tirs projettent étincelles, éclats ou poussière et sonnent selon ce qu'ils touchent. Les étincelles exigent GPU Sparks."
-
-REFERENCE           BOLTS_AS_LIGHTS
-LANG_ENGLISH        "Bolts as Lights"
-LANG_FRENCH         "Tirs lumineux"
-
-REFERENCE           BOLTS_LIGHT_WHAT_THEY_FLY_PAST_THE_N
-LANG_ENGLISH        "Bolts light what they fly past, the nearest eight, and flash at a blade that deflects them."
-LANG_FRENCH         "Les tirs éclairent ce qu'ils frôlent (les huit plus proches) et brillent sur la lame qui les dévie."
-
-REFERENCE           RICOCHETS
-LANG_ENGLISH        "Ricochets"
-LANG_FRENCH         "#same"
-
-REFERENCE           A_BOLT_THAT_BOUNCES_OFF_METAL_WHINES
-LANG_ENGLISH        "A bolt that bounces off metal whines away."
-LANG_FRENCH         "Un tir qui rebondit sur le métal part en sifflant."
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
+LANG_FRENCH         "Les tirs projettent étincelles, éclats ou poussière et sonnent selon ce qu'ils touchent, et un tir qui rebondit sur le métal part en sifflant. Les étincelles exigent GPU Sparks."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
@@ -2301,10 +2237,6 @@ REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_FRENCH         "Joueurs"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_FRENCH         "Armes"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_FRENCH         "Langue"
@@ -2312,6 +2244,10 @@ LANG_FRENCH         "Langue"
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_FRENCH         "Sabres laser"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_FRENCH         "Armes"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"

@@ -290,8 +290,6 @@ set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/saber/cg_saberdrawn.h"
 	"${MPDir}/cgame/saber/cg_saberignite.c"
 	"${MPDir}/cgame/saber/cg_saberignite.h"
-	"${MPDir}/cgame/saber/cg_saberwound.c"
-	"${MPDir}/cgame/saber/cg_saberwound.h"
 	"${MPDir}/cgame/saber/cg_sabersound.c"
 	"${MPDir}/cgame/saber/cg_sabersound.h"
 	"${MPDir}/cgame/boombox/cg_boombox_sync.c"

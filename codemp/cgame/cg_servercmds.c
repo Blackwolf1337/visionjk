@@ -32,7 +32,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_sabersound.h"
 #include "cgame/saber/cg_saberclash.h"
 #include "cgame/saber/cg_saberdrawn.h"
-#include "cgame/saber/cg_saberwound.h"
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/saber/cg_saberbelt.h"
 #include "game/bg/bg_public.h"
@@ -957,7 +956,6 @@ static void CG_MapRestart( void ) {
 	CG_SaberSoundInit();
 	CG_SaberClashInit();
 	CG_SaberDrawnInit();
-	CG_SaberWoundsInit();
 	CG_SaberDropInit();
 	CG_SaberBeltInit();
 	CG_KillCEntityInstances();
@@ -1324,7 +1322,6 @@ static void CG_RestoreClientGhoul_f( void ) {
 
 	//clear all the decals as well
 	trap->G2API_ClearSkinGore( clent->ghoul2 );
-	CG_SaberWoundsClear( clent->currentState.number );
 
 	clent->weapon = 0;
 	clent->ghoul2weapon = NULL; //force a weapon reinit

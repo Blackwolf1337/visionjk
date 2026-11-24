@@ -25,5 +25,7 @@ void CG_BoltLightsInit( void );
 qboolean CG_BoltLight( const centity_t *cent );
 // a blade deflected a bolt here
 void CG_BoltLightFlash( const vec3_t at );
+// a weapon charging a shot: a light at the end of its barrel that grows with the charge, 0 to 1
+void CG_ChargeLight( int weapon, const vec3_t at, float charge );
 // after the entities of a scene: the nearest bolts go in as lights, the flashes only into the main view
 void CG_BoltLightsAdd( qboolean skyPortal );

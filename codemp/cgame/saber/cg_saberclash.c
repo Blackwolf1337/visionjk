@@ -21,6 +21,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_saberclash.c -- blades meeting (issue #20): a flash that lights the room and glowing drops that fall and cool, on
 // top of the sparks of the block event. While two players are locked it keeps going at the point where the blades
 // cross, which the server does not send: it is worked out here from the blades as they were drawn this frame.
+// No switch of its own: the flash is a moving light (v_dlightScale), the drops and sparks are GPU sparks (v_gpuSparks)
+// and the flash of the view belongs to v_fxSaber.
 
 #include "cgame/cg_local.h"
 #include "cgame/saber/cg_saberclash.h"
@@ -43,17 +45,12 @@ typedef struct {
 static clashLight_t	lights[CLASH_LIGHTS];
 static int			nextLight;
 static int			lockSpark[MAX_CLIENTS], lockFlash[MAX_CLIENTS];
-static fxHandle_t	dropsFx;
 
 void CG_SaberClashInit( void ) {
 	memset( lights, 0, sizeof( lights ) );
 	memset( lockSpark, 0, sizeof( lockSpark ) );
 	memset( lockFlash, 0, sizeof( lockFlash ) );
 	nextLight = 0;
-}
-
-void CG_SaberClashRegister( void ) {
-	dropsFx = trap->FX_RegisterEffect( "vision/saber_embers.efx" );
 }
 
 static void Clash_Light( const vec3_t origin, float strength ) {
@@ -66,16 +63,10 @@ static void Clash_Light( const vec3_t origin, float strength ) {
 }
 
 void CG_SaberClash( const vec3_t origin, const vec3_t dir, float strength, qboolean flare ) {
-	if ( !v_saberClash.integer ) {
-		return;
-	}
 	if ( flare ) {
 		Clash_Light( origin, strength );
 	}
-	// (the drops the renderer simulates where it can, else the embers of the effect)
-	if ( !CG_GpuSparks( origin, dir, GPUSPARKS_DROPS, strength ) && dropsFx ) {
-		trap->FX_PlayEffectID( dropsFx, (float *)origin, (float *)dir, -1, -1, qfalse );
-	}
+	CG_GpuSparks( origin, dir, GPUSPARKS_DROPS, strength );
 }
 
 static qboolean Lock_Player( int num, vec3_t origin ) {
@@ -202,7 +193,7 @@ void CG_SaberClashAdd( void ) {
 				level, level * 0.93f, level * 0.8f );
 		}
 	}
-	if ( !v_saberClash.integer || !cg.snap ) {
+	if ( !cg.snap ) {
 		return;
 	}
 	for ( i = 0; i < cgs.maxclients; i++ ) {

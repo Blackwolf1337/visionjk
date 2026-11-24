@@ -59,7 +59,7 @@ void CG_SaberBeltInit( void ) {
 static qboolean Belt_Off( const centity_t *cent, const clientInfo_t *ci ) {
 	const entityState_t *es = &cent->currentState;
 
-	if ( !v_saberBelt.integer || ( cp_pluginDisable.integer & ( 1 << 9 ) ) || es->weapon != WP_SABER || es->saberHolstered != 2
+	if ( !v_saberHilts.integer || ( cp_pluginDisable.integer & ( 1 << 9 ) ) || es->weapon != WP_SABER || es->saberHolstered != 2
 		|| es->saberInFlight || !es->saberEntityNum || ( es->eFlags & EF_DEAD ) || ci->team == TEAM_SPECTATOR
 		|| es->NPC_class == CLASS_VEHICLE || !ci->saber[0].model[0] || ci->bolt_hipR <= 0 ) {
 		return qfalse;
@@ -161,7 +161,7 @@ void CG_SaberBeltSwing( const centity_t *cent, int saberNum, const vec3_t hip, c
 	beltHilt_t	*h;
 	int			ms, i;
 
-	if ( !v_saberBelt.integer || num < 0 || num >= MAX_CLIENTS || saberNum < 0 || saberNum >= MAX_SABERS ) {
+	if ( !v_saberHilts.integer || num < 0 || num >= MAX_CLIENTS || saberNum < 0 || saberNum >= MAX_SABERS ) {
 		return;
 	}
 	h = &belts[num].hilts[saberNum];

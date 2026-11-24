@@ -869,21 +869,13 @@ REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 LANG_SPANISH        "Lo que se acerca o se aleja cambia de tono."
 
-REFERENCE           SMOOTH_SWING
-LANG_ENGLISH        "Smooth Swing"
-LANG_SPANISH        "#same"
+REFERENCE           SABER_SOUNDS
+LANG_ENGLISH        "Saber Sounds"
+LANG_SPANISH        "Sonidos del sable"
 
 REFERENCE           THE_HUM_OF_A_BLADE_FOLLOWS_HOW_FAST
-LANG_ENGLISH        "The hum of a blade follows how fast it moves, and each stance has swings of its own."
-LANG_SPANISH        "El zumbido de la hoja sigue la velocidad con que se mueve, y cada estilo tiene sus propios golpes."
-
-REFERENCE           NEAR_MISS
-LANG_ENGLISH        "Near Miss"
-LANG_SPANISH        "Por los pelos"
-
-REFERENCE           A_SOUND_WHEN_THE_BLADE_OF_ANOTHER_PL
-LANG_ENGLISH        "A sound when the blade of another player passes close to your head."
-LANG_SPANISH        "Un sonido cuando la hoja de otro jugador pasa muy cerca de tu cabeza."
+LANG_ENGLISH        "The hum of a blade follows how fast it moves, each stance has swings of its own, and a blade that passes close to your head is heard."
+LANG_SPANISH        "El zumbido de la hoja sigue la velocidad con que se mueve, cada estilo tiene sus propios golpes, y se oye una hoja que pasa muy cerca de tu cabeza."
 
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
@@ -1058,56 +1050,16 @@ LANG_ENGLISH        "Ignition"
 LANG_SPANISH        "Encendido"
 
 REFERENCE           THE_BLADE_FLICKERS_AS_IT_COMES_OUT_A
-LANG_ENGLISH        "The blade flickers as it comes out and goes in, its light grows with it, and each hilt sounds different."
-LANG_SPANISH        "La hoja parpadea al salir y al entrar, su luz crece con ella y cada empuñadura tiene su propio sonido."
+LANG_ENGLISH        "The blade flickers as it comes out and goes in and when it deflects a shot, its light grows with it, and hilts differ between the ignition sounds of the game."
+LANG_SPANISH        "La hoja parpadea al salir y al entrar y cuando desvía un disparo, su luz crece con ella, y las empuñaduras se distinguen por los sonidos de encendido del juego."
 
-REFERENCE           BLADE_CLASH
-LANG_ENGLISH        "Blade Clash"
-LANG_SPANISH        "Choque de hojas"
-
-REFERENCE           A_CLASH_LIGHTS_THE_ROOM_AND_THROWS_G
-LANG_ENGLISH        "A clash lights the room and throws glowing drops that fall and cool. Stronger while blades are locked."
-LANG_SPANISH        "Un choque ilumina la sala y lanza gotas incandescentes que caen y se enfrían. Más fuerte cuando las hojas están trabadas."
-
-REFERENCE           BURN_WOUNDS
-LANG_ENGLISH        "Burn Wounds"
-LANG_SPANISH        "Quemaduras"
-
-REFERENCE           A_BLADE_LEAVES_A_GLOWING_CUT_ON_THE
-LANG_ENGLISH        "A blade leaves a glowing cut on the body that cools and stays as a dark mark until the respawn."
-LANG_SPANISH        "Una hoja deja en el cuerpo un corte incandescente que se enfría y queda como marca oscura hasta reaparecer."
-
-REFERENCE           DROPPED_HILT
-LANG_ENGLISH        "Dropped Hilt"
-LANG_SPANISH        "Empuñadura caída"
-
-REFERENCE           WHEN_A_PLAYER_DIES_THE_BLADE_GOES_IN
-LANG_ENGLISH        "When a player dies the blade goes in and the hilt falls to the floor and rolls."
-LANG_SPANISH        "Cuando un jugador muere, la hoja se retrae y la empuñadura cae al suelo y rueda."
-
-REFERENCE           HILT_ON_THE_BELT
-LANG_ENGLISH        "Hilt on the Belt"
-LANG_SPANISH        "Empuñadura al cinturón"
+REFERENCE           HILTS
+LANG_ENGLISH        "Hilts"
+LANG_SPANISH        "Empuñaduras"
 
 REFERENCE           A_SABER_THAT_IS_SWITCHED_OFF_HANGS_O
-LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk. The hand puts it there and takes it. Not for the staff."
-LANG_SPANISH        "Un sable apagado cuelga del cinturón y se balancea al andar. La mano lo guarda y lo recoge. No para el sable doble."
-
-REFERENCE           BLADE_IN_SMOKE
-LANG_ENGLISH        "Blade in Smoke"
-LANG_SPANISH        "Hoja en el humo"
-
-REFERENCE           A_BLADE_LIGHTS_THE_SMOKE_AND_DUST_AR
-LANG_ENGLISH        "A blade lights the smoke and dust around it. Vulkan only."
-LANG_SPANISH        "La hoja ilumina el humo y el polvo a su alrededor. Solo con Vulkan."
-
-REFERENCE           DEFLECT_FLICKER
-LANG_ENGLISH        "Deflect Flicker"
-LANG_SPANISH        "Parpadeo al desviar"
-
-REFERENCE           A_BLADE_THAT_DEFLECTS_A_SHOT_FLICKER
-LANG_ENGLISH        "A blade that deflects a shot flickers for a moment and throws sparks where it was hit."
-LANG_SPANISH        "Una hoja que desvía un disparo parpadea un momento y lanza chispas donde recibió el impacto."
+LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk (not the staff). When a player dies the hilt falls to the floor and rolls."
+LANG_SPANISH        "Un sable apagado cuelga del cinturón y se balancea al andar (no el sable doble). Cuando un jugador muere, la empuñadura cae al suelo y rueda."
 
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
@@ -1198,24 +1150,8 @@ LANG_ENGLISH        "Impacts by Material"
 LANG_SPANISH        "Impactos según material"
 
 REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
-LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit. Sparks need GPU Sparks."
-LANG_SPANISH        "Los disparos lanzan chispas, astillas o polvo y suenan según lo que golpean. Las chispas necesitan GPU Sparks."
-
-REFERENCE           BOLTS_AS_LIGHTS
-LANG_ENGLISH        "Bolts as Lights"
-LANG_SPANISH        "Disparos como luz"
-
-REFERENCE           BOLTS_LIGHT_WHAT_THEY_FLY_PAST_THE_N
-LANG_ENGLISH        "Bolts light what they fly past, the nearest eight, and flash at a blade that deflects them."
-LANG_SPANISH        "Los disparos iluminan aquello junto a lo que pasan (los ocho más cercanos) y destellan en la hoja que los desvía."
-
-REFERENCE           RICOCHETS
-LANG_ENGLISH        "Ricochets"
-LANG_SPANISH        "Rebotes"
-
-REFERENCE           A_BOLT_THAT_BOUNCES_OFF_METAL_WHINES
-LANG_ENGLISH        "A bolt that bounces off metal whines away."
-LANG_SPANISH        "Un disparo que rebota en el metal se aleja silbando."
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
+LANG_SPANISH        "Los disparos lanzan chispas, astillas o polvo y suenan según lo que golpean, y un disparo que rebota en el metal se aleja silbando. Las chispas necesitan GPU Sparks."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
@@ -2301,10 +2237,6 @@ REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_SPANISH        "Jugadores"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_SPANISH        "Armas"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_SPANISH        "Idioma"
@@ -2312,6 +2244,10 @@ LANG_SPANISH        "Idioma"
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_SPANISH        "Sables de luz"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_SPANISH        "Armas"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"

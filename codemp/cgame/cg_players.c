@@ -29,7 +29,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_sabersound.h"
 #include "cgame/saber/cg_saberignite.h"
 #include "cgame/saber/cg_saberdrawn.h"
-#include "cgame/saber/cg_saberwound.h"
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/saber/cg_saberbelt.h"
 #include "ghoul2/G2.h"
@@ -6509,11 +6508,9 @@ void CG_SaberCompWork(vec3_t start, vec3_t end, centity_t *owner, int saberNum, 
 										}
 									}
 								}
-								// (a hilt with a mark of its own keeps it)
-								if ( markShader != cgs.media.bdecal_saberglow || !CG_SaberWound( trEnt, trace.endpos, ePos ) )
-									CG_AddGhoul2Mark(markShader, flrand(3.0f, 4.0f),
-										trace.endpos, ePos, trace.entityNum, trEnt->lerpOrigin, trEnt->lerpAngles[YAW],
-										trEnt->ghoul2, trEnt->modelScale, Q_irand(5000, 10000));
+								CG_AddGhoul2Mark(markShader, flrand(3.0f, 4.0f),
+									trace.endpos, ePos, trace.entityNum, trEnt->lerpOrigin, trEnt->lerpAngles[YAW],
+									trEnt->ghoul2, trEnt->modelScale, Q_irand(5000, 10000));
 								if ( weaponMarkShader )
 								{
 									vec3_t splashBackDir;

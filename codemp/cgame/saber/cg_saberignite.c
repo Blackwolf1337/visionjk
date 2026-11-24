@@ -19,14 +19,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_saberignite.c -- a blade going on and off (issue #20): it flickers on its way, and so does its light, and a hilt
-// without a sound of its own in its .sab gets one of twelve voices by its name. Client side only: the server keeps
+// without a sound of its own in its .sab gets one of the three ignition sounds of the game by its name. Client side only: the server keeps
 // sending the sound of the game, which is swapped here, so this works on every server.
 
 #include "cgame/cg_local.h"
 #include "cgame/saber/cg_saberignite.h"
 #include "cgame/saber/cg_saberdrawn.h"
 
-#define IGNITE_VOICES	12
+#define IGNITE_VOICES	3
 #define FLICKER_MSEC	34			// a new brightness about 30 times a second, at any frame rate
 #define FLICKER_DEPTH	0.5f
 #define EVENT_RANGE		96.0f		// of the spot of a sound event to the player it belongs to
@@ -43,9 +43,12 @@ static int			deflectTime[MAX_CLIENTS];
 void CG_SaberIgniteRegister( void ) {
 	int i;
 
+	static const char *const on[IGNITE_VOICES] = { "saberon", "saberonquick", "enemy_saber_on" };
+	static const char *const off[IGNITE_VOICES] = { "saberoff", "saberoffquick", "enemy_saber_off" };
+
 	for ( i = 0; i < IGNITE_VOICES; i++ ) {
-		voiceOn[i] = trap->S_RegisterSound( va( "sound/vision/saber/ignite%d.wav", i + 1 ) );
-		voiceOff[i] = trap->S_RegisterSound( va( "sound/vision/saber/retract%d.wav", i + 1 ) );
+		voiceOn[i] = trap->S_RegisterSound( va( "sound/weapons/saber/%s.wav", on[i] ) );
+		voiceOff[i] = trap->S_RegisterSound( va( "sound/weapons/saber/%s.wav", off[i] ) );
 	}
 	stockOn[0] = trap->S_RegisterSound( "sound/weapons/saber/saberon.wav" );
 	stockOn[1] = trap->S_RegisterSound( "sound/weapons/saber/enemy_saber_on.wav" );
@@ -122,15 +125,16 @@ sfxHandle_t CG_SaberIgniteEvent( const vec3_t origin, sfxHandle_t sound ) {
 	}
 }
 
-// the blade nearest to a deflected shot, of whoever holds one there
+// the blade nearest to a deflected shot, of whoever holds one there. The sparks are GPU sparks (v_gpuSparks), the flicker
+// of the blade belongs to v_saberIgnition
 void CG_SaberDeflect( const vec3_t at, const vec3_t dir ) {
 	float	best = DEFLECT_RANGE * DEFLECT_RANGE;
 	int		i, s, b, owner = -1;
 
-	if ( !v_saberDeflect.integer ) {
+	CG_GpuSparks( at, dir, GPUSPARKS_DEFLECT, 1.0f );
+	if ( !v_saberIgnition.integer ) {
 		return;
 	}
-	CG_GpuSparks( at, dir, GPUSPARKS_DEFLECT, 1.0f );
 	for ( i = 0; i < cgs.maxclients; i++ ) {
 		for ( s = 0; s < MAX_SABERS; s++ ) {
 			for ( b = 0; b < MAX_BLADES; b++ ) {
@@ -162,7 +166,7 @@ float CG_SaberIgniteFlicker( const bladeInfo_t *blade, int num, int saberNum, in
 	float			target, f;
 	unsigned int	n;
 
-	if ( v_saberDeflect.integer && num >= 0 && num < MAX_CLIENTS && deflectTime[num]
+	if ( v_saberIgnition.integer && num >= 0 && num < MAX_CLIENTS && deflectTime[num]
 		&& cg.time - deflectTime[num] >= 0 && cg.time - deflectTime[num] < DEFLECT_MSEC ) {
 		// (a flash that dies down, shaking)
 		const float left = 1.0f - ( cg.time - deflectTime[num] ) / (float)DEFLECT_MSEC;

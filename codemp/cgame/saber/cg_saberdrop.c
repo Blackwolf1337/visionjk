@@ -244,7 +244,7 @@ qboolean CG_SaberDropUpdate( centity_t *cent, clientInfo_t *ci ) {
 	if ( dropState[num] != DROP_ALIVE ) {
 		return (qboolean)( dropState[num] == DROP_DROPPED );
 	}
-	if ( !v_saberDropHilt.integer || !held[num] || cg.time - aliveTime[num] > DROP_SEEN_MSEC || !cent->ghoul2 ) {
+	if ( !v_saberHilts.integer || !held[num] || cg.time - aliveTime[num] > DROP_SEEN_MSEC || !cent->ghoul2 ) {
 		dropState[num] = DROP_KEPT;
 		return qfalse;
 	}

@@ -320,49 +320,6 @@ gfx/vision/fb/fireball
 	}
 }
 
-// the burn wounds of a blade on a body (cgame/saber/cg_saberwound.c): core and glow fade on RGB, so they are added
-gfx/vision/burn_core
-{
-	polygonOffset
-	surfaceparm	nomarks
-	surfaceparm	trans
-	q3map_nolightmap
-	{
-		clampmap gfx/vision/burn_core
-		blendFunc GL_ONE GL_ONE
-		rgbGen identity
-		glow
-	}
-}
-
-gfx/vision/burn_glow
-{
-	polygonOffset
-	surfaceparm	nomarks
-	surfaceparm	trans
-	q3map_nolightmap
-	{
-		clampmap gfx/vision/burn_glow
-		blendFunc GL_ONE GL_ONE
-		rgbGen identity
-		glow
-	}
-}
-
-gfx/vision/burn_char
-{
-	polygonOffset
-	surfaceparm	nomarks
-	surfaceparm	trans
-	q3map_nolightmap
-	{
-		clampmap gfx/vision/burn_char
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbGen identity
-		alphaGen vertex
-	}
-}
-
 gfx/vision/impact_dust
 {
 	nopicmip

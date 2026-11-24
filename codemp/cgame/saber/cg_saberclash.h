@@ -21,7 +21,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 void CG_SaberClashInit( void );
-void CG_SaberClashRegister( void );
 // blades met at origin: glowing drops, and with flare a flash of light on the room
 void CG_SaberClash( const vec3_t origin, const vec3_t dir, float strength, qboolean flare );
 // once a frame after the entities: the flashes, and the players whose blades are locked

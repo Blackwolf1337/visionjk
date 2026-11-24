@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_impact.h"
 
 #define IMPACT_SOUNDS		3
-#define RICOCHET_SOUNDS		4
+#define RICOCHET_SOUNDS		2
 #define IMPACT_SOUND_GAP	70			// msec between two sounds of a kind: a burst of shards is not a machine gun
 #define RICOCHET_GAP		140
 #define IMPACT_PUFF_GAP		35
@@ -39,16 +39,17 @@ typedef struct {
 	float		count;
 	float		puff;		// radius of the dust, 0: none
 	float		r, g, b;
+	int			puffs;		// clouds of it
 	int			chips;
 } impactLook_t;
 
 static const impactLook_t impactLooks[IMPACT_KINDS] = {
-	{ GPUSPARKS_DRAG_STONE,	2.4f,	20.0f,	0.62f, 0.58f, 0.52f,	0 },
-	{ GPUSPARKS_DRAG_METAL,	2.6f,	0.0f,	0.0f, 0.0f, 0.0f,		0 },
-	{ GPUSPARKS_DRAG_WOOD,	1.2f,	13.0f,	0.42f, 0.30f, 0.18f,	3 },
-	{ GPUSPARKS_DRAG_GLASS,	3.0f,	0.0f,	0.0f, 0.0f, 0.0f,		0 },
-	{ GPUSPARKS_DRAG_COLD,	3.0f,	16.0f,	0.80f, 0.85f, 0.90f,	0 },
-	{ GPUSPARKS_DRAG_SOFT,	3.0f,	18.0f,	0.36f, 0.28f, 0.20f,	0 },
+	{ GPUSPARKS_DRAG_STONE,	2.4f,	38.0f,	0.62f, 0.58f, 0.52f,	3,	0 },
+	{ GPUSPARKS_DRAG_METAL,	2.6f,	0.0f,	0.0f, 0.0f, 0.0f,		0,	0 },
+	{ GPUSPARKS_DRAG_WOOD,	1.2f,	20.0f,	0.42f, 0.30f, 0.18f,	2,	3 },
+	{ GPUSPARKS_DRAG_GLASS,	3.0f,	0.0f,	0.0f, 0.0f, 0.0f,		0,	0 },
+	{ GPUSPARKS_DRAG_COLD,	3.0f,	28.0f,	0.80f, 0.85f, 0.90f,	2,	0 },
+	{ GPUSPARKS_DRAG_SOFT,	3.0f,	30.0f,	0.36f, 0.28f, 0.20f,	3,	0 },
 };
 
 static const char *impactNames[IMPACT_KINDS] = { "stone", "metal", "wood", "glass", "cold", "soft" };
@@ -80,7 +81,7 @@ void CG_ImpactRegister( void ) {
 		}
 	}
 	for ( i = 0; i < RICOCHET_SOUNDS; i++ ) {
-		ricochetSounds[i] = trap->S_RegisterSound( va( "sound/vision/impact/ricochet%i.wav", i + 1 ) );
+		ricochetSounds[i] = trap->S_RegisterSound( va( "sound/weapons/flechette/ricochet%i.wav", i + 1 ) );	// (of the game)
 	}
 	dustShader = trap->R_RegisterShader( "gfx/vision/impact_dust" );
 }
@@ -244,13 +245,23 @@ static void Impact_Show( impactKind_t kind, const vec3_t at, const vec3_t normal
 		return;
 	}
 	if ( look->puff > 0.0f && dustShader && cg.time >= nextPuff ) {
-		vec3_t p, vel;
+		const int	puffs = Q_max( 1, (int)( look->puffs * scale + 0.5f ) );
+		int			i, k;
 
-		// (off the wall by what v_softParticles fades away, or there is nothing left of it)
-		VectorMA( at, 11.0f, normal, p );
-		VectorScale( normal, 34.0f, vel );
-		vel[2] += 7.0f;
-		CG_SmokePuff( p, vel, look->puff * ( 0.6f + 0.4f * scale ), look->r, look->g, look->b, 0.75f, Q_irand( 520, 760 ), cg.time, 0, 0, dustShader );
+		for ( i = 0; i < puffs; i++ ) {
+			vec3_t p, vel;
+
+			// (off the wall by what v_softParticles fades away, or there is nothing left of it)
+			VectorMA( at, 11.0f + i * 5.0f, normal, p );
+			VectorScale( normal, flrand( 30.0f, 75.0f ), vel );
+			for ( k = 0; k < 3; k++ ) {
+				p[k] += flrand( -look->puff, look->puff ) * 0.25f;
+				vel[k] += flrand( -22.0f, 22.0f );
+			}
+			vel[2] += 9.0f;
+			CG_SmokePuff( p, vel, look->puff * ( 0.7f + 0.3f * scale ) * flrand( 0.8f, 1.2f ), look->r, look->g, look->b, 0.85f,
+				Q_irand( 850, 1400 ), cg.time, 0, 0, dustShader );
+		}
 		nextPuff = cg.time + IMPACT_PUFF_GAP;
 	}
 	if ( look->chips ) {
@@ -279,7 +290,7 @@ void CG_BoltTrack( const centity_t *cent ) {
 	impactKind_t		kind;
 	qboolean			fresh;
 
-	if ( !v_ricochets.integer || s->number < 0 || s->number >= MAX_GENTITIES
+	if ( !v_weaponImpacts.integer || s->number < 0 || s->number >= MAX_GENTITIES
 		|| Impact_Scale( s->weapon, (qboolean)!!( s->eFlags & EF_ALT_FIRING ) ) <= 0.0f ) {
 		return;
 	}
@@ -299,7 +310,7 @@ void CG_BoltTrack( const centity_t *cent ) {
 					trap->S_StartSound( NULL, s->number, CHAN_AUTO, ricochetSounds[Q_irand( 0, RICOCHET_SOUNDS - 1 )] );
 					nextRicochet = cg.time + RICOCHET_GAP;
 				}
-			} else if ( v_weaponImpacts.integer ) {
+			} else {
 				Impact_Show( kind, s->pos.trBase, normal, 0.5f );
 			}
 		}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # The sounds of shots hitting a wall (issue #22, codemp/cgame/weapons/cg_impact.c), made here so no audio of anybody
-# else ships: stone, metal, wood, glass, cold and soft 1-3.wav, laid quietly over the stock impact, and ricochet1-4.wav
-# for a bolt whining off metal. 22050 Hz, 16 bit, mono, as the game. Noise with a fixed seed, so the files come out the
+# else ships: stone, metal, wood, glass, cold and soft 1-3.wav, laid quietly over the stock impact (a bolt that whines off
+# metal plays the ricochet of the flechette of the game). 22050 Hz, 16 bit, mono, as the game. Noise with a fixed seed, so the files come out the
 # same every time. Writes into assets/japlus_client/sound/vision/impact/.
 # usage: tools/sounds/make_impact_sounds.py
 import os
@@ -81,19 +81,6 @@ def soft( rng ):
 	return 0.6 * burst( t, rng, 120, 1300, 0.02 ) + modes( t, rng, [ ( 95, 1.0, 0.03 ), ( 185, 0.5, 0.02 ) ] )
 
 
-def ricochet( rng ):
-	length = rng.uniform( 0.42, 0.62 )
-	t = times( length )
-	x = t / length
-	start, end = rng.uniform( 3000, 3900 ), rng.uniform( 1050, 1500 )
-	wobble = 1.0 + 0.018 * np.sin( 2.0 * np.pi * rng.uniform( 17, 26 ) * t )
-	phase = 2.0 * np.pi * np.cumsum( ( start * ( end / start ) ** x ) * wobble ) / RATE
-	envelope = ( 1.0 - np.exp( -t / 0.006 ) ) * ( 1.0 - x ) ** 1.6
-	tone = np.sin( phase ) + 0.28 * np.sin( 2.0 * phase + 0.7 ) + 0.1 * np.sin( 3.0 * phase )
-	hiss = band( rng.standard_normal( len( t ) ), 2500, 9000 ) * 0.5
-	return ( tone + hiss ) * envelope + 0.5 * burst( t, rng, 1800, 9000, 0.005 )
-
-
 def main():
 	os.makedirs( OUT, exist_ok=True )
 	rng = np.random.default_rng( 2226 )
@@ -102,8 +89,6 @@ def main():
 	for name, make in makers.items():
 		for i in range( 1, 4 ):
 			write( '%s%i.wav' % ( name, i ), make( rng ), levels[name] )
-	for i in range( 1, 5 ):
-		write( 'ricochet%i.wav' % i, ricochet( rng ), 0.34 )
 
 
 if __name__ == '__main__':

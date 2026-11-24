@@ -74,7 +74,9 @@ void CG_SaberSoundInit( void ) {
 }
 
 void CG_SaberSoundRegister( void ) {
-	static const char *const kinds[3] = { "fast", "medium", "strong" };
+	// the swings of the game (saberhup1-9), sorted by stance: the short ones for the fast stance, the ones with the
+	// higher tone for the medium one, the long and low ones for the strong one
+	static const int kinds[3][3] = { { 1, 2, 3 }, { 6, 7, 8 }, { 4, 5, 9 } };
 	char	value[8];
 	int		k, n;
 
@@ -82,7 +84,7 @@ void CG_SaberSoundRegister( void ) {
 	swingHigh = trap->S_RegisterSound( "sound/vision/saber/swing_high.wav" );
 	for ( k = 0; k < 3; k++ ) {
 		for ( n = 0; n < 3; n++ ) {
-			swingKinds[k][n] = trap->S_RegisterSound( va( "sound/vision/saber/%s%d.wav", kinds[k], n + 1 ) );
+			swingKinds[k][n] = trap->S_RegisterSound( va( "sound/weapons/saber/saberhup%d.wav", kinds[k][n] ) );
 		}
 	}
 	for ( n = 0; n < NEAR_SOUNDS; n++ ) {
@@ -98,7 +100,7 @@ void CG_SaberSoundBlade( const centity_t *cent, int saberNum, int bladeNum, cons
 	saberSwing_t	*s;
 	int				gap;
 
-	if ( !v_saberSmoothSwing.integer || bladeNum || saberNum < 0 || saberNum > 1 || num < 0 || num >= MAX_GENTITIES ) {
+	if ( !v_saberSounds.integer || bladeNum || saberNum < 0 || saberNum > 1 || num < 0 || num >= MAX_GENTITIES ) {
 		return;
 	}
 	s = &swings[num];
@@ -165,7 +167,7 @@ void CG_SaberSoundHum( const centity_t *cent, const vec3_t spot, sfxHandle_t hum
 	saberSwing_t	*s;
 	float			level, x;
 
-	if ( !v_saberSmoothSwing.integer || !loopVolume || num < 0 || num >= MAX_GENTITIES ) {
+	if ( !v_saberSounds.integer || !loopVolume || num < 0 || num >= MAX_GENTITIES ) {
 		trap->S_AddLoopingSound( num, spot, vec3_origin, hum );
 		return;
 	}
@@ -189,7 +191,7 @@ void CG_SaberSoundNearMiss( void ) {
 	vec3_t	head;
 	int		me, i;
 
-	if ( !v_saberNearMiss.integer || !cg.snap || cg.predictedPlayerState.pm_type >= PM_DEAD
+	if ( !v_saberSounds.integer || !cg.snap || cg.predictedPlayerState.pm_type >= PM_DEAD
 		|| cg.predictedPlayerState.pm_type == PM_SPECTATOR ) {
 		return;
 	}
@@ -245,7 +247,7 @@ void CG_SaberSoundNearMiss( void ) {
 }
 
 sfxHandle_t CG_SaberSwingSound( int kind ) {
-	if ( !v_saberSmoothSwing.integer || kind < 0 || kind > 2 ) {
+	if ( !v_saberSounds.integer || kind < 0 || kind > 2 ) {
 		return 0;
 	}
 	return swingKinds[kind][Q_irand( 0, 2 )];

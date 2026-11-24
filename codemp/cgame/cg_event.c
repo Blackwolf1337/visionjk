@@ -38,7 +38,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_boltlight.h"
 #include "cgame/saber/cg_saberclash.h"
-#include "cgame/saber/cg_saberwound.h"
 //==========================================================================
 
 extern qboolean WP_SaberBladeUseSecondBladeStyle( saberInfo_t *saber, int bladeNum );
@@ -2280,8 +2279,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					fxDir[1] = 1;
 				}
 				trap->S_StartSound(es->origin, es->number, CHAN_AUTO, hitSound );
-				if ( es->otherEntityNum >= 0 && es->otherEntityNum < MAX_CLIENTS && cg_entities[es->otherEntityNum].ghoul2 )
-					CG_SaberWoundAt( &cg_entities[es->otherEntityNum], es->origin );
 				if ( es->eventParm == 3 )
 				{	// moderate or big hits.
 					trap->FX_PlayEffectID( hitPersonSmallFxID, es->origin, fxDir, -1, -1, qfalse );

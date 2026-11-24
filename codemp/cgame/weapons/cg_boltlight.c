@@ -19,7 +19,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_boltlight.c -- every bolt lights what it flies past and flashes at a blade that deflects it (issue #22). The
-// renderer has 32 lights for everything, so only the bolts nearest to the view get one.
+// renderer has 32 lights for everything, so only the bolts nearest to the view get one. No switch of its own: these are
+// moving lights like those of the game (v_dlightScale).
 
 #include "cgame/cg_local.h"
 #include "cgame/weapons/cg_boltlight.h"
@@ -29,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FLASH_MSEC		140
 #define FLASH_RADIUS	150.0f
 #define FLASH_MERGE		96.0f		// closer to a flash still burning: the same one
+#define BOLT_REACH		1.6f		// of the radius of Bolt_Look: far enough for the shadows it casts to be seen
+#define CHARGE_REACH	0.8f		// of the same radius, for a weapon fully charged
 
 typedef struct {
 	vec3_t	at, color;
@@ -76,6 +79,10 @@ static qboolean Bolt_Look( int weapon, qboolean altFire, float *radius, vec3_t c
 		*radius = 130.0f;
 		VectorSet( color, 0.35f, 0.55f, 1.0f );
 		return qtrue;
+	case WP_DISRUPTOR:		// (has no bolt, this is for its charge)
+		*radius = 150.0f;
+		VectorSet( color, 1.0f, 0.7f, 0.2f );
+		return qtrue;
 	case WP_FLECHETTE:
 		*radius = 75.0f;
 		VectorSet( color, 1.0f, 0.7f, 0.25f );
@@ -99,7 +106,7 @@ qboolean CG_BoltLight( const centity_t *cent ) {
 	float				radius, dist;
 	vec3_t				color;
 
-	if ( !v_boltLights.integer || !Bolt_Look( s->weapon, (qboolean)!!( s->eFlags & EF_ALT_FIRING ), &radius, color ) ) {
+	if ( !Bolt_Look( s->weapon, (qboolean)!!( s->eFlags & EF_ALT_FIRING ), &radius, color ) ) {
 		return qfalse;
 	}
 	dist = DistanceSquared( cent->lerpOrigin, cg.refdef.vieworg );
@@ -120,17 +127,26 @@ qboolean CG_BoltLight( const centity_t *cent ) {
 	}
 	VectorCopy( cent->lerpOrigin, slot->at );
 	VectorCopy( color, slot->color );
-	slot->radius = radius;
+	slot->radius = radius * BOLT_REACH;
 	slot->dist = dist;
 	return qtrue;
+}
+
+void CG_ChargeLight( int weapon, const vec3_t at, float charge ) {
+	float	radius, level;
+	vec3_t	color;
+
+	if ( !Bolt_Look( weapon, qfalse, &radius, color ) ) {
+		return;
+	}
+	charge = Com_Clamp( 0.0f, 1.0f, charge );
+	level = 0.25f + 0.75f * charge;
+	trap->R_AddLightToScene( at, 30.0f + charge * radius * CHARGE_REACH, color[0] * level, color[1] * level, color[2] * level );
 }
 
 void CG_BoltLightFlash( const vec3_t at ) {
 	int i;
 
-	if ( !v_boltLights.integer ) {
-		return;
-	}
 	// (a blade under fire is one light that goes on flashing: added up they burn out the whole room)
 	for ( i = 0; i < BOLT_FLASHES; i++ ) {
 		if ( flashes[i].time && cg.time - flashes[i].time < FLASH_MSEC
