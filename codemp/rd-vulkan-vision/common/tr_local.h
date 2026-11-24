@@ -143,6 +143,12 @@ typedef struct trRefEntity_s {
 	int			ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
 	int			dlightBits;
+	// VisionJK (v_panelLight): the lamps of the level that light this player by pixel, his share of the light of the
+	// grid taken from directedLight (R_SetupEntityLighting); in the world, the colour as a moving light has it
+	int			numLamps;
+	vec3_t		lampOrigin[3];
+	vec3_t		lampColor[3];
+	float		lampRange[3];
 	// VisionJK: drawn cut by a plane (ext.AddCutEntityToScene): what lies on the side the normal points to is kept
 	qboolean	cut;
 	vec4_t		cutPlane;		// in the world: normal, distance

@@ -2817,8 +2817,10 @@ static void VK_RT_AskSeen( int patch, const vec3_t from ) {
 }
 
 typedef struct {
-	vec3_t	origin, dir;
-	float	share;
+	vec3_t	origin;
+	int		count;
+	vec3_t	lamp[VK_RT_LAMP_SHOWN];
+	float	share[VK_RT_LAMP_SHOWN];
 } vkPlayerLamps_t;
 
 static vkPlayerLamps_t	vk_playerLamps[VK_RT_CASTERS];
@@ -3037,34 +3039,22 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 	memcpy( last, now, sizeof( vkLampMemory_t ) * count );
 	lastCount = count;
 
-	// for the light on the players of the next frame (VK_RT_PlayerLamps): where each one is, the direction to his
-	// panels weighted by their shares, and what they share of his light
+	// for the light on the players of the next frame (VK_RT_PlayerLamps): where each one is, his panels and what each
+	// shares of his light
 	vk_numPlayerLamps = 0;
 	for ( int i = 0; i < count; i++ ) {
 		const float	(*out)[4] = &rows[VK_RT_LAMP_ROW + i * VK_RT_LAMP_ROWS];
 		vkPlayerLamps_t	*p = &vk_playerLamps[vk_numPlayerLamps++];
-		vec3_t		chest;
 
 		VectorCopy( rt.casters[i].origin, p->origin );
-		VectorCopy( p->origin, chest );
-		chest[2] += 24.0f;
-		VectorClear( p->dir );
-		p->share = 0.0f;
+		p->count = 0;
 		for ( int k = 0; k < VK_RT_LAMP_SHOWN; k++ ) {
-			vec3_t to;
-
 			if ( out[3][k] <= 0.0f ) {
 				continue;
 			}
-			VectorSubtract( out[k], chest, to );
-			if ( VectorNormalize( to ) < 1.0f ) {
-				continue;
-			}
-			VectorMA( p->dir, out[3][k], to, p->dir );
-			p->share += out[3][k];
-		}
-		if ( VectorNormalize( p->dir ) < 1e-4f ) {
-			p->share = 0.0f;
+			VectorCopy( out[k], p->lamp[p->count] );
+			p->share[p->count] = out[3][k];
+			p->count++;
 		}
 	}
 }
@@ -3073,22 +3063,24 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 ===============
 VK_RT_PlayerLamps
 
-The panels the traced shadow of the player standing at origin came from in the frame before (VK_RT_PickLamps):
-the direction to them from his chest and the share of his light they have; qfalse when no player of that frame
-stood within 32 units (or the panels are not traced: shadow maps, v_rtLamps 0)
+The panels the shadow of the player standing at origin came from in the frame before (VK_RT_PickLamps), up to
+three, and the share of his light each has; how many, 0 when no player of that frame stood within 32 units (or
+v_rtLamps 0)
 ===============
 */
-qboolean VK_RT_PlayerLamps( const vec3_t origin, vec3_t dir, float *share ) {
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], float share[3] ) {
 	for ( int i = 0; i < vk_numPlayerLamps; i++ ) {
 		const vkPlayerLamps_t *p = &vk_playerLamps[i];
 
-		if ( p->share > 0.0f && DistanceSquared( p->origin, origin ) < 32.0f * 32.0f ) {
-			VectorCopy( p->dir, dir );
-			*share = Com_Clamp( 0.0f, 1.0f, p->share );
-			return qtrue;
+		if ( p->count && DistanceSquared( p->origin, origin ) < 32.0f * 32.0f ) {
+			for ( int k = 0; k < p->count; k++ ) {
+				VectorCopy( p->lamp[k], lamp[k] );
+				share[k] = Com_Clamp( 0.0f, 1.0f, p->share[k] );
+			}
+			return p->count;
 		}
 	}
-	return qfalse;
+	return 0;
 }
 
 // shaders/rtlamps.comp over what VK_RT_PickLamps asked in this frame, after the top level of the frame is built

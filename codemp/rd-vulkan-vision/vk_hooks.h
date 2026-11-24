@@ -51,8 +51,9 @@ static inline int VK_PuddleSize( int frame ) { return ( frame + 1 ) / 2; }
 void VK_NoteDrawSurfs( int numDrawSurfs );
 // ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
 qboolean RE_GpuProfile( gpuProfile_t *out );
-// vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the traced shadow of the player at origin came from (v_panelLight)
-qboolean VK_RT_PlayerLamps( const vec3_t origin, vec3_t dir, float *share );
+// vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the shadow of the player at origin came from, and their shares
+// of his light (v_panelLight)
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], float share[3] );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );
 

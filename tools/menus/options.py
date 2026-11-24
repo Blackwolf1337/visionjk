@@ -114,7 +114,7 @@ SETUP = [
         ('slider', 'Glowing Panels', 'v_panelGlow', 2.0, 0, 4,
          'How brightly the lamp panels of a level glow as light sources. With HDR they glow out past white. 0: as their texture.'),
         ('yesno', 'Panel Light on Players', 'v_panelLight',
-         'Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing.'),
+         'Players near lamp panels are lit from them, the side that faces a panel brighter, from the panels their shadow falls away from. Needs real shadows.'),
         ('yesno', 'Tessellation', 'v_tessellation',
          'Materials with a height in their bump map get real bumps: the graphics card cuts their surfaces finer and lifts them. Off: they look carved by parallax instead, which costs less. Needs a graphics card with tessellation.'),
         ('yesno', 'Parallax', 'v_parallax',

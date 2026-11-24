@@ -303,7 +303,7 @@ TR = {
     'Glowing Panels': 'Leuchtende Lampen',
     'How brightly the lamp panels of a level glow as light sources. With HDR they glow out past white. 0: as their texture.': 'Wie hell die Lampen eines Levels als Lichtquellen leuchten. Mit HDR strahlen sie über Weiß hinaus. 0: wie ihre Textur.',
     'Panel Light on Players': 'Lampenlicht auf Spielern',
-    'Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing.': 'Spieler nahe an Lampen werden von ihnen beleuchtet, von der Seite, von der ihr Schatten wegfällt. Braucht echte Schatten mit Raytracing.',
+    'Players near lamp panels are lit from them, the side that faces a panel brighter, from the panels their shadow falls away from. Needs real shadows.': 'Spieler nahe an Lampen werden von ihnen beleuchtet, die Seite zur Lampe heller, von den Lampen, von denen ihr Schatten wegfällt. Braucht echte Schatten.',
     'Tessellation': 'Tessellation',
     'Materials with a height in their bump map get real bumps: the graphics card cuts their surfaces finer and lifts them. Off: they look carved by parallax instead, which costs less. Needs a graphics card with tessellation.': 'Materialien mit einer Höhe in ihrer Bump-Map bekommen echte Erhebungen: die Grafikkarte teilt ihre Flächen feiner und hebt sie an. Aus: sie wirken stattdessen per Parallax eingeschnitten, das kostet weniger. Braucht eine Grafikkarte mit Tessellation.',
     'Parallax': 'Parallax',

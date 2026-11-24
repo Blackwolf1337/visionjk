@@ -486,8 +486,8 @@ LANG_ENGLISH        "Panel Light on Players"
 LANG_GERMAN         "Lampenlicht auf Spielern"
 
 REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
-LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
-LANG_GERMAN         "Spieler nahe an Lampen werden von ihnen beleuchtet, von der Seite, von der ihr Schatten wegfällt. Braucht echte Schatten mit Raytracing."
+LANG_ENGLISH        "Players near lamp panels are lit from them, the side that faces a panel brighter, from the panels their shadow falls away from. Needs real shadows."
+LANG_GERMAN         "Spieler nahe an Lampen werden von ihnen beleuchtet, die Seite zur Lampe heller, von den Lampen, von denen ihr Schatten wegfällt. Braucht echte Schatten."
 
 REFERENCE           TESSELLATION
 LANG_ENGLISH        "Tessellation"

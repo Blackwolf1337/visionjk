@@ -978,7 +978,7 @@ static void RB_AddDrawSurf( const drawSurf_t *drawSurf ) {
 	// tess.dlightBits are gone when the surface began a new batch on the way)
 	const surfaceType_t type = *drawSurf->surface;
 
-	rb_surfaceDlights = drawSurf->dlightBits;
+	rb_surfaceDlights = drawSurf->dlightBits | ( backEnd.currentEntity != &tr.worldEntity && backEnd.currentEntity->numLamps ? 1 : 0 );
 	VK_AddSurface( drawSurf->surface );
 	rb_surfaceDlights = 0;
 	if ( type != SF_FACE && type != SF_GRID && type != SF_TRIANGLES ) {
@@ -1130,7 +1130,8 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		// the run of the light passes: only what a light reaches, and nothing that the end of the list draws (their
 		// light passes come with them there)
-		const qboolean notLit = (qboolean)( rb_dlightsOnly && ( !drawSurf->dlightBits || ( entityNum != REFENTITYNUM_WORLD
+		const qboolean notLit = (qboolean)( rb_dlightsOnly && ( ( !drawSurf->dlightBits
+			&& ( entityNum == REFENTITYNUM_WORLD || !backEnd.refdef.entities[entityNum].numLamps ) ) || ( entityNum != REFENTITYNUM_WORLD
 			&& ( backEnd.refdef.entities[entityNum].e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) ) ) ) );
 		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) || wrongRun || notLit ) {
 			shader = oldShader;
