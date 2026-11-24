@@ -27,8 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   of vk_world.cpp is laid out for drawing);
 // - one for each player who casts a shadow (RF_SHADOW_PLANE), built each frame from his surfaces as the view drew
 //   them: shaders/rtskin.comp moves their vertices by the bones of his skeleton into positions of the frame;
+// - one for each brush model of the level (doors, lifts, platforms), built once per level like the level;
 // - the top level over all of them each frame, which the shaders that trace read: the level with mask 1, the
-//   players with mask 2, each with the place of his entity.
+//   players with mask 2, each with the place of his entity, the brush models with mask 4 where theirs are now (only
+//   the moving lights trace against them: the lightmaps and the cells were made with them where the map has them).
 //
 // The passes run where the wet places do (RB_DrawWet()): after what is solid, before anything transparent, outside
 // a target, so the builds of the frame are recorded right before them in its command buffer. Every build of a
@@ -85,25 +87,36 @@ static const uint32_t vk_rtLampsComp[] =
 #include "shaders/rtlamps_comp.inc"
 ;
 
-#define VK_RT_MAX_INSTANCES			64
+#define VK_RT_MAX_INSTANCES			256
+#define VK_RT_MAX_BRUSHES			( VK_RT_MAX_INSTANCES - 1 - VK_RT_MAX_CASTERS )	// brush entities in one frame
+#define VK_RT_BRUSH_RANGE			3072.0f			// from the eye: further out none of the lights that cast shadows reaches them
 #define VK_RT_MAX_CASTERS			16				// players with a shadow in one frame
 #define VK_RT_LAMP_RAYS				256				// panels a frame asks whether a player sees them (shaders/rtlamps.comp)
 #define VK_RT_LAMP_ASKED			16				// of them for one player
 #define VK_RT_MAX_CASTER_SURFACES	64				// surfaces of one of them, saber and weapon included
+#define VK_RT_MAX_QUEUED			( VK_RT_MAX_CASTERS * VK_RT_MAX_CASTER_SURFACES )	// of players not drawn in the view
+#define VK_RT_HIDDEN_RANGE			1024.0f			// from the eye: further out their shadows are not worth the bones
 #define VK_RT_SKIN_VERTEXES			( 256 * 1024 )	// their skinned vertices in one frame
 #define VK_RT_LOCAL_INDEXES			( 1024 * 1024 )	// the triangles of the model surfaces they have, counted in the surface
 #define VK_RT_CASTER_BYTES			( 32 << 20 )	// their acceleration structures in one frame
 #define VK_RT_ACCEL_ALIGN			256				// where an acceleration structure may begin in its buffer
 
 // the shadow maps: tiles of one atlas, one for each caster (in the light of the grid at his feet, without ray tracing)
-// and for each of the two moving lights a cube (six) at each of VK_SM_POINTS points along it (a blade: near the hilt,
-// the middle, the tip; a point light uses the first alone)
+// and for the moving lights: the first VK_RT_TUBES a cube (six) at each of VK_SM_POINTS points along it (a blade: near
+// the hilt, the middle, the tip; a point light uses the first alone), the others, points only, one cube each
 #define VK_SM_TILE					256
 #define VK_SM_COLUMNS				8
 #define VK_SM_POINTS				3
-#define VK_SM_TILES					( VK_RT_MAX_CASTERS + 2 * VK_SM_POINTS * 6 )
+#define VK_RT_LIGHTS					4				// moving lights with shadows in one frame, one channel of the mask each
+#define VK_RT_TUBES					2				// of them blades at most
+#define VK_SM_TILES					( VK_RT_MAX_CASTERS + VK_RT_TUBES * VK_SM_POINTS * 6 + ( VK_RT_LIGHTS - VK_RT_TUBES ) * 6 )
+#define VK_SM_LIGHT_TILE( k, point )	( VK_RT_MAX_CASTERS + ( ( k ) < VK_RT_TUBES ? ( ( k ) * VK_SM_POINTS + ( point ) ) * 6 \
+										: VK_RT_TUBES * VK_SM_POINTS * 6 + ( ( k ) - VK_RT_TUBES ) * 6 ) )
 #define VK_SM_ROWS					( ( VK_SM_TILES + VK_SM_COLUMNS - 1 ) / VK_SM_COLUMNS )
 #define VK_SM_FIRST_ROW				47				// of the rt globals: four a tile, its view and projection
+#define VK_RT_POWER_ROW				( VK_SM_FIRST_ROW + VK_SM_TILES * 4 + 4 )	// how strong each moving light is (rtresolve.frag)
+#define VK_SM_OWN_LIGHT				56.0f			// a point of light this near a player can be his own weapon (VK_SM_DrawAtlas)
+#define VK_RT_LIGHT_ROW( k )		( ( k ) < 2 ? 38 + ( k ) * 2 : VK_SM_FIRST_ROW + VK_SM_TILES * 4 + ( ( k ) - 2 ) * 2 )	// two a light
 
 cvar_t	*v_rtDebug;
 static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
@@ -126,6 +139,8 @@ typedef struct vkCasterSurface_s {
 
 typedef struct vkRtLight_s {		// a moving light whose players' shadows are traced
 	qboolean					active;
+	qboolean					inSolid;		// a point inside a wall or floor: an explosion on what it hit
+	float						power;			// how bright, as the light pass has it
 	qboolean					tube;
 	vec3_t						start, end;		// a point light has both at its place
 	float						range;			// how far it reaches from that point or tube
@@ -154,6 +169,9 @@ static struct {
 	uint32_t					numVertexes, numTriangles;
 	VkDeviceSize				levelScratch;
 	vkAccel_t					level;
+	// the brush models (VK_RT_Brushes): their triangles in one pair of buffers, each its own structure
+	vkBuffer_t					brushPositions, brushIndexes;
+	uint32_t					brushVertexes;
 	vkBuffer_t					grid;			// the light grid of the level, three vec4 a cell (shaders/rtshadow.frag)
 	// the light patches of the level (VK_RT_Patches), three vec4 each: middle and power, the side it lights and the
 	// radius of its disk, how far it goes from its middle; for every cell of the grid its list of patches
@@ -207,6 +225,7 @@ static struct {
 	// points were from the eye with it; the view of the frame before for shaders/rtshadow.frag to find them again
 	vkTarget_t					mask[2];
 	VkDescriptorSet				maskSets[2];
+	VkDescriptorSet				lightMaskSets[2];	// the masks of the moving lights for shaders/rtresolve.frag
 	// the rays of this frame alone (rtshadow.frag, smshadow.frag), laid onto the mask of the frame before by
 	// shaders/rtaccum.frag (its layout: the sets of the frame, of the raw mask, of the depth, of the mask before)
 	vkTarget_t					raw;
@@ -221,16 +240,24 @@ static struct {
 	int							frameNumber;	// the noise of the rays changes with it
 
 	// The shadows of the players from the moving lights (shaders/smlights.frag, from the cubes of the shadow maps on
-	// both ways): for the two strongest lights near
-	// a player, how much the players take of each at every pixel, red and green. Made after the solid part of the
+	// both ways): for the strongest lights (VK_RT_PickLights), how much the players and, with rays, the level take of
+	// each at every pixel, one channel a light. Made after the solid part of the
 	// level, so the light passes of the NEXT frame read it (generic.frag DynamicLight), through the texture table
 	// (tr.rtLightImage), at the place the point had in the view it was made in. One mask is written while the
 	// other is read.
 	vkTarget_t					lightMask[2];
 	int							lightShown[2];	// the texture slot each was last written into, -1: none
 	int							lightWrite;		// the one this frame writes
-	vkRtLight_t					lights[2];		// the lights of this frame's mask
-	vkRtLight_t					readLights[2];	// the lights of the mask the light passes read now
+	vkRtLight_t					lights[VK_RT_LIGHTS];		// the lights of this frame's mask
+	vkRtLight_t					readLights[VK_RT_LIGHTS];	// the lights of the mask the light passes read now
+	// The surfaces of the players the view does not draw (VK_RT_QueueCaster, front end), taken by VK_RT_Pass after
+	// those it drew, so a full list keeps the players on the screen.
+	struct {
+		const trRefEntity_t		*ent;
+		CBoneCache				*bones;
+		const mdxmSurface_t		*surface;
+	}							queued[VK_RT_MAX_QUEUED];
+	int							numQueued, queuedFrame;
 	float						readView[5][4];	// the view and projection it was made with, its rect on the target
 	qboolean					readValid;
 
@@ -241,6 +268,8 @@ static struct {
 	vkTarget_t					atlas;
 	VkPipelineLayout			depthLayout;
 	VkPipeline					depthPipeline;
+	VkPipeline					depthLevelPipeline;		// the level into the cubes of the moving lights (VK_SM_BuildLevel)
+	vkBuffer_t					mapPositions, mapIndexes;
 	VkShaderModule				depthVertex;
 	VkShaderModule				smShadowFragment, smLightsFragment;
 	VkPipeline					smShadowPipeline, smLightsPipeline;
@@ -449,6 +478,223 @@ static void VK_RT_LevelTriangles( std::vector<float> &positions, std::vector<uin
 			VK_RT_SurfaceTriangles( &model->firstSurface[i], positions, indexes );
 		}
 	}
+}
+
+/*
+===============
+VK_RT_Brushes
+
+Doors, lifts and the other brush models of the level (the inline models *1, *2...). Their triangles are in the space
+of the model, so one structure (or one range of the mesh of the shadow maps) serves wherever the entity is in a
+frame. Without them a lift stood in the light of a saber like glass, and its edge threw no shadow on the floor.
+===============
+*/
+typedef struct {
+	uint32_t	firstIndex, numIndexes;		// in rt.brushIndexes, or in rt.mapIndexes for the shadow maps
+	vkAccel_t	accel;
+	VkDeviceSize	scratch;
+} vkBrush_t;
+
+typedef struct {
+	int			brush;
+	vec3_t		origin, axis[3];
+	vec3_t		center;
+	float		radius;
+} vkBrushEntity_t;
+
+static std::vector<vkBrush_t>	vk_brushes;		// by the number of the model, 0 (the world) left empty
+static vkBrushEntity_t			vk_brushEnts[VK_RT_MAX_BRUSHES];
+static int						vk_numBrushEnts;
+
+// the brush entities of the view of the level near the eye, where they are in this frame
+static void VK_RT_BrushEntities( void ) {
+	vk_numBrushEnts = 0;
+	if ( !tr.world || vk_brushes.empty() ) {
+		return;
+	}
+	for ( int i = 0; i < backEnd.refdef.num_entities && vk_numBrushEnts < VK_RT_MAX_BRUSHES; i++ ) {
+		const trRefEntity_t	*ent = &backEnd.refdef.entities[i];
+		const model_t		*model;
+
+		// (not RF_NOSHADOW: the game gives it to every mover, for the old stencil shadows)
+		if ( ent->e.reType != RT_MODEL || ( ent->e.renderfx & RF_FIRST_PERSON ) ) {
+			continue;
+		}
+		model = R_GetModelByHandle( ent->e.hModel );
+		if ( !model || model->type != MOD_BRUSH || !model->bmodel || model->bspInstance ) {
+			continue;
+		}
+		const int brush = (int)( model->bmodel - tr.world->bmodels );
+		if ( brush <= 0 || brush >= (int)vk_brushes.size() || !vk_brushes[brush].numIndexes ) {
+			continue;
+		}
+		vkBrushEntity_t	*out = &vk_brushEnts[vk_numBrushEnts];
+		vec3_t			middle;
+
+		VectorAdd( model->bmodel->bounds[0], model->bmodel->bounds[1], middle );
+		VectorScale( middle, 0.5f, middle );
+		VectorCopy( ent->e.origin, out->center );
+		for ( int k = 0; k < 3; k++ ) {
+			VectorMA( out->center, middle[k], ent->e.axis[k], out->center );
+		}
+		out->radius = 0.5f * Distance( model->bmodel->bounds[0], model->bmodel->bounds[1] );
+		if ( Distance( out->center, backEnd.viewParms.ori.origin ) - out->radius > VK_RT_BRUSH_RANGE ) {
+			continue;
+		}
+		out->brush = brush;
+		VectorCopy( ent->e.origin, out->origin );
+		for ( int k = 0; k < 3; k++ ) {
+			VectorCopy( ent->e.axis[k], out->axis[k] );
+		}
+		vk_numBrushEnts++;
+	}
+}
+
+/*
+===============
+VK_SM_BuildLevel
+
+Without rays the level goes into the cubes of the moving lights as a mesh of its own, so walls and pillars hide them.
+Its triangles are sorted into chunks of VK_SM_CHUNK units, so a cube draws what lies near its light. They all turn
+the side they show to the right-handed normal (a shader that shows both sides has them twice), for VK_SM_Create to
+keep only what faces the light. Only while no frame is on its way.
+===============
+*/
+#define VK_SM_CHUNK		256.0f
+
+typedef struct {
+	vec3_t		mins, maxs;
+	uint32_t	firstIndex, numIndexes;
+} vkMapChunk_t;
+
+static std::vector<vkMapChunk_t>	vk_mapChunks;
+static std::vector<uint32_t>		vk_mapNear;		// the chunks in reach of the point of the cube being drawn
+
+// a triangle turned so its right-handed normal is the side it shows, qfalse for one without area
+static qboolean VK_SM_Turned( const std::vector<float> &positions, const std::vector<float> &normals, const uint32_t *in, uint32_t *v ) {
+	const float	*a = &positions[in[0] * 3], *b = &positions[in[1] * 3], *c = &positions[in[2] * 3];
+	const float	*na = &normals[in[0] * 3], *nb = &normals[in[1] * 3], *nc = &normals[in[2] * 3];
+	vec3_t		e1, e2, cross, side;
+
+	VectorSubtract( b, a, e1 );
+	VectorSubtract( c, a, e2 );
+	CrossProduct( e1, e2, cross );
+	if ( VectorLengthSquared( cross ) < 0.0001f ) {
+		return qfalse;
+	}
+	VectorAdd( na, nb, side );
+	VectorAdd( side, nc, side );
+	const qboolean turned = (qboolean)( DotProduct( cross, side ) < 0.0f );
+
+	v[0] = in[0];
+	v[1] = in[turned ? 2 : 1];
+	v[2] = in[turned ? 1 : 2];
+	return qtrue;
+}
+
+static void VK_SM_BuildLevel( void ) {
+	typedef struct {
+		uint64_t	cell;
+		uint32_t	v[3];
+	} mapTriangle_t;
+	std::vector<float>			positions, normals;
+	std::vector<uint32_t>		indexes, sorted;
+	std::vector<mapTriangle_t>	triangles;
+	const bmodel_t				*model = &tr.world->bmodels[0];
+
+	for ( int i = 0; i < model->numSurfaces; i++ ) {
+		const msurface_t	*surf = &model->firstSurface[i];
+		const size_t		first = indexes.size();
+
+		if ( !VK_RT_StopsLight( surf->shader ) ) {
+			continue;
+		}
+		VK_RT_SurfaceTriangles( surf, positions, indexes );
+		VK_RT_SurfaceNormals( surf, normals );
+		for ( size_t t = first; t + 2 < indexes.size(); t += 3 ) {
+			mapTriangle_t	tri;
+
+			if ( !VK_SM_Turned( positions, normals, &indexes[t], tri.v ) ) {
+				continue;
+			}
+			const float *a = &positions[tri.v[0] * 3], *b = &positions[tri.v[1] * 3], *c = &positions[tri.v[2] * 3];
+
+			tri.cell = 0;
+			for ( int k = 0; k < 3; k++ ) {
+				const int at = (int)floorf( ( a[k] + b[k] + c[k] ) / ( 3.0f * VK_SM_CHUNK ) );
+
+				tri.cell = ( tri.cell << 20 ) | (uint64_t)( at + 0x80000 );
+			}
+			triangles.push_back( tri );
+			if ( surf->shader->cullType == CT_TWO_SIDED ) {
+				const uint32_t other = tri.v[1];
+
+				tri.v[1] = tri.v[2];
+				tri.v[2] = other;
+				triangles.push_back( tri );
+			}
+		}
+	}
+	std::sort( triangles.begin(), triangles.end(), []( const mapTriangle_t &x, const mapTriangle_t &y ) { return x.cell < y.cell; } );
+	sorted.reserve( triangles.size() * 3 );
+	for ( size_t t = 0; t < triangles.size(); t++ ) {
+		if ( !t || triangles[t].cell != triangles[t - 1].cell ) {
+			vkMapChunk_t chunk;
+
+			ClearBounds( chunk.mins, chunk.maxs );
+			chunk.firstIndex = (uint32_t)sorted.size();
+			chunk.numIndexes = 0;
+			vk_mapChunks.push_back( chunk );
+		}
+		vkMapChunk_t &chunk = vk_mapChunks.back();
+
+		for ( int k = 0; k < 3; k++ ) {
+			sorted.push_back( triangles[t].v[k] );
+			AddPointToBounds( &positions[triangles[t].v[k] * 3], chunk.mins, chunk.maxs );
+		}
+		chunk.numIndexes += 3;
+	}
+	// the brush models after the chunks, a range each, the sides turned the same way (VK_SM_DrawAtlas places them)
+	vk_brushes.assign( Q_max( tr.world->numBModels, 1 ), vkBrush_t() );
+	for ( int b = 1; b < tr.world->numBModels; b++ ) {
+		const bmodel_t	*brush = &tr.world->bmodels[b];
+		vkBrush_t		*out = &vk_brushes[b];
+
+		out->firstIndex = (uint32_t)sorted.size();
+		for ( int i = 0; i < brush->numSurfaces; i++ ) {
+			const msurface_t	*surf = &brush->firstSurface[i];
+			const size_t		first = indexes.size();
+
+			if ( !VK_RT_StopsLight( surf->shader ) ) {
+				continue;
+			}
+			VK_RT_SurfaceTriangles( surf, positions, indexes );
+			VK_RT_SurfaceNormals( surf, normals );
+			for ( size_t t = first; t + 2 < indexes.size(); t += 3 ) {
+				uint32_t v[3];
+
+				if ( VK_SM_Turned( positions, normals, &indexes[t], v ) ) {
+					sorted.insert( sorted.end(), v, v + 3 );
+					if ( surf->shader->cullType == CT_TWO_SIDED ) {
+						sorted.push_back( v[0] );
+						sorted.push_back( v[2] );
+						sorted.push_back( v[1] );
+					}
+				}
+			}
+		}
+		out->numIndexes = (uint32_t)sorted.size() - out->firstIndex;
+	}
+	if ( sorted.empty() ) {
+		vk_mapChunks.clear();
+		vk_brushes.clear();
+		return;
+	}
+	VK_CreateBuffer( &rt.mapPositions, positions.size() * sizeof( float ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, qtrue );
+	memcpy( rt.mapPositions.mapped, positions.data(), positions.size() * sizeof( float ) );
+	VK_CreateBuffer( &rt.mapIndexes, sorted.size() * sizeof( uint32_t ), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, qtrue );
+	memcpy( rt.mapIndexes.mapped, sorted.data(), sorted.size() * sizeof( uint32_t ) );
+	ri.Printf( PRINT_DEVELOPER, "shadow maps: the level has %i triangles in %i chunks\n", (int)triangles.size(), (int)vk_mapChunks.size() );
 }
 
 /*
@@ -804,11 +1050,22 @@ static VkDeviceSize VK_RT_PrepareTriangles( const std::vector<float> &positions,
 
 static void VK_RT_DestroyLevel( void ) {
 	VK_RT_DestroyAccel( &rt.level );
+	for ( vkBrush_t &brush : vk_brushes ) {
+		VK_RT_DestroyAccel( &brush.accel );
+	}
+	vk_brushes.clear();
+	vk_numBrushEnts = 0;
+	VK_DestroyBuffer( &rt.brushPositions );
+	VK_DestroyBuffer( &rt.brushIndexes );
+	rt.brushVertexes = 0;
 	VK_DestroyBuffer( &rt.positions );
 	VK_DestroyBuffer( &rt.indexes );
 	VK_DestroyBuffer( &rt.patches );
 	VK_DestroyBuffer( &rt.cellLists );
 	VK_DestroyBuffer( &rt.cellLight );
+	VK_DestroyBuffer( &rt.mapPositions );
+	VK_DestroyBuffer( &rt.mapIndexes );
+	vk_mapChunks.clear();
 	rt.levelReady = rt.levelPending = qfalse;
 	rt.cellState = 0;
 	vk_patchScale = 0.0f;
@@ -831,6 +1088,64 @@ static void VK_RT_WriteLevelSet( uint32_t binding, const vkBuffer_t *buffer ) {
 		write.pBufferInfo = &info;
 		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 	}
+}
+
+// the build of one brush model: its range of the shared buffers
+static void VK_RT_BrushBuildInfo( const vkBrush_t *brush, VkAccelerationStructureGeometryKHR *geometry,
+	VkAccelerationStructureBuildGeometryInfoKHR *build ) {
+	VK_RT_TrianglesBuildInfo( geometry, build, &rt.brushPositions, rt.brushVertexes, &rt.brushIndexes );
+	geometry->geometry.triangles.indexData.deviceAddress += brush->firstIndex * sizeof( uint32_t );
+}
+
+// the triangles of the brush models and a structure for each (VK_RT_Brushes), the largest scratch one needs
+static VkDeviceSize VK_RT_PrepareBrushes( void ) {
+	std::vector<float>		positions;
+	std::vector<uint32_t>	indexes;
+	const VkBufferUsageFlags	input = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	VkDeviceSize			scratch = 0;
+	int						built = 0;
+
+	vk_brushes.assign( Q_max( tr.world->numBModels, 1 ), vkBrush_t() );
+	for ( int b = 1; b < tr.world->numBModels; b++ ) {
+		const bmodel_t *brush = &tr.world->bmodels[b];
+
+		vk_brushes[b].firstIndex = (uint32_t)indexes.size();
+		for ( int i = 0; i < brush->numSurfaces; i++ ) {
+			if ( VK_RT_StopsLight( brush->firstSurface[i].shader ) ) {
+				VK_RT_SurfaceTriangles( &brush->firstSurface[i], positions, indexes );
+			}
+		}
+		vk_brushes[b].numIndexes = (uint32_t)indexes.size() - vk_brushes[b].firstIndex;
+	}
+	if ( indexes.empty() ) {
+		vk_brushes.clear();
+		return 0;
+	}
+	rt.brushVertexes = (uint32_t)( positions.size() / 3 );
+	VK_CreateBuffer( &rt.brushPositions, positions.size() * sizeof( float ), input, qtrue );
+	memcpy( rt.brushPositions.mapped, positions.data(), positions.size() * sizeof( float ) );
+	VK_CreateBuffer( &rt.brushIndexes, indexes.size() * sizeof( uint32_t ), input, qtrue );
+	memcpy( rt.brushIndexes.mapped, indexes.data(), indexes.size() * sizeof( uint32_t ) );
+	for ( vkBrush_t &brush : vk_brushes ) {
+		VkAccelerationStructureGeometryKHR			geometry;
+		VkAccelerationStructureBuildGeometryInfoKHR	build;
+		VkAccelerationStructureBuildSizesInfoKHR	sizes = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+		const uint32_t								numTriangles = brush.numIndexes / 3;
+
+		if ( !numTriangles ) {
+			brush.numIndexes = 0;
+			continue;
+		}
+		VK_RT_BrushBuildInfo( &brush, &geometry, &build );
+		qvkGetAccelerationStructureBuildSizesKHR( vk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build, &numTriangles, &sizes );
+		VK_RT_CreateAccel( &brush.accel, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, sizes.accelerationStructureSize );
+		brush.scratch = sizes.buildScratchSize;
+		scratch = Q_max( scratch, sizes.buildScratchSize );
+		built++;
+	}
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: %i brush models with %i solid triangles\n", built, (int)( indexes.size() / 3 ) );
+	return scratch;
 }
 
 /*
@@ -858,7 +1173,8 @@ static void VK_RT_PrepareLevel( void ) {
 	rt.levelScratch = 0;
 	rt.previousValid = qfalse;
 	if ( rt.maps ) {
-		return;		// the shadow maps need the light grid of the level alone
+		VK_SM_BuildLevel();		// no structure to build: the cubes of the moving lights draw it
+		return;
 	}
 	vk_patches->clear();
 
@@ -869,6 +1185,7 @@ static void VK_RT_PrepareLevel( void ) {
 		return;
 	}
 	rt.levelScratch = VK_RT_PrepareTriangles( positions, indexes, &rt.positions, &rt.indexes, &rt.level );
+	rt.levelScratch = Q_max( rt.levelScratch, VK_RT_PrepareBrushes() );
 
 	VK_RT_Patches( *vk_patches );
 	VK_CreateBuffer( &rt.patches, sizeof( float ) * 12 * Q_max( (int)vk_patches->size(), 1 ), traced, qtrue );
@@ -907,6 +1224,18 @@ static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
 	range.primitiveCount = rt.numTriangles;
 	qvkCmdBuildAccelerationStructuresKHR( cmd, 1, &build, &ranges );
 	VK_RT_BuildAfterBuild( cmd );
+	// the brush models one after the other in the same scratch memory
+	for ( const vkBrush_t &brush : vk_brushes ) {
+		if ( !brush.numIndexes ) {
+			continue;
+		}
+		VK_RT_BrushBuildInfo( &brush, &geometry, &build );
+		build.dstAccelerationStructure = brush.accel.as;
+		build.scratchData.deviceAddress = VK_RT_ScratchAt( 0 );
+		range.primitiveCount = brush.numIndexes / 3;
+		qvkCmdBuildAccelerationStructuresKHR( cmd, 1, &build, &ranges );
+		VK_RT_BuildAfterBuild( cmd );
+	}
 	rt.levelPending = qfalse;
 	rt.levelReady = qtrue;
 }
@@ -971,24 +1300,11 @@ THE PLAYERS
 ===============================================================================
 */
 
-/*
-===============
-VK_RT_AddCaster
+// a surface of the player ent into his acceleration structure
+static void VK_RT_CasterSurface( const trRefEntity_t *ent, CBoneCache *bones, const mdxmSurface_t *surface ) {
+	const int	entityNum = (int)( ent - backEnd.refdef.entities );
+	vkCaster_t	*caster = NULL;
 
-A Ghoul2 surface went into a batch of the device (VK_AddDeviceMesh): it also goes into the acceleration structure
-of its player when his entity casts a shadow and this is the view of the level.
-===============
-*/
-void VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface ) {
-	const trRefEntity_t	*ent = backEnd.currentEntity;
-	const int			entityNum = (int)( ent - backEnd.refdef.entities );
-	vkCaster_t			*caster = NULL;
-
-	// (a body cut in two is no caster: each half would cast the whole body)
-	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE ) || ent->cut
-		|| backEnd.viewParms.isPortal || ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
-		return;
-	}
 	if ( rt.castersFrame != backEnd.viewParms.frameCount ) {
 		rt.castersFrame = backEnd.viewParms.frameCount;
 		rt.numCasters = 0;
@@ -1024,8 +1340,69 @@ void VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface ) {
 	}
 }
 
+/*
+===============
+VK_RT_AddCaster
+
+A Ghoul2 surface went into a batch of the device (VK_AddDeviceMesh): it also goes into the acceleration structure
+of its player when his entity casts a shadow and this is the view of the level.
+===============
+*/
+void VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface ) {
+	const trRefEntity_t *ent = backEnd.currentEntity;
+
+	// (a body cut in two is no caster: each half would cast the whole body)
+	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE ) || ent->cut
+		|| backEnd.viewParms.isPortal || ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		return;
+	}
+	VK_RT_CasterSurface( ent, bones, surface );
+}
+
+/*
+===============
+VK_RT_WantsHidden
+
+Casters came only from what the view draws, so the player himself in first person and everyone just outside the
+picture threw no shadow into it. Front end: such a player, near enough to matter, in the view of the level.
+===============
+*/
+qboolean VK_RT_WantsHidden( const trRefEntity_t *ent ) {
+	return (qboolean)( rt.skinPipeline && VK_RT_Wanted() && ( ent->e.renderfx & RF_SHADOW_PLANE ) && !ent->cut
+		&& !tr.viewParms.isPortal && !tr.viewParms.isPuddle && !tr.viewParms.probeFace
+		&& !( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )
+		&& DistanceSquared( ent->e.origin, tr.viewParms.ori.origin ) < VK_RT_HIDDEN_RANGE * VK_RT_HIDDEN_RANGE );
+}
+
+// front end: a surface of such a player. It stays out of the list of surfaces, which draws what it is given.
+void VK_RT_QueueCaster( const trRefEntity_t *ent, CBoneCache *bones, const mdxmSurface_t *surface ) {
+	if ( !VK_RT_WantsHidden( ent ) ) {
+		return;
+	}
+	if ( rt.queuedFrame != tr.viewParms.frameCount ) {
+		rt.queuedFrame = tr.viewParms.frameCount;
+		rt.numQueued = 0;
+	}
+	if ( rt.numQueued < VK_RT_MAX_QUEUED ) {
+		rt.queued[rt.numQueued].ent = ent;
+		rt.queued[rt.numQueued].bones = bones;
+		rt.queued[rt.numQueued].surface = surface;
+		rt.numQueued++;
+	}
+}
+
+static void VK_RT_TakeQueued( void ) {
+	if ( rt.queuedFrame == backEnd.viewParms.frameCount ) {
+		for ( int i = 0; i < rt.numQueued; i++ ) {
+			VK_RT_CasterSurface( rt.queued[i].ent, rt.queued[i].bones, rt.queued[i].surface );
+		}
+	}
+	rt.numQueued = 0;
+}
+
 // R_Init() ran: the surfaces of the models may be others at the same addresses
 void VK_RT_ModelsChanged( void ) {
+	rt.numQueued = 0;
 	if ( rt.localFirst ) {
 		rt.localFirst->clear();
 	}
@@ -1248,7 +1625,8 @@ static void VK_RT_RecordCasters( VkCommandBuffer cmd ) {
 ===============
 VK_RT_RecordTop
 
-The top level of this frame: the level with mask 1, each caster with mask 2 where his entity is.
+The top level of this frame: the level with mask 1, each caster with mask 2 where his entity is, the brush models
+near the eye with mask 4 where theirs are.
 ===============
 */
 static void VK_RT_RecordTop( VkCommandBuffer cmd ) {
@@ -1285,6 +1663,21 @@ static void VK_RT_RecordTop( VkCommandBuffer cmd ) {
 		instance->mask = 0x02;
 		instance->flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 		instance->accelerationStructureReference = caster->address;
+	}
+	for ( int i = 0; i < vk_numBrushEnts && rt.levelReady && count < VK_RT_MAX_INSTANCES; i++ ) {
+		const vkBrushEntity_t				*ent = &vk_brushEnts[i];
+		VkAccelerationStructureInstanceKHR	*instance = &instances[count++];
+
+		memset( instance, 0, sizeof( *instance ) );
+		for ( int r = 0; r < 3; r++ ) {
+			instance->transform.matrix[r][0] = ent->axis[0][r];
+			instance->transform.matrix[r][1] = ent->axis[1][r];
+			instance->transform.matrix[r][2] = ent->axis[2][r];
+			instance->transform.matrix[r][3] = ent->origin[r];
+		}
+		instance->mask = 0x04;
+		instance->flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance->accelerationStructureReference = vk_brushes[ent->brush].accel.address;
 	}
 
 	memset( &geometry, 0, sizeof( geometry ) );
@@ -1433,7 +1826,7 @@ static void VK_RT_CreateLayouts( void ) {
 		sizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		sizes[0].descriptorCount = VK_FRAMES;
 		sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sizes[1].descriptorCount = VK_FRAMES + 3;
+		sizes[1].descriptorCount = VK_FRAMES + 5;
 		pool.poolSizeCount = 2;
 	} else {
 		sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
@@ -1441,10 +1834,10 @@ static void VK_RT_CreateLayouts( void ) {
 		sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		sizes[1].descriptorCount = VK_FRAMES * 3;
 		sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sizes[2].descriptorCount = VK_FRAMES + 3;
+		sizes[2].descriptorCount = VK_FRAMES + 5;
 		pool.poolSizeCount = 3;
 	}
-	pool.maxSets = VK_FRAMES + 3;
+	pool.maxSets = VK_FRAMES + 5;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &rt.pool ) );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
@@ -1457,6 +1850,7 @@ static void VK_RT_CreateLayouts( void ) {
 	layouts[0] = layouts[1] = vk.postSetLayout;
 	alloc.descriptorSetCount = 2;
 	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, rt.maskSets ) );
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, rt.lightMaskSets ) );
 	alloc.descriptorSetCount = 1;
 	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &rt.rawSet ) );
 
@@ -1558,6 +1952,7 @@ static void VK_RT_EnsureMask( void ) {
 		VK_CreateTarget( &rt.lightMask[i], halfWidth, halfHeight, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 		VK_TargetLayout( vk.frame->cmd, &rt.lightMask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		VK_WriteSet( rt.lightMaskSets[i], vk.postSampler, rt.lightMask[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		rt.lightShown[i] = -1;
 	}
 	VK_DestroyTarget( &rt.raw );
@@ -1600,6 +1995,7 @@ void VK_RT_Shutdown( void ) {
 	vk_patches = NULL;
 	VK_DestroyTarget( &rt.atlas );
 	qvkDestroyPipeline( vk.device, rt.depthPipeline, NULL );
+	qvkDestroyPipeline( vk.device, rt.depthLevelPipeline, NULL );
 	qvkDestroyPipeline( vk.device, rt.smShadowPipeline, NULL );
 	qvkDestroyPipeline( vk.device, rt.smLightsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.depthVertex, NULL );
@@ -1822,6 +2218,12 @@ static void VK_SM_Create( void ) {
 	info.pDynamicState = &dynamic;
 	info.layout = rt.depthLayout;
 	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.depthPipeline ) );
+	// The level: only the side that faces the light, so a light lying just under the floor it hit (an explosion) still
+	// lights the room. VK_SM_FaceView has right x up = -forward, so a triangle with its right-handed normal to the light
+	// has a negative area for the device, which counts that as its back: the front is what is culled.
+	raster.cullMode = VK_CULL_MODE_FRONT_BIT;
+	raster.depthBiasSlopeFactor = 1.5f;		// (more pushes a wall seen edge on behind what stands at its foot)
+	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.depthLevelPipeline ) );
 
 	// the masks from the atlas, as the rays write them
 	rt.smShadowFragment = VK_CreateShader( vk_smShadowFrag, sizeof( vk_smShadowFrag ) );
@@ -1855,11 +2257,63 @@ static void VK_SM_Tile( VkCommandBuffer cmd, int tile ) {
 	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
 
+// the chunks of the level around center that this face of its cube sees, in as few draws as they allow
+static void VK_SM_DrawLevel( VkCommandBuffer cmd, const float *view, const vec3_t center, int face ) {
+	const int	a = face >> 1, b = ( a + 1 ) % 3, c = ( a + 2 ) % 3;
+	uint32_t	first = 0, count = 0;
+
+	qvkCmdPushConstants( cmd, rt.depthLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( float ) * 16, view );
+	for ( const uint32_t n : vk_mapNear ) {
+		const vkMapChunk_t	*chunk = &vk_mapChunks[n];
+		vec3_t				lo, hi;
+
+		VectorSubtract( chunk->mins, center, lo );
+		VectorSubtract( chunk->maxs, center, hi );
+		// (the face is the pyramid where the axis a is at least as far as the two others)
+		const float along = ( face & 1 ) ? -lo[a] : hi[a];
+
+		if ( along + hi[b] < 0.0f || along - lo[b] < 0.0f || along + hi[c] < 0.0f || along - lo[c] < 0.0f ) {
+			continue;
+		}
+		if ( count && first + count == chunk->firstIndex ) {
+			count += chunk->numIndexes;
+			continue;
+		}
+		if ( count ) {
+			qvkCmdDrawIndexed( cmd, count, 1, first, 0, 0 );
+		}
+		first = chunk->firstIndex;
+		count = chunk->numIndexes;
+	}
+	if ( count ) {
+		qvkCmdDrawIndexed( cmd, count, 1, first, 0, 0 );
+	}
+}
+
+// the chunks within reach of a point, for the six faces of its cube
+static void VK_SM_NearChunks( const vec3_t center, float reach ) {
+	vk_mapNear.clear();
+	for ( size_t n = 0; n < vk_mapChunks.size(); n++ ) {
+		const vkMapChunk_t	*chunk = &vk_mapChunks[n];
+		float				d = 0.0f;
+
+		for ( int k = 0; k < 3; k++ ) {
+			const float out = center[k] < chunk->mins[k] ? chunk->mins[k] - center[k] : ( center[k] > chunk->maxs[k] ? center[k] - chunk->maxs[k] : 0.0f );
+
+			d += out * out;
+		}
+		if ( d < reach * reach ) {
+			vk_mapNear.push_back( (uint32_t)n );
+		}
+	}
+}
+
 /*
 ===============
 VK_SM_DrawAtlas
 
-The players of this frame into the atlas, the views of the tiles into rows (the rt globals of the frame). After
+The players of this frame, and without rays the level around the moving lights, into the atlas, the views of the
+tiles into rows (the rt globals of the frame). After
 VK_RT_SkinCasters and VK_RT_PickLights. No target is begun before and after.
 ===============
 */
@@ -1868,6 +2322,12 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 	VkRenderingInfo				info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
 	const VkDeviceSize			zero = 0;
 	float						view[16];
+	struct {
+		int		tile;
+		vec3_t	center;
+		float	zFar;
+	}							cubes[VK_SM_TILES / 6];
+	int							numCubes = 0;
 
 	VK_TargetLayout( cmd, &rt.atlas, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 	depthInfo.imageView = rt.atlas.view;
@@ -1908,7 +2368,7 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 		along[point] = ( (float)point + 0.1f + 0.8f * Q_flrand( 0.0f, 1.0f ) ) / (float)VK_SM_POINTS;
 		rows[21][1 + point] = along[point];
 	}
-	for ( int k = 0; k < 2; k++ ) {
+	for ( int k = 0; k < VK_RT_LIGHTS; k++ ) {
 		const vkRtLight_t	*light = &rt.lights[k];
 
 		if ( !light->active ) {
@@ -1920,16 +2380,76 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 
 			VectorSubtract( light->end, light->start, center );
 			VectorMA( light->start, light->tube ? along[point] : 0.0f, center, center );
+			// A muzzle flash or the charge of a shot right at a body threw a huge second shadow of the shooter across the
+			// room. With rays the shader makes it a light one (lightmask.glsl CubeShadow). Without them the level is in
+			// these cubes too and must stay dark behind a wall, so the player nearest to such a point casts nothing from
+			// it, anyone else does. A blade keeps its shadow.
+			int own = -1;
+			if ( rt.maps && !light->tube ) {
+				float nearest = VK_SM_OWN_LIGHT;
+
+				for ( int c = 0; c < rt.numCasters; c++ ) {
+					const float away = Distance( rt.casters[c].origin, center );
+
+					if ( away < nearest ) {
+						nearest = away;
+						own = c;
+					}
+				}
+			}
+			cubes[numCubes].tile = VK_SM_LIGHT_TILE( k, point );
+			VectorCopy( center, cubes[numCubes].center );
+			cubes[numCubes].zFar = zFar;
+			numCubes++;
 			for ( int face = 0; face < 6; face++ ) {
-				const int tile = VK_RT_MAX_CASTERS + ( k * VK_SM_POINTS + point ) * 6 + face;
+				const int tile = VK_SM_LIGHT_TILE( k, point ) + face;
 
 				VK_SM_FaceView( center, face, zFar, view );
 				memcpy( rows[VK_SM_FIRST_ROW + tile * 4], view, sizeof( view ) );
 				VK_SM_Tile( cmd, tile );
 				for ( int c = 0; c < rt.numCasters; c++ ) {
-					if ( Distance( rt.casters[c].origin, center ) < zFar ) {
+					if ( c != own && Distance( rt.casters[c].origin, center ) < zFar ) {
 						VK_SM_DrawCaster( cmd, c, view );
 					}
+				}
+			}
+		}
+	}
+	if ( !vk_mapChunks.empty() ) {
+		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.depthLevelPipeline );
+		vk.boundPipeline = rt.depthLevelPipeline;
+		qvkCmdBindVertexBuffers( cmd, 0, 1, &rt.mapPositions.buffer, &zero );
+		qvkCmdBindIndexBuffer( cmd, rt.mapIndexes.buffer, 0, VK_INDEX_TYPE_UINT32 );
+		for ( int i = 0; i < numCubes; i++ ) {
+			VK_SM_NearChunks( cubes[i].center, cubes[i].zFar );
+			for ( int face = 0; face < 6; face++ ) {
+				const int tile = cubes[i].tile + face;
+
+				VK_SM_Tile( cmd, tile );
+				VK_SM_DrawLevel( cmd, rows[VK_SM_FIRST_ROW + tile * 4], cubes[i].center, face );
+			}
+			// the doors and lifts in reach, where they are now
+			for ( int b = 0; b < vk_numBrushEnts; b++ ) {
+				const vkBrushEntity_t	*ent = &vk_brushEnts[b];
+				const vkBrush_t			*brush = &vk_brushes[ent->brush];
+				float					model[16], mvp[16];
+
+				if ( Distance( ent->center, cubes[i].center ) - ent->radius > cubes[i].zFar ) {
+					continue;
+				}
+				for ( int c = 0; c < 3; c++ ) {
+					VectorCopy( ent->axis[c], model + c * 4 );
+					model[c * 4 + 3] = 0.0f;
+				}
+				VectorCopy( ent->origin, model + 12 );
+				model[15] = 1.0f;
+				for ( int face = 0; face < 6; face++ ) {
+					const int tile = cubes[i].tile + face;
+
+					VK_SM_Multiply( rows[VK_SM_FIRST_ROW + tile * 4], model, mvp );
+					VK_SM_Tile( cmd, tile );
+					qvkCmdPushConstants( cmd, rt.depthLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( mvp ), mvp );
+					qvkCmdDrawIndexed( cmd, brush->numIndexes, 1, brush->firstIndex, 0, 0 );
 				}
 			}
 		}
@@ -1950,18 +2470,23 @@ THE PASSES
 ===============
 VK_RT_PickLights
 
-The two moving lights whose shadows of the players are traced this frame: of the lights that reach a player, the
-brightest and nearest to the eye (a saber in the hand of the player, the bolt flying past).
+The moving lights with shadows this frame, the brightest and nearest to the eye: a saber in the hand of the player,
+the bolt flying past, the flash of a clash or a blast. Blades cost three cubes, so at most VK_RT_TUBES of them, and
+they come first in rt.lights. Any light can be hidden by the level (by rays, or in the cubes of the shadow maps); only
+where a level has no mesh for the cubes a light has to reach a player to cast anything.
 ===============
 */
 static void VK_RT_PickLights( void ) {
-	float best[2] = { 0.0f, 0.0f };
+	vkRtLight_t	picked[VK_RT_LIGHTS];
+	float		scores[VK_RT_LIGHTS] = { 0.0f };
+	int			count = 0, next = 0;
 
 	memset( rt.lights, 0, sizeof( rt.lights ) );
 	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
 		const dlight_t *dl = &backEnd.refdef.dlights[l];
 		vkRtLight_t light;
 		float score, nearest = 1e9f;
+		int slot = -1, tubes = 0;
 
 		memset( &light, 0, sizeof( light ) );
 		light.active = qtrue;
@@ -1974,27 +2499,54 @@ static void VK_RT_PickLights( void ) {
 			VectorCopy( dl->origin, light.start );
 			VectorCopy( dl->origin, light.end );
 			light.range = dl->radius;
+			light.inSolid = R_PointInSolid( dl->origin );
 		}
-		// it has to reach a player for him to cast a shadow from it
-		for ( int c = 0; c < rt.numCasters; c++ ) {
-			nearest = Q_min( nearest, Distance( dl->origin, rt.casters[c].origin ) );
-		}
-		if ( nearest > dl->radius + 64.0f ) {
-			continue;
+		light.power = ( dl->color[0] * 0.3f + dl->color[1] * 0.59f + dl->color[2] * 0.11f ) * Com_Clamp( 0.0f, 8.0f, v_dlightScale->value );
+		if ( rt.maps && vk_mapChunks.empty() ) {
+			for ( int c = 0; c < rt.numCasters; c++ ) {
+				nearest = Q_min( nearest, Distance( dl->origin, rt.casters[c].origin ) );
+			}
+			if ( nearest > dl->radius + 64.0f ) {
+				continue;
+			}
 		}
 		score = ( dl->color[0] * 0.3f + dl->color[1] * 0.59f + dl->color[2] * 0.11f ) * light.range
 			/ ( 1.0f + Distance( dl->origin, backEnd.viewParms.ori.origin ) / 512.0f );
 		if ( score <= 0.0f ) {
 			continue;
 		}
-		if ( score > best[0] ) {
-			best[1] = best[0];
-			rt.lights[1] = rt.lights[0];
-			best[0] = score;
-			rt.lights[0] = light;
-		} else if ( score > best[1] ) {
-			best[1] = score;
-			rt.lights[1] = light;
+		for ( int i = 0; i < count; i++ ) {
+			tubes += picked[i].tube ? 1 : 0;
+		}
+		if ( light.tube && tubes >= VK_RT_TUBES ) {
+			for ( int i = 0; i < count; i++ ) {
+				if ( picked[i].tube && ( slot < 0 || scores[i] < scores[slot] ) ) {
+					slot = i;
+				}
+			}
+		} else if ( count < VK_RT_LIGHTS ) {
+			slot = count++;
+			scores[slot] = 0.0f;
+		} else {
+			for ( int i = 0; i < count; i++ ) {
+				if ( slot < 0 || scores[i] < scores[slot] ) {
+					slot = i;
+				}
+			}
+		}
+		if ( score > scores[slot] ) {
+			scores[slot] = score;
+			picked[slot] = light;
+		}
+	}
+	for ( int i = 0; i < count; i++ ) {
+		if ( picked[i].tube ) {
+			rt.lights[next++] = picked[i];
+		}
+	}
+	for ( int i = 0; i < count; i++ ) {
+		if ( !picked[i].tube ) {
+			rt.lights[next++] = picked[i];
 		}
 	}
 }
@@ -2415,7 +2967,7 @@ static void VK_RT_TraceLamps( VkCommandBuffer cmd ) {
 VK_RT_LightChannel
 
 For the light pass of a moving light in the view of the level: which channel of the mask the light passes read
-now has its shadows (1 red, 2 green, 0 none), found by where the light was when the mask was made (this frame: the
+now has its shadows (1 to 4: red to alpha, 0 none), found by where the light was when the mask was made (this frame: the
 light passes wait for the shadows, rb_deferDlights), and the slot of the texture table that shows that mask
 ===============
 */
@@ -2428,22 +2980,30 @@ int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
 	if ( rt.lightShown[read] != (int)tr.rtLightImage[read]->texnum ) {
 		return 0;
 	}
-	for ( int k = 0; k < 2; k++ ) {
+	int channel = 0;
+	// (a saber swings: the middle of its blade moves up to two hands' width in a frame of a fast swing)
+	float best = 48.0f;
+
+	for ( int k = 0; k < VK_RT_LIGHTS; k++ ) {
 		const vkRtLight_t *was = &rt.readLights[k];
 		vec3_t middle;
+		float d;
 
 		if ( !was->active ) {
 			continue;
 		}
 		VectorAdd( was->start, was->end, middle );
 		VectorScale( middle, 0.5f, middle );
-		// (a saber swings: the middle of its blade moves up to two hands' width in a frame of a fast swing)
-		if ( Distance( middle, dl->origin ) < 48.0f && (qboolean)( dl->lineRange > 0.0f ) == was->tube ) {
-			*slot = tr.rtLightImage[read]->texnum;
-			return k + 1;
+		d = Distance( middle, dl->origin );
+		if ( d < best && (qboolean)( dl->lineRange > 0.0f ) == was->tube ) {
+			best = d;
+			channel = k + 1;
 		}
 	}
-	return 0;
+	if ( channel ) {
+		*slot = tr.rtLightImage[read]->texnum;
+	}
+	return channel;
 }
 
 qboolean VK_RT_Ready( void ) {
@@ -2453,6 +3013,47 @@ qboolean VK_RT_Ready( void ) {
 // the view of the level asks for a pass that traces
 qboolean VK_RT_Wanted( void ) {
 	return (qboolean)( rt.layout && tr.world && ( v_rtDebug->integer > 0 || v_rtShadows->integer ) );
+}
+
+// The level hides the moving lights also in a frame without a player to cast anything (first person, nobody in sight).
+// cg_shadows 2 is the setting of all these shadows; the players carry it in RF_SHADOW_PLANE, the level not.
+static qboolean VK_RT_LevelLights( void ) {
+	return (qboolean)( ( rt.maps ? !vk_mapChunks.empty() : rt.levelReady ) && backEnd.refdef.num_dlights > 0
+		&& ri.Cvar_VariableIntegerValue( "cg_shadows" ) == 2 );
+}
+
+// the shadows from the moving lights, for the light passes after them (rt.lights is filled from the front)
+static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobals_t *globals ) {
+	if ( !rt.lights[0].active ) {
+		rt.readValid = qfalse;
+		return;
+	}
+	const VkDescriptorSet	lightSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
+	vkTarget_t				*target = &rt.lightMask[rt.lightWrite];
+	const int				slot = (int)tr.rtLightImage[rt.lightWrite]->texnum;
+
+	VK_BeginTarget( target, NULL, 1, qfalse );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.smLightsPipeline );
+	vk.boundPipeline = rt.smLightsPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
+	VK_RT_WholeTarget( cmd, target );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_EndTarget();
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_GpuMark( "rt light shadows" );
+	if ( rt.lightShown[rt.lightWrite] != slot ) {
+		VK_ShowTarget( slot, target );
+		rt.lightShown[rt.lightWrite] = slot;
+	}
+	memcpy( rt.readLights, rt.lights, sizeof( rt.readLights ) );
+	memcpy( rt.readView, rows[0], sizeof( float ) * 16 );
+	memcpy( rt.readView[4], rows[8], sizeof( float ) * 4 );
+	rt.readValid = qtrue;
+	rt.lightWrite ^= 1;
+	// The light passes of the solid surfaces run after this (vk_backend.cpp rb_deferDlights) and read the mask
+	// of this frame: they need its view too. (The globals are read when the frame runs on the device, so this
+	// is what every draw of the frame sees.)
+	memcpy( globals->rt[42], rt.readView, sizeof( rt.readView ) );
 }
 
 /*
@@ -2472,10 +3073,12 @@ void VK_RT_Pass( void ) {
 	if ( !vk.frame || !VK_RT_Wanted() ) {
 		return;
 	}
-	// Nothing to trace this frame: no player casts a shadow (VK_RT_AddCaster ran during the level), the level is
-	// built and its cells are traced, no debug view. Splitting the level, resolving its samples and building the
-	// top structure cost about 0.1 ms a frame for nothing (2026-11-14).
+	VK_RT_TakeQueued();
+	// Nothing to trace this frame: no player casts a shadow (VK_RT_AddCaster ran during the level), no moving light
+	// for the level to hide, the level is built and its cells are traced, no debug view. Splitting the level,
+	// resolving its samples and building the top structure cost about 0.1 ms a frame for nothing (2026-11-14).
 	if ( v_rtDebug->integer <= 0 && ( rt.castersFrame != backEnd.viewParms.frameCount || !rt.numCasters )
+		&& !VK_RT_LevelLights()
 		&& rt.world == tr.world && rt.worldLoads == r_worldLoads && !rt.levelPending && rt.cellState == 0 ) {
 		rt.numCasters = 0;
 		rt.previousValid = qfalse;
@@ -2492,6 +3095,7 @@ void VK_RT_Pass( void ) {
 		VK_RT_PrepareLevel();
 	}
 	casterScratch = VK_RT_PrepareCasters();
+	VK_RT_BrushEntities();
 	VK_RT_EnsureMask();
 	if ( rt.maps ) {
 		// the shadow maps draw the skinned players, nothing is built
@@ -2543,11 +3147,14 @@ void VK_RT_Pass( void ) {
 	// the moving lights whose shadows are traced this frame (38-41), and the view the mask the light passes read
 	// was made in (42-46: view and projection, its rect)
 	VK_RT_PickLights();
-	for ( int k = 0; k < 2; k++ ) {
-		VectorCopy( rt.lights[k].start, rows[38 + k * 2] );
-		rows[38 + k * 2][3] = rt.lights[k].active ? rt.lights[k].range : 0.0f;
-		VectorCopy( rt.lights[k].end, rows[39 + k * 2] );
-		rows[39 + k * 2][3] = rt.lights[k].tube ? 1.0f : 0.0f;
+	for ( int k = 0; k < VK_RT_LIGHTS; k++ ) {
+		const int row = VK_RT_LIGHT_ROW( k );
+
+		VectorCopy( rt.lights[k].start, rows[row] );
+		rows[row][3] = rt.lights[k].active ? rt.lights[k].range : 0.0f;
+		VectorCopy( rt.lights[k].end, rows[row + 1] );
+		rows[row + 1][3] = rt.lights[k].tube ? 1.0f : ( rt.lights[k].inSolid ? -1.0f : 0.0f );
+		rows[VK_RT_POWER_ROW][k] = rt.lights[k].active ? rt.lights[k].power : 0.0f;
 	}
 	memcpy( rows[42], rt.readView, sizeof( rt.readView ) );
 	// the players as spheres: a pixel whose light passes none of them traces nothing
@@ -2568,7 +3175,7 @@ void VK_RT_Pass( void ) {
 		// darken the shade of the walls too. They take the light of the grid everywhere (smshadow.frag).
 		rows[11][3] = 0.0f;
 	}
-	if ( rt.numCasters ) {
+	if ( rt.numCasters || ( rt.maps && VK_RT_LevelLights() ) ) {
 		VK_SM_DrawAtlas( cmd, rows );
 		VK_GpuMark( "shadow maps" );
 	}
@@ -2586,14 +3193,20 @@ void VK_RT_Pass( void ) {
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );
 	} else if ( !rt.numCasters ) {
-		// nothing in the mask this frame: the next one starts it again
+		// nothing in the mask of the players this frame: the next one starts it again
 		rt.previousValid = qfalse;
 		rt.readValid = qfalse;
+		if ( VK_RT_LevelLights() ) {
+			VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+			// (no player was drawn into it, maybe ever; the mask only looks at it through the empty rows of its tiles)
+			VK_TargetLayout( cmd, &rt.atlas, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+			VK_RT_DrawLightMask( cmd, rows, globals );
+			rt.frameNumber++;
+		}
 	} else {
 		const int				now = rt.frameNumber & 1;
 		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet, rt.maskSets[now ^ 1] };
 		const VkDescriptorSet	accumSets[4] = { vk.frame->set, rt.rawSet, vk.depthSet, rt.maskSets[now ^ 1] };
-		const VkDescriptorSet	resolveSets[3] = { vk.frame->set, rt.maskSets[now], vk.depthSet };
 
 		// the rays of this frame (rt.raw); they read the depth of the scene, which has to be in the layout for reading
 		// first (the validation layer: the set of the depth expects it)
@@ -2617,48 +3230,20 @@ void VK_RT_Pass( void ) {
 		VK_EndTarget();
 		VK_TargetLayout( cmd, &rt.mask[now], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
-		// the shadows from the moving lights, for the light passes of the next frame
-		if ( rt.lights[0].active || rt.lights[1].active ) {
-			const VkDescriptorSet	lightSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
-			vkTarget_t				*target = &rt.lightMask[rt.lightWrite];
-			const int				slot = (int)tr.rtLightImage[rt.lightWrite]->texnum;
-
-			VK_BeginTarget( target, NULL, 1, qfalse );
-			qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.smLightsPipeline );
-			vk.boundPipeline = rt.smLightsPipeline;
-			qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
-			VK_RT_WholeTarget( cmd, target );
-			qvkCmdDraw( cmd, 3, 1, 0, 0 );
-			VK_EndTarget();
-			VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-			VK_GpuMark( "rt light shadows" );
-			if ( rt.lightShown[rt.lightWrite] != slot ) {
-				VK_ShowTarget( slot, target );
-				rt.lightShown[rt.lightWrite] = slot;
-			}
-			memcpy( rt.readLights, rt.lights, sizeof( rt.readLights ) );
-			memcpy( rt.readView, rows[0], sizeof( float ) * 16 );
-			memcpy( rt.readView[4], rows[8], sizeof( float ) * 4 );
-			rt.readValid = qtrue;
-			rt.lightWrite ^= 1;
-			// The light passes of the solid surfaces run after this (vk_backend.cpp rb_deferDlights) and read the mask
-			// of this frame: they need its view too. (The globals are read when the frame runs on the device, so this
-			// is what every draw of the frame sees.)
-			memcpy( globals->rt[42], rt.readView, sizeof( rt.readView ) );
-		} else {
-			rt.readValid = qfalse;
-		}
+		VK_RT_DrawLightMask( cmd, rows, globals );
 
 		memcpy( rt.previous, rows[0], sizeof( float ) * 16 );
 		VectorCopy( rows[4], rt.previous[4] );
 		rt.previousValid = qtrue;
 		rt.frameNumber++;
 
-		// softened onto the frame
+		// softened onto the frame, with what the moving lights just made (VK_RT_DrawLightMask moved lightWrite on)
+		const VkDescriptorSet resolveSets[4] = { vk.frame->set, rt.maskSets[now], vk.depthSet, rt.lightMaskSets[rt.lightWrite ^ 1] };
+
 		VK_BeginOverLevel( cmd );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.resolvePipeline );
 		vk.boundPipeline = rt.resolvePipeline;
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, resolveSets, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, resolveSets, 0, NULL );
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );

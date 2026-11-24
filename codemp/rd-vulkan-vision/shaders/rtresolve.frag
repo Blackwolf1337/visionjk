@@ -2,7 +2,8 @@
 
 // cg_shadows 2 (vk_rt.cpp): the shadow mask of shaders/rtshadow.frag laid onto the view of the level, softened over
 // the pixels around each one that lie on the same surface by their depth, so the few rays a pixel had become a soft
-// shadow. Multiplied into the frame.
+// shadow. Multiplied into the frame. Where a moving light shines on a point it outshines the light of the level there, and
+// the shadow from that light fades: a shot shows one shadow, its own, and not two that cross (their picture 2026-11-24).
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -11,16 +12,44 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[319];
+	vec4	rt[372];
 } globals;
 layout( set = 1, binding = 0 ) uniform sampler2D u_mask;		// the shadow mask, read pixel for pixel
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
+layout( set = 3, binding = 0 ) uniform sampler2D u_lights;	// what hides each moving light (shaders/lightmask.glsl)
 
 #define W	globals.rt
 
 layout( location = 0 ) out vec4 o_color;
 
 #include "scene.glsl"
+
+#include "geom.glsl"
+
+// how much of a moving light reaches the point p, the strongest of them, 0 to 1: the fall of generic.frag DynamicLight
+// and what hides it. Rows 38 + 2k (2 and 3: 303 + 2 (k - 2)): where each is and its reach, row 307: how strong.
+float MovingLight( vec3 p ) {
+	vec4 hidden = texture( u_lights, gl_FragCoord.xy / ( vec2( textureSize( u_lights, 0 ) ) * max( W[15].z, 1.0 ) ) );
+	float most = 0.0;
+
+	for ( int k = 0; k < 4; k++ ) {
+		int row = k < 2 ? 38 + k * 2 : 303 + ( k - 2 ) * 2;
+		vec4 a = W[row], b = W[row + 1];
+
+		if ( a.w <= 0.0 || W[307][k] <= 0.0 ) {
+			continue;
+		}
+		float x = distance( NearestOnSegment( a.xyz, b.xyz, p ), p ) / a.w;
+		if ( x >= 1.0 ) {
+			continue;
+		}
+		float window = 1.0 - x * x * x * x;
+		float fall = window * window / ( 1.0 + 4.0 * x * x ) * 1.6;
+
+		most = max( most, clamp( fall * W[307][k] * 1.25, 0.0, 1.0 ) * ( 1.0 - hidden[k] ) );
+	}
+	return most;
+}
 
 #define TAPS	16
 const vec2 DISK[TAPS] = vec2[TAPS](
@@ -48,5 +77,5 @@ void main() {
 		sum += w * texelFetch( u_mask, at, 0 ).r;
 		weights += w;
 	}
-	o_color = vec4( vec3( 1.0 - sum / weights ), 1.0 );
+	o_color = vec4( vec3( 1.0 - sum / weights * ( 1.0 - 0.9 * MovingLight( ScenePoint( gl_FragCoord.xy ) ) ) ), 1.0 );
 }

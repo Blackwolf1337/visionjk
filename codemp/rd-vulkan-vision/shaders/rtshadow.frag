@@ -32,7 +32,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[319];
+	vec4	rt[372];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
@@ -50,7 +50,7 @@ layout( set = 1, binding = 3, std430 ) readonly buffer Lists {
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
 
 #define W		globals.rt
-#define LAMPS	255
+#define LAMPS	308
 #define LAMP_ROWS	4
 #define LIST	8
 #define NONE	0xffffffffu
@@ -82,6 +82,10 @@ float HitAt( vec3 origin, vec3 dir, float tMax, uint mask ) {
 }
 
 #include "grid.glsl"
+
+float LevelHitAt( vec3 origin, vec3 dir, float tMax ) {
+	return HitAt( origin, dir, tMax, 0x01u );
+}
 
 // a number in [0, 1) for this pixel, frame and ray
 float Noise( uint k ) {
@@ -285,7 +289,12 @@ void main() {
 		o_color = vec4( 0.0, PackDistance( 8192.0 ) );
 		return;
 	}
+	if ( d < VIEW_WEAPON_RANGE ) {
+		o_color = vec4( 0.0, PackDistance( d ) );
+		return;
+	}
 	// (what the frames before had is added by shaders/rtaccum.frag)
-	float mask = Shadow( p, SceneSurface( pixel, p, normalize( eye - p ) ) );
+	vec3 normal = SceneSurfaceWide( pixel, p, normalize( eye - p ), 32.0 );
+	float mask = Shadow( OnLevel( p, normal ), normal );
 	o_color = vec4( mask, PackDistance( d ) );
 }

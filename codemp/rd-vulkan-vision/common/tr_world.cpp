@@ -250,6 +250,15 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 	return qfalse;
 }
 
+// VisionJK: the surfaces of a brush model (a door, a lift) are in the space of the model, so they are tested against
+// the lights moved into it (R_DlightBmodel). Against the place in the world, a lift that had gone up or a door that had
+// opened lost every light whose world position was further than its reach from the plane where the map has it.
+static qboolean	r_dlightInModel;
+
+static const float *R_DlightAt( const dlight_t *dl ) {
+	return r_dlightInModel ? dl->transformed : dl->origin;
+}
+
 static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 	float		d;
 	int			i;
@@ -260,7 +269,7 @@ static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 			continue;
 		}
 		dl = &tr.refdef.dlights[i];
-		d = DotProduct( dl->origin, face->plane.normal ) - face->plane.dist;
+		d = DotProduct( R_DlightAt( dl ), face->plane.normal ) - face->plane.dist;
 		if ( !VectorCompare(face->plane.normal, vec3_origin) && (d < -dl->radius || d > dl->radius) ) {
 			// dlight doesn't reach the plane
 			dlightBits &= ~( 1 << i );
@@ -284,12 +293,13 @@ static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 			continue;
 		}
 		dl = &tr.refdef.dlights[i];
-		if ( dl->origin[0] - dl->radius > grid->meshBounds[1][0]
-			|| dl->origin[0] + dl->radius < grid->meshBounds[0][0]
-			|| dl->origin[1] - dl->radius > grid->meshBounds[1][1]
-			|| dl->origin[1] + dl->radius < grid->meshBounds[0][1]
-			|| dl->origin[2] - dl->radius > grid->meshBounds[1][2]
-			|| dl->origin[2] + dl->radius < grid->meshBounds[0][2] ) {
+		const float *at = R_DlightAt( dl );
+		if ( at[0] - dl->radius > grid->meshBounds[1][0]
+			|| at[0] + dl->radius < grid->meshBounds[0][0]
+			|| at[1] - dl->radius > grid->meshBounds[1][1]
+			|| at[1] + dl->radius < grid->meshBounds[0][1]
+			|| at[2] - dl->radius > grid->meshBounds[1][2]
+			|| at[2] + dl->radius < grid->meshBounds[0][2] ) {
 			// dlight doesn't reach the bounds
 			dlightBits &= ~( 1 << i );
 		}
@@ -570,9 +580,11 @@ void R_AddBrushModelSurfaces ( trRefEntity_t *ent ) {
 //		R_DlightBmodel( bmodel, true );
 //	}
 
+	r_dlightInModel = qtrue;
 	for ( i = 0 ; i < bmodel->numSurfaces ; i++ ) {
 		R_AddWorldSurface( bmodel->firstSurface + i, tr.currentEntity->dlightBits, qtrue );
 	}
+	r_dlightInModel = qfalse;
 }
 
 float GetQuadArea( vec3_t v1, vec3_t v2, vec3_t v3, vec3_t v4 )
@@ -1552,6 +1564,11 @@ static mnode_t *R_PointInLeaf( const vec3_t p ) {
 	}
 
 	return node;
+}
+
+// VisionJK: whether a point lies in the solid of the level (a leaf without a cluster)
+qboolean R_PointInSolid( const vec3_t p ) {
+	return (qboolean)( tr.world && R_PointInLeaf( p )->cluster == -1 );
 }
 
 /*

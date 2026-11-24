@@ -1355,7 +1355,7 @@ textures/danger/sand
 	rmoGen 0.3 0.3
 	roughness 0.9
 	metalness 0
-	tessellation 16 0.5 32
+	tessellation 5 0.5 32
 }
 
 models/map_objects/desert/evaporator2

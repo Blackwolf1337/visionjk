@@ -3486,6 +3486,64 @@ static void AutoMaterial( void ) {
 		mat->gen.rmoVariation = made.rmoVariation;
 		mat->gen.rmoOcclusion = made.rmoOcclusion;
 	}
+	if ( shader.alphaShine ) {
+		// (as deep as the walls beside them in the vmat_ files of the same levels)
+		mat->parallaxDepth = 0.03f;
+		mat->parallaxPlane = 0.5f;
+	}
+}
+
+/*
+===================
+MergeReflectedTexture
+
+VisionJK (v_autoMaterials): many walls of the game are three stages: a picture of a reflection on the environment
+coordinates, the texture over it by its alpha, the lightmap over both. Materials need the texture and its lightmap in
+one stage, and parallax would slide the texture over a reflection that stays put, so these got no bumps, no parallax
+and a light that fell on the wrong layer. They become the plain two stages of any other wall (collapsed into one
+below), the real reflections take the place of the painted one, and the alpha goes on saying where the surface shines.
+===================
+*/
+static void MergeReflectedTexture( void ) {
+	const uint32_t	blendBits = GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS;
+	shaderStage_t	*env = &stages[0], *tex = &stages[1], *lit = &stages[2];
+	autoMaterial_t	made;
+
+	if ( !v_autoMaterials || !v_autoMaterials->integer || shader.lightmapIndex[0] < 0 || shader.sky
+		|| !env->active || !tex->active || !lit->active || stages[3].active ) {
+		return;
+	}
+	if ( ( env->stateBits & blendBits ) || env->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED || env->bundle[1].image ) {
+		return;
+	}
+	if ( ( tex->stateBits & blendBits ) != ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA )
+		|| !tex->bundle[0].image || tex->bundle[0].isLightmap || tex->bundle[0].numTexMods || tex->bundle[0].numImageAnimations > 1
+		|| tex->bundle[0].isVideoMap || ( tex->bundle[0].tcGen != TCGEN_BAD && tex->bundle[0].tcGen != TCGEN_TEXTURE ) ) {
+		return;
+	}
+	const uint32_t litBlend = lit->stateBits & blendBits;
+
+	if ( !lit->bundle[0].isLightmap || ( litBlend != ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO )
+		&& litBlend != ( GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR ) ) ) {
+		return;
+	}
+	// (one that no material would be made for keeps the reflection it has)
+	if ( !tex->mat && !R_AutoMaterialClass( shader.name, tex->bundle[0].image, &made ) ) {
+		return;
+	}
+	shaderStage_t newLit = *lit, newTex = *tex;
+
+	newLit.stateBits = env->stateBits;
+	newTex.stateBits = ( env->stateBits & ~( blendBits | GLS_DEPTHMASK_TRUE ) ) | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+	newLit.rgbGen = newTex.rgbGen = CGEN_IDENTITY;
+	newLit.alphaGen = newTex.alphaGen = AGEN_IDENTITY;
+	newLit.bundle[0].texMods = texMods[0];
+	newTex.bundle[0].texMods = texMods[1];
+	stages[0] = newLit;
+	stages[1] = newTex;
+	memset( &stages[2], 0, sizeof( stages[2] ) );
+	stages[2].bundle[0].texMods = texMods[2];
+	shader.alphaShine = true;
 }
 
 static shader_t *FinishShader( void ) {
@@ -3495,6 +3553,8 @@ static shader_t *FinishShader( void ) {
 
 	hasLightmapStage = qfalse;
 	vertexLightmap = qfalse;
+
+	MergeReflectedTexture();
 
 	//
 	// set sky stuff appropriate
@@ -4995,6 +5055,13 @@ static void CreateInternalShaders( void ) {
 	stages[0].active = qtrue;
 	stages[0].stateBits = GLS_DEFAULT;
 	tr.defaultShader = FinishShader();
+
+	// The game asks for the distortion by its number, 2 (a cloaked player, cg_saberTrail 2). Number 1 was the marker of the
+	// stencil shadows: without it 2 was the sun, and a cloaked player a white glowing figure.
+	Q_strncpyz( shader.name, "<unused>", sizeof( shader.name ) );
+	shader.sort = SS_BLEND0;
+	shader.defaultShader = qfalse;
+	FinishShader();
 
 	// distortion shader is just a marker
 	Q_strncpyz( shader.name, "internal_distortion", sizeof( shader.name ) );

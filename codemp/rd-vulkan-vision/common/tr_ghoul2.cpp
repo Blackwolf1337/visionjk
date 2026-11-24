@@ -2662,6 +2662,12 @@ void RenderSurfaces(CRenderSurface &RS) //also ended up just ripping right from 
 			}
 #endif
 		}
+#ifndef RD_VISION_GLES
+		else if ( RS.renderfx & RF_SHADOW_PLANE )
+		{	// VisionJK: not drawn in this view, its shadow is (vk_rt.cpp)
+			VK_RT_QueueCaster( tr.currentEntity, RS.boneCache, surface );
+		}
+#endif
 	}
 
 	// if we are turning off all descendants, then stop this recursion now
@@ -3316,16 +3322,24 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 	// cull the entire model if merged bounding box of both frames
 	// is outside the view frustum.
 	cull = R_GCullModel (ent );
+	// VisionJK: a player just outside the picture is not drawn, but his shadow can fall into it
+	qboolean hiddenCaster = qfalse;
 	if ( cull == CULL_OUT )
 	{
-		return;
+#ifndef RD_VISION_GLES
+		hiddenCaster = VK_RT_WantsHidden( ent );
+#endif
+		if ( !hiddenCaster )
+		{
+			return;
+		}
 	}
 	HackadelicOnClient=true;
 	// are any of these models setting a new origin?
 	RootMatrix(ghoul2,currentTime, ent->e.modelScale,rootMatrix);
 
    	// don't add third_person objects if not in a portal
-	personalModel = (qboolean)((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal);
+	personalModel = (qboolean)(hiddenCaster || ((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal));
 
 	int modelList[256];
 	assert(ghoul2.size()<=255);

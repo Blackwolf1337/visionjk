@@ -332,7 +332,7 @@ void		VK_RT_Shutdown( void );
 qboolean	VK_RT_Wanted( void );
 // the shadows of the players can be drawn on this device (by rays or by shadow maps)
 qboolean	VK_RT_Ready( void );
-// the channel of the mask of the shadows from the moving lights for dl (1, 2, 0: none) and its slot in the texture table
+// the channel of the mask of the shadows from the moving lights for dl (1 to 4, 0: none) and its slot in the texture table
 int			VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot );
 void		VK_RT_Pass( void );
 void		VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface );

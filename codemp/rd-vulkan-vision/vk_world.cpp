@@ -654,10 +654,13 @@ static void VK_BuildWorld( void ) {
 			const int count = ( *data == SF_GRID ) ? ( (const srfGridMesh_t *)data )->width * ( (const srfGridMesh_t *)data )->height
 				: ( (const srfTriangles_t *)data )->numVerts;
 
+			// (a patch with hard corners: short normals tell the light pass to take the plane of the triangle, generic.frag)
+			const float normalScale = ( *data == SF_GRID && ( (const srfGridMesh_t *)data )->hardEdges ) ? 0.4f : 1.0f;
+
 			vk_firstVertex[data] = vertex;
 			for ( int j = 0; j < count; j++, dv++, vertex++ ) {
 				VectorCopy( dv->xyz, xyz[vertex] );
-				VectorCopy( dv->normal, normal[vertex] );
+				VectorScale( dv->normal, normalScale, normal[vertex] );
 				VectorSet2( texCoords[vertex][0], dv->st[0], dv->st[1] );
 				for ( int k = 0; k < MAXLIGHTMAPS; k++ ) {
 					VectorSet2( texCoords[vertex][k + 1], dv->lightmap[k][0], dv->lightmap[k][1] );
@@ -988,9 +991,9 @@ static qboolean VK_SpriteLit( void ) {
 
 static void VK_SpriteLight( const vec3_t at, vec3_t light ) {
 	vec3_t ambient, directed, dir, point, glow = { 0.0f, 0.0f, 0.0f };
-	// v_saberSmoke: a moving light (a blade above all) also glows in the smoke further out than it lights a wall, and past
-	// the limit of the plain light, or a blade in a dark room would only tint it
-	const float glowReach = v_saberSmoke->integer ? 1.5f : 0.0f;
+	// a moving light (a blade above all) also glows in the smoke further out than it lights a wall, and past the limit of
+	// the plain light, or a blade in a dark room would only tint it
+	const float glowReach = 1.5f;
 
 	VectorCopy( at, point );
 	if ( !R_LightForPoint( point, ambient, directed, dir ) ) {

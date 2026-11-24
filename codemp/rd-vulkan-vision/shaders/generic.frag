@@ -253,6 +253,57 @@ vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth, float plane, float stepScal
 	return cur - delta * clamp( after / max( after - before, 1e-4 ), 0.0, 1.0 );
 }
 
+// A plain stage over a stage with parallax (vk_shade.cpp VKP_FOLLOW, a detail texture): the shift that stage's texture
+// gets, worked out again from its height and coordinates (v_texCoord1), carried over to this stage's coordinates. They
+// follow those of the material in a straight line (tcMod scale, rotate), so the screen derivatives of both give it.
+vec2 FollowParallax( Draw d, vec2 uv ) {
+	vec2 base = v_texCoord1;
+	mat2 b = mat2( dFdx( base ), dFdy( base ) ), s = mat2( dFdx( uv ), dFdy( uv ) );
+	float parallax = d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 );
+	Transform t = TRANSFORMS( d.transform );
+	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
+	vec3 n = normalize( v_normal );
+	if ( dot( n, toEye ) < 0.0 ) {
+		n = -n;
+	}
+	mat3 frame = CotangentFrame( n, v_position, base );
+	vec2 moved = Parallax( d, base, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( n, toEye ) ), parallax, d.pbr2.x,
+		clamp( 320.0 / max( v_depth, 1.0 ), 0.25, 1.0 ) );
+	float det = determinant( b );
+
+	if ( parallax <= 0.0 || abs( det ) < 1e-14 ) {
+		return uv;
+	}
+	return uv + s * inverse( b ) * ( moved - base );
+}
+
+// How much of a moving light the bumps of the height leave at uv: from there up towards the light (l, in the frame of the
+// texture) the height must stay under the ray. Soft, what stands close to the point counts most.
+float ParallaxLight( Draw d, vec2 uv, vec2 dx, vec2 dy, vec3 l, float depth ) {
+	const int STEPS = 8;
+	float start = textureGrad( TEX2( d ), uv, dx, dy ).a;
+	vec2 along = l.xy / max( l.z, 0.15 ) * depth * ( 1.0 - start );
+	float over = 0.0;
+
+	for ( int i = 1; i <= STEPS; i++ ) {
+		float t = float( i ) / float( STEPS );
+		float h = textureGrad( TEX2( d ), uv + along * t, dx, dy ).a;
+
+		over = max( over, ( h - mix( start, 1.0, t ) ) * ( 1.0 - t * 0.5 ) );
+	}
+	return 1.0 - clamp( over * 6.0, 0.0, 0.85 );
+}
+
+// A wall whose texture lay over a painted reflection by its alpha (tr_shader.cpp MergeReflectedTexture): where it let the
+// reflection through it is smooth and partly metal, and takes the real reflections. The alpha of these runs from 1 to
+// about 0.7, so that is the whole range.
+void AlphaShine( float alpha, inout float roughness, inout float metalness ) {
+	float shine = clamp( ( 1.0 - alpha ) * 3.0, 0.0, 1.0 );
+
+	roughness = mix( roughness, 0.3, shine );
+	metalness = mix( metalness, 0.7, shine );
+}
+
 // the reflection of light that comes from all around, for a roughness and an angle (Karis, "Physically Based Shading
 // on Mobile", 2014)
 vec3 EnvBRDF( vec3 f0, float roughness, float nv ) {
@@ -371,12 +422,21 @@ vec3 NearestToRay( vec3 a, vec3 b, vec3 p, vec3 r ) {
    as before. tex0: the texture of the surface (white where the frame already holds it: then the pass multiplies). */
 vec4 DynamicLight( Draw d ) {
 	Transform t = TRANSFORMS( d.transform );
-	// The normal of the vertices, exact for the faces of the level. The one of the plane of the pixels, from how the
-	// position changes from one pixel to the next, only where they have none.
-	vec3 flat_ = dot( v_normal, v_normal ) > 0.25 ? normalize( v_normal ) : normalize( cross( dFdx( v_position ), dFdy( v_position ) ) );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
-	if ( dot( flat_, toEye ) < 0.0 ) {
-		flat_ = -flat_;		// the side of the triangle that is looked at
+	// The plane of the triangle, on the side that is looked at, and the normal of the vertices where they have one. A
+	// patch folded round hard corners has them smoothed across its flat sides, by up to 45 degrees each way: one edge of
+	// a side turned from a flash beside it and went dark, and past that it was flipped to face the flash and lit up
+	// (mp/ffa2, the pillars, their picture 2026-11-24). Such a patch has short normals (vk_world.cpp) and takes the plane.
+	vec3 plane = normalize( cross( dFdx( v_position ), dFdy( v_position ) ) );
+	if ( dot( plane, toEye ) < 0.0 ) {
+		plane = -plane;
+	}
+	vec3 flat_ = plane;
+	if ( dot( v_normal, v_normal ) > 0.25 ) {
+		flat_ = normalize( v_normal );
+		if ( dot( flat_, plane ) < 0.0 ) {
+			flat_ = -flat_;		// a surface seen from its back
+		}
 	}
 	bool tube = d.grid0.w > 0.0;
 	float range = tube ? d.grid0.w : d.parm.w;
@@ -413,13 +473,36 @@ vec4 DynamicLight( Draw d ) {
 			vec2 pixel = vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
 			// (the mask is half the size of the frame, globals.rt[15].z)
 			vec4 mask = texture( TEX1( d ), pixel / ( vec2( textureSize( TEX1( d ), 0 ) ) * max( globals.rt[15].z, 1.0 ) ) );
-			radiance *= 1.0 - ( channel == 1 ? mask.r : mask.g );
+			radiance *= 1.0 - mask[channel - 1];
 		}
 	}
 #endif
 
 	vec2 uv = v_texCoord0;
-	vec3 albedo = pow( texture( TEX0( d ), uv ).rgb, vec3( 2.2 ) );
+	// The parallax of the stage this light falls on, or it lay flat on top of the carved surface: the same place of the
+	// texture as PbrStage worked out (with the normal it took), and the bumps throw shadows from this light.
+	float parallax = PBR( d.flags ) && ( d.pbrFlags & PBR_HEIGHT ) != 0u ? d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 ) : 0.0;
+	if ( parallax > 0.0 ) {
+		vec3 stageNormal = normalize( v_normal );
+		if ( dot( stageNormal, toEye ) < 0.0 ) {
+			stageNormal = -stageNormal;
+		}
+		mat3 stageFrame = CotangentFrame( stageNormal, v_position, uv );
+		vec2 dx = dFdx( uv ), dy = dFdy( uv );
+
+		if ( ( d.pbrFlags & PBR_RAISED ) != 0u ) {
+			// tessellated (vk_shade.cpp VK_DynamicLights): the surface already stands where the texture is, the height in
+			// units becomes one of the texture by how far it runs along a unit of the surface
+			vec3 px = dFdx( v_position ), py = dFdy( v_position );
+			parallax *= sqrt( ( dot( dx, dx ) + dot( dy, dy ) ) / max( dot( px, px ) + dot( py, py ), 1e-6 ) );
+		} else {
+			uv = Parallax( d, uv, vec3( dot( stageFrame[0], toEye ), dot( stageFrame[1], toEye ), dot( stageNormal, toEye ) ), parallax, d.pbr2.x,
+				clamp( 320.0 / max( v_depth, 1.0 ), 0.25, 1.0 ) );
+		}
+		radiance *= ParallaxLight( d, uv, dx, dy, vec3( dot( stageFrame[0], l ), dot( stageFrame[1], l ), dot( stageNormal, l ) ), parallax );
+	}
+	vec4 painted = texture( TEX0( d ), uv );
+	vec3 albedo = pow( painted.rgb, vec3( 2.2 ) );
 	Surface s;
 	s.flat_ = flat_;
 	s.v = toEye;
@@ -455,6 +538,9 @@ vec4 DynamicLight( Draw d ) {
 		s.roughness = max( rmo.r, 0.04 );
 		s.metalness = rmo.g;
 		occlusion = rmo.b;
+		if ( ( d.pbrFlags & PBR_ALPHA_SHINE ) != 0u ) {
+			AlphaShine( painted.a, s.roughness, s.metalness );
+		}
 		s.f0 = mix( vec3( d.material2.z > 0.0 ? d.material2.z : 0.04 ), albedo, s.metalness );
 		s.coat = d.pbr2.y;
 		s.coatRoughness = d.pbr2.z;
@@ -726,6 +812,10 @@ vec4 PbrStage( Draw d ) {
 		rmo = vec3( 1.0 - sg.a, 0.0, 1.0 );
 	}
 	float roughness = max( rmo.r, 0.04 ), metalness = rmo.g, occlusion = rmo.b;
+	if ( ( d.pbrFlags & PBR_ALPHA_SHINE ) != 0u ) {
+		AlphaShine( base.a, roughness, metalness );
+		base.a = 1.0;		// (it is opaque now)
+	}
 
 	vec3 albedo, ambient, directed, l;
 	float alpha;
@@ -1229,7 +1319,13 @@ void main() {
 		color = PbrStage( d );
 		env = 0u;
 	} else {
-		color = texture( TEX0( d ), ( TCGEN0( d.flags ) == TCGEN_REST ) ? v_screenCoord0 : v_texCoord0 ) * v_color;
+		vec2 uv0 = ( TCGEN0( d.flags ) == TCGEN_REST ) ? v_screenCoord0 : v_texCoord0;
+		if ( ( d.pbrFlags & PBR_FOLLOW ) != 0u ) {
+			// (the mip level of the coordinates before the shift, which jumps from pixel to pixel at the edges of bumps)
+			color = textureGrad( TEX0( d ), FollowParallax( d, uv0 ), dFdx( uv0 ), dFdy( uv0 ) ) * v_color;
+		} else {
+			color = texture( TEX0( d ), uv0 ) * v_color;
+		}
 	}
 	if ( MATERIAL( d.flags ) ) {
 		color.rgb = MaterialLight( d, color.rgb );

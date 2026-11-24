@@ -16,7 +16,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[319];
+	vec4	rt[372];
 } globals;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
 layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
@@ -98,7 +98,11 @@ void main() {
 		o_color = vec4( 0.0, PackDistance( 8192.0 ) );
 		return;
 	}
+	if ( d < VIEW_WEAPON_RANGE ) {
+		o_color = vec4( 0.0, PackDistance( d ) );
+		return;
+	}
 	// (what the frames before had is added by shaders/rtaccum.frag)
-	float mask = Shadow( p, SceneSurface( pixel, p, normalize( eye - p ) ) );
+	float mask = Shadow( p, SceneSurfaceWide( pixel, p, normalize( eye - p ), 32.0 ) );
 	o_color = vec4( mask, PackDistance( d ) );
 }
