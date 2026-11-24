@@ -296,6 +296,37 @@ static void PutPointsOnCurve( drawVert_t	ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE],
 R_CreateSurfaceGridMesh
 =================
 */
+// VisionJK: the plane of a quad of the grid; qfalse: it has none
+static qboolean R_GridQuadPlane( const srfGridMesh_t *grid, int x, int y, vec3_t normal ) {
+	const drawVert_t	*v = &grid->verts[y * grid->width + x];
+	vec3_t				a, b;
+
+	VectorSubtract( v[grid->width + 1].xyz, v[0].xyz, a );
+	VectorSubtract( v[grid->width].xyz, v[1].xyz, b );
+	CrossProduct( a, b, normal );
+	return (qboolean)( VectorNormalize( normal ) > 0.001f );
+}
+
+// VisionJK: two quads side by side meet at more than 60 degrees: a corner, not a curve
+static qboolean R_GridHasHardEdges( const srfGridMesh_t *grid ) {
+	vec3_t n, m;
+
+	for ( int y = 0; y < grid->height - 1; y++ ) {
+		for ( int x = 0; x < grid->width - 1; x++ ) {
+			if ( !R_GridQuadPlane( grid, x, y, n ) ) {
+				continue;
+			}
+			if ( x + 2 < grid->width && R_GridQuadPlane( grid, x + 1, y, m ) && DotProduct( n, m ) < 0.5f ) {
+				return qtrue;
+			}
+			if ( y + 2 < grid->height && R_GridQuadPlane( grid, x, y + 1, m ) && DotProduct( n, m ) < 0.5f ) {
+				return qtrue;
+			}
+		}
+	}
+	return qfalse;
+}
+
 srfGridMesh_t *R_CreateSurfaceGridMesh(int width, int height,
 								drawVert_t ctrl[MAX_GRID_SIZE][MAX_GRID_SIZE], float errorTable[2][MAX_GRID_SIZE] ) {
 	int i, j, size;
@@ -335,6 +366,7 @@ srfGridMesh_t *R_CreateSurfaceGridMesh(int width, int height,
 
 	VectorCopy( grid->localOrigin, grid->lodOrigin );
 	grid->lodRadius = grid->meshRadius;
+	grid->hardEdges = R_GridHasHardEdges( grid );
 	//
 	return grid;
 }

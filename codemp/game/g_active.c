@@ -3084,8 +3084,11 @@ void ClientThink_real( gentity_t *ent ) {
 
 				memcpy(&pmove.cmd, &ent->m_pVehicle->m_ucmd, sizeof(usercmd_t));
 
-				//no veh can strafe
-				pmove.cmd.rightmove = 0;
+				//no veh can strafe (VisionJK: but the walker of a pilot whose cgame predicts it, BG_WalkerSteps)
+				if ( ent->m_pVehicle->m_pVehicleInfo->type != VH_WALKER || !BG_WalkerSteps( ent->m_pVehicle->m_pPilot->s.number ) )
+				{
+					pmove.cmd.rightmove = 0;
+				}
 				//no crouching or jumping!
 				pmove.cmd.upmove = 0;
 
@@ -3401,6 +3404,11 @@ void ClientThink_real( gentity_t *ent ) {
 	}
 	else {
 		BG_PlayerStateToEntityState( &ent->client->ps, &ent->s, qfalse );
+	}
+	// VisionJK: an AT-ST NPC is sent the yaw of its legs, its head turns on them (npc/NPC_AI_Atst.c)
+	if ( isNPC && ent->client->NPC_class == CLASS_ATST )
+	{
+		G_ATSTFrame( ent );
 	}
 
 	if (isNPC)

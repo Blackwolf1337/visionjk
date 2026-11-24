@@ -26,6 +26,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // for a 3D rendering
 #include "cg_local.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/saber/cg_saberclash.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberdrop.h"
+#include "cgame/weapons/cg_boltlight.h"
 #include "game/bg/bg_saga.h"
 
 #define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
@@ -225,6 +229,7 @@ static void CG_CalcVrect (void) {
 //==============================================================================
 //==============================================================================
 // this causes a compiler bug on mac MrC compiler
+float CG_WalkerViewLag( void );
 static void CG_StepOffset( void ) {
 	int		timeDelta;
 
@@ -363,6 +368,12 @@ static void CG_CalcIdealThirdPersonViewLocation(void)
 			veh->m_pVehicle->m_pVehicleInfo->cameraOverride)
 		{ //override the range with what the vehicle wants it to be
 			thirdPersonRange = veh->m_pVehicle->m_pVehicleInfo->cameraRange;
+			// VisionJK: an AT-ST that goes as the one of single player is seen from as close as there (240,
+			// g_active.cpp of code/)
+			if ( veh->m_pVehicle->m_pVehicleInfo->type == VH_WALKER && BG_WalkerSteps( cg.clientNum ) )
+			{
+				thirdPersonRange = 240.0f;
+			}
 			if ( veh->playerState->hackingTime )
 			{
 				thirdPersonRange += fabs(((float)veh->playerState->hackingTime)/MAX_STRAFE_TIME) * 100.0f;
@@ -1090,6 +1101,10 @@ static void CG_OffsetFighterView( void )
 		//NOTE: no yaw offset?
 		pitchOffset = veh->m_pVehicle->m_pVehicleInfo->cameraPitchOffset;
 		range = veh->m_pVehicle->m_pVehicleInfo->cameraRange;
+		if ( veh->m_pVehicle->m_pVehicleInfo->type == VH_WALKER && BG_WalkerSteps( cg.clientNum ) )
+		{
+			range = 240.0f;	// (as CG_CalcIdealThirdPersonViewLocation)
+		}
 		if ( veh->playerState->hackingTime )
 		{
 			horzOffset += (((float)veh->playerState->hackingTime)/MAX_STRAFE_TIME) * -80.0f;
@@ -1556,6 +1571,9 @@ static int CG_CalcViewValues( void ) {
 	if ( !manningTurret )
 	{//not manning a turret on a vehicle
 		VectorCopy( ps->origin, cg.refdef.vieworg );
+		// VisionJK: the pilot of an AT-ST rides with its body as it is drawn, which comes after its box smoothly; the box
+		// steps up to 66 units in one go, and the camera hopped with it (cg_players.c CG_WalkerBodyLag)
+		cg.refdef.vieworg[2] -= CG_WalkerViewLag();
 #ifdef VEH_CONTROL_SCHEME_4
 		if ( cg.predictedPlayerState.m_iVehicleNum )//in a vehicle
 		{
@@ -1808,6 +1826,7 @@ void CG_DrawSkyBoxPortal(const char *cstr)
 
 	CG_AddPacketEntities(qtrue); //rww - There was no proper way to put real entities inside the portal view before.
 									//This will put specially flagged entities in the render.
+	CG_BoltLightsAdd( qtrue );
 
 	if (cg_skyOri)
 	{ //ok, we want to orient the sky refdef vieworg based on the normal vieworg's relation to the ori pos
@@ -2717,6 +2736,10 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 		CG_SaberScarsAdd();
+		CG_SaberClashAdd();
+		CG_BoltLightsAdd( qfalse );
+		CG_SaberSoundNearMiss();
+		CG_SaberDropAdd();
 		CG_FxTestFrame();
 		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
 		CG_BoomboxScene();

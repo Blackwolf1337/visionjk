@@ -26,6 +26,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "ui/ui_saberfx.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberignite.h"
+#include "cgame/saber/cg_saberdrawn.h"
+#include "cgame/saber/cg_saberdrop.h"
+#include "cgame/saber/cg_saberbelt.h"
 #include "ghoul2/G2.h"
 #include "game/bg/bg_saga.h"
 
@@ -2252,6 +2257,460 @@ static void _PlayerFootStep( const vec3_t origin,
 	}
 }
 
+/*
+===============
+CG_WalkerAngles
+
+VisionJK: a walker that goes as the AT-ST of single player (CG_WalkerVision) faces where its pilot looks, at once
+(WalkerNPC.c). What shows of that is its head; its legs come after as there (CG_ATSTLegsYaw of code/cgame/
+cg_players.cpp), only drawn so, by every client for itself:
+- walking, they turn towards where it goes, up to WALKER_LEGS_SWING from where it looks (going back they face the other
+  way and walk back), at WALKER_LEGS_RATE; more than WALKER_LEGS_LAG behind they are pulled along
+- standing, they stay while the head turns over them, until it looks more than WALKER_TURN_FROM aside: then the turn of
+  the model plays once, and during it they come round to where it looks, faster towards its end
+- the pads of its feet lie on the ground under them (PM_FootSlopeTrace there)
+Single player counts all of this per frame; here it goes by time, at about what that gives at 60 frames a second.
+
+Not from there: each foot stands on the ground under it (CG_WalkerFeet), where single player only had five stands that
+lean, and only standing. And its body rises and sinks smoothly (CG_WalkerBodyLag): the box the game moves steps up
+to 66 units in one go (bg_slidemove.c), and the whole walker hopped with it.
+===============
+*/
+#define WALKER_LEGS_SWING	90.0f		// (60 there: stepping straight sideways the legs then walked 30 degrees off, and it slid)
+#define WALKER_LEGS_RATE	150.0f		// degrees a second
+#define WALKER_LEGS_LAG		50.0f
+#define WALKER_TURN_FROM	105.0f		// (the 45 of single player past the 60 its legs may swing there)
+#define WALKER_TURN_RATE	400.0f		// degrees a second at the end of the turn
+#define WALKER_FOOT_UP		72.0f		// how far a foot goes up onto something (the box steps up 66), and down after the ground
+#define WALKER_FOOT_DOWN	60.0f
+#define WALKER_FOOT_RATE	240.0f		// units a second it goes there
+#define WALKER_DROP_FROM	16.0f		// a foot further down than this takes the body down with it,
+#define WALKER_DROP_MOST	32.0f		// this far at most,
+#define WALKER_DROP_RATE	120.0f		// at this many units a second
+#define WALKER_BODY_FOLLOW	6.0f		// how fast the body comes after its box: this share of what is left, a second
+#define WALKER_BODY_BELOW	70.0f		// how far below its box it may be (one step up), and how far above (as far as its
+#define WALKER_BODY_ABOVE	30.0f		// legs stretch)
+
+typedef struct walkerLegs_s {
+	int		time;			// when this was last worked out (cg.time), 0: not, or a walker drawn as ever
+	float	yaw;			// where its legs face
+	int		turn;			// the turn of the model they play, 0: none
+	int		turnTime;		// when it began
+	float	foot[2];		// how far above the ground its box stands on the ground under each foot is (left, right)
+	float	drop;			// how far the body is down for a foot on lower ground
+	qboolean	feet;		// it has the leg bones of the AT-ST (CG_WalkerFeet)
+	float	height;			// how high its body is drawn (CG_WalkerBodyLag),
+	int		heightTime;		// worked out when,
+	float	lag;			// and how far below its box that is
+} walkerLegs_t;
+
+static walkerLegs_t	cg_walkerLegs[MAX_GENTITIES];
+// which way a positive angle bends its hip and its knee (CG_WalkerFeet checks what it did and turns it round or, at a
+// second miss, off): 1 as worked out from the skeleton, -1 the other way, 0 no feet on the ground
+static int			cg_walkerIk = 1;
+static int			cg_walkerIkMiss, cg_walkerIkTurned;
+
+// whether this walker goes as the AT-ST of single player: on a server that says so (vs_caps) and with a pilot who plays
+// with a client of this tree (the own one, or one the server named, status/cg_peers.c); the game module moves only those
+// so (BG_WalkerSteps), any other walker is drawn as the game always drew it
+static qboolean CG_WalkerVision( const centity_t *cent )
+{
+	const int pilot = cent->currentState.owner;
+
+	if ( !( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & VS_CAPS_WALKER ) )
+	{
+		return qfalse;
+	}
+	if ( cg.predictedPlayerState.m_iVehicleNum == cent->currentState.number )
+	{
+		return qtrue;
+	}
+	return (qboolean)( pilot >= 0 && pilot < MAX_CLIENTS && CG_PeerVision( pilot, NULL ) == 1 );
+}
+
+// the legs of such a walker one frame on, towards where it looks now
+static void CG_WalkerLegsTurn( const centity_t *cent, walkerLegs_t *legs, float view, float seconds )
+{
+	const int		anim = cent->currentState.legsAnim;
+	const qboolean	going = (qboolean)( cent->currentState.pos.trDelta[0] * cent->currentState.pos.trDelta[0]
+						+ cent->currentState.pos.trDelta[1] * cent->currentState.pos.trDelta[1] > 10.0f * 10.0f );
+	float			diff, step;
+
+	if ( going )
+	{
+		float swing = AngleSubtract( vectoyaw( cent->currentState.pos.trDelta ), view );
+
+		if ( anim == BOTH_WALKBACK1 || anim == BOTH_RUNBACK1 )
+		{
+			swing = AngleNormalize180( swing + 180.0f );
+		}
+		swing = fabs( swing ) > 150.0f ? 0.0f : Com_Clamp( -WALKER_LEGS_SWING, WALKER_LEGS_SWING, swing );
+		legs->turn = 0;
+		diff = AngleSubtract( view + swing, legs->yaw );
+		if ( fabs( diff ) > WALKER_LEGS_LAG )
+		{
+			legs->yaw += diff > 0.0f ? diff - WALKER_LEGS_LAG : diff + WALKER_LEGS_LAG;
+			diff = diff > 0.0f ? WALKER_LEGS_LAG : -WALKER_LEGS_LAG;
+		}
+		step = WALKER_LEGS_RATE * seconds;
+	}
+	else
+	{
+		const float	most = WALKER_TURN_FROM + 5.0f;
+		const int	length = legs->turn ? BG_AnimLength( cent->localAnimIndex, (animNumber_t)legs->turn ) : 0;
+
+		diff = AngleSubtract( view, legs->yaw );
+		if ( legs->turn && ( anim != BOTH_STAND1 || cg.time - legs->turnTime >= length ) )
+		{
+			legs->turn = 0;
+		}
+		if ( !legs->turn )
+		{
+			if ( anim == BOTH_STAND1 && fabs( diff ) > WALKER_TURN_FROM )
+			{
+				legs->turn = diff > 0.0f ? BOTH_TURN_LEFT1 : BOTH_TURN_RIGHT1;
+				legs->turnTime = cg.time;
+			}
+			return;
+		}
+		if ( fabs( diff ) > most )
+		{
+			legs->yaw += diff > 0.0f ? diff - most : diff + most;
+			diff = diff > 0.0f ? most : -most;
+		}
+		step = WALKER_TURN_RATE * seconds * ( cg.time - legs->turnTime ) / length;
+	}
+	legs->yaw = AngleNormalize180( legs->yaw + Com_Clamp( -step, step, diff ) );
+}
+
+// the legs it plays: what the game sent, but standing the turn worked out here (CG_WalkerAngles, which a frame is
+// drawn through first)
+static int CG_WalkerLegsAnim( const centity_t *cent )
+{
+	const walkerLegs_t *legs = &cg_walkerLegs[cent->currentState.number];
+
+	if ( cent->currentState.legsAnim != BOTH_STAND1 || !legs->time || cg.time - legs->time > 100 )
+	{
+		return cent->currentState.legsAnim;
+	}
+	return legs->turn ? legs->turn : BOTH_STAND1;
+}
+
+void PM_AnglesForSlope( const float yaw, const vec3_t slope, vec3_t angles );
+
+// How far below its box, which is at z now, the body of this walker is drawn: it comes after the box smoothly, its
+// feet stay on the ground meanwhile (CG_WalkerFeet). 0 for a walker without those feet. The view of its pilot asks
+// first in a frame (CG_WalkerViewLag), so the camera rides with the body, then the walker itself.
+static float CG_WalkerBodyLag( int entityNum, float z )
+{
+	walkerLegs_t *legs = &cg_walkerLegs[entityNum];
+
+	if ( !legs->feet || !cg_walkerIk || !legs->time || cg.time - legs->time > 500 || cg.time < legs->time )
+	{
+		legs->heightTime = 0;
+		return 0.0f;
+	}
+	if ( legs->heightTime != cg.time )
+	{
+		const int msec = cg.time - legs->heightTime;
+
+		if ( !legs->heightTime || msec < 0 || msec > 500 )
+		{
+			legs->height = z;
+		}
+		else
+		{
+			legs->height += ( z - legs->height ) * ( 1.0f - expf( -WALKER_BODY_FOLLOW * msec * 0.001f ) );
+			legs->height = Com_Clamp( z - WALKER_BODY_BELOW, z + WALKER_BODY_ABOVE, legs->height );
+		}
+		legs->heightTime = cg.time;
+		legs->lag = z - legs->height;
+	}
+	return legs->lag;
+}
+
+// the same for the walker the own player pilots, for his view (cg_view.c): 0 in anything else
+float CG_WalkerViewLag( void )
+{
+	const int		n = cg.predictedPlayerState.m_iVehicleNum;
+	const centity_t	*veh = ( n > 0 && n < MAX_GENTITIES ) ? &cg_entities[n] : NULL;
+
+	if ( !veh || !veh->m_pVehicle || !veh->m_pVehicle->m_pVehicleInfo || veh->m_pVehicle->m_pVehicleInfo->type != VH_WALKER
+		|| !BG_WalkerSteps( cg.clientNum ) )
+	{
+		return 0.0f;
+	}
+	return CG_WalkerBodyLag( n, cg.predictedVehicleState.origin[2] );
+}
+
+// The bones of a leg of the AT-ST (atst.gla): the femur turns in the hip, the tibia in the knee behind it, the tarsal
+// carries the pad of the foot; all three turn round the axis across the walker (their own Y axis), so a leg bends in
+// the plane of forward and up. An angle on the pitch of the femur or the tibia turns what hangs on it from forward
+// towards up, on the tarsal the other way (its Y axis points to the other side).
+#define Vector2Set( v, x, y )	( (v)[0] = (x), (v)[1] = (y) )
+
+static const char *cg_walkerLeg[2][3] = { { "l_femur", "l_tibia", "l_tarsal" }, { "r_femur", "r_tibia", "r_tarsal" } };
+
+static void CG_WalkerBone( centity_t *cent, const char *bone, const vec3_t angles )
+{
+	trap->G2API_SetBoneAngles( cent->ghoul2, 0, bone, angles, BONE_ANGLES_POSTMULT, POSITIVE_Z, NEGATIVE_Y, NEGATIVE_X, cgs.gameModels, 0, cg.time );
+}
+
+// Hip, knee and ankle of a leg in the plane it bends in (x forward, y up): the angles, in degrees and from forward
+// towards up, to turn it by in the hip and in the knee so the ankle comes to lie up higher; where it then lies, from
+// the hip, goes to target (not further than the leg reaches).
+static void CG_WalkerLegSolve( const vec2_t hipAt, const vec2_t kneeAt, const vec2_t ankleAt, float up, float *hip, float *knee, vec2_t target )
+{
+	vec2_t	k, e, u, v, v2, e2;
+	float	l1, l2, d, most, least, s0, s1, c, b, co, si;
+
+	Vector2Set( k, kneeAt[0] - hipAt[0], kneeAt[1] - hipAt[1] );
+	Vector2Set( e, ankleAt[0] - hipAt[0], ankleAt[1] - hipAt[1] );
+	Vector2Set( target, e[0], e[1] + up );
+	Vector2Set( u, -k[0], -k[1] );
+	Vector2Set( v, e[0] - k[0], e[1] - k[1] );
+	l1 = sqrtf( k[0] * k[0] + k[1] * k[1] );
+	l2 = sqrtf( v[0] * v[0] + v[1] * v[1] );
+	d = sqrtf( target[0] * target[0] + target[1] * target[1] );
+	*hip = *knee = 0.0f;
+	if ( l1 < 1.0f || l2 < 1.0f || d < 1.0f )
+	{
+		return;
+	}
+	most = l1 + l2 - 1.0f;
+	least = fabs( l1 - l2 ) + 1.0f;
+	if ( d > most || d < least )
+	{
+		const float to = d > most ? most : least;
+
+		target[0] *= to / d;
+		target[1] *= to / d;
+		d = to;
+	}
+	// the knee: the angle between its two bones that gives this distance from hip to ankle, bent to the side it is
+	s0 = atan2f( u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1] );
+	c = Com_Clamp( -1.0f, 1.0f, ( l1 * l1 + l2 * l2 - d * d ) / ( 2.0f * l1 * l2 ) );
+	s1 = ( s0 < 0.0f ? -1.0f : 1.0f ) * acosf( c );
+	b = s1 - s0;
+	// the hip: from where that puts the ankle to where it should be
+	co = cosf( b );
+	si = sinf( b );
+	Vector2Set( v2, v[0] * co - v[1] * si, v[0] * si + v[1] * co );
+	Vector2Set( e2, k[0] + v2[0], k[1] + v2[1] );
+	*hip = RAD2DEG( atan2f( e2[0] * target[1] - e2[1] * target[0], e2[0] * target[0] + e2[1] * target[1] ) );
+	*knee = RAD2DEG( b );
+}
+
+// Each foot on the ground under it: a trace down where the foot is gives how much higher or lower that ground is than
+// the ground the box of the walker stands on, which is the ground its animations walk on. The leg bends or stretches by
+// that much (hip and knee, CG_WalkerLegSolve), the pad stays as the animation holds it and lies on the plane found,
+// and for a foot far down the body comes down some of the way (CG_WalkerDrop). Only drawn so: what the walker stands
+// on and steps over is the game's box as ever.
+static void CG_WalkerFeet( centity_t *cent, walkerLegs_t *legs, const vec3_t legsAngles, float seconds )
+{
+	const float	ground = cent->lerpOrigin[2] + DEFAULT_MINS_2;
+	vec3_t		forward, at[2][3], slope[2];
+	vec2_t		target[2], hipAt[2];
+	float		up[2] = { 0.0f, 0.0f };
+	float		lowest, drop;
+	int			bolt[2][3];
+	int			side, j;
+
+	for ( side = 0; side < 2; side++ )
+	{
+		for ( j = 0; j < 3; j++ )
+		{
+			bolt[side][j] = trap->G2API_AddBolt( cent->ghoul2, 0, cg_walkerLeg[side][j] );
+			if ( bolt[side][j] < 0 )
+			{// another walker than the AT-ST
+				legs->feet = qfalse;
+				return;
+			}
+		}
+	}
+	legs->feet = qtrue;
+	// the legs as the animation has them
+	for ( side = 0; side < 2; side++ )
+	{
+		for ( j = 0; j < 3; j++ )
+		{
+			CG_WalkerBone( cent, cg_walkerLeg[side][j], vec3_origin );
+		}
+	}
+	AngleVectors( legsAngles, forward, NULL, NULL );
+	for ( side = 0; side < 2; side++ )
+	{
+		for ( j = 0; j < 3; j++ )
+		{
+			mdxaBone_t boltMatrix;
+
+			trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt[side][j], &boltMatrix, legsAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+			BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, at[side][j] );
+		}
+	}
+
+	// the ground under each foot (its pad lies in front of the ankle)
+	for ( side = 0; side < 2; side++ )
+	{
+		vec3_t	start, end;
+		vec3_t	mins = { -16.0f, -16.0f, 0.0f }, maxs = { 16.0f, 16.0f, 1.0f };
+		float	want = 0.0f, step;
+		trace_t	tr;
+
+		VectorMA( at[side][2], 16.0f, forward, start );
+		start[2] = ground + WALKER_FOOT_UP + 8.0f;
+		VectorCopy( start, end );
+		end[2] = ground - WALKER_FOOT_DOWN - 12.0f;
+		CG_Trace( &tr, start, mins, maxs, end, cent->currentState.number, MASK_SOLID );
+		VectorClear( slope[side] );
+		if ( !tr.startsolid && tr.fraction < 1.0f )
+		{// (nothing in reach under it, or something above it: as the animation holds it)
+			want = Com_Clamp( -WALKER_FOOT_DOWN, WALKER_FOOT_UP, tr.endpos[2] - ground );
+			if ( tr.plane.normal[2] > 0.5f )
+			{
+				VectorCopy( tr.plane.normal, slope[side] );
+			}
+		}
+		step = WALKER_FOOT_RATE * seconds;
+		legs->foot[side] = seconds > 0.0f ? legs->foot[side] + Com_Clamp( -step, step, want - legs->foot[side] ) : want;
+	}
+	lowest = Q_min( legs->foot[0], legs->foot[1] );
+	drop = Com_Clamp( 0.0f, WALKER_DROP_MOST, -lowest - WALKER_DROP_FROM );
+	{
+		const float step = WALKER_DROP_RATE * seconds;
+
+		legs->drop = seconds > 0.0f ? legs->drop + Com_Clamp( -step, step, drop - legs->drop ) : drop;
+	}
+
+	for ( side = 0; side < 2; side++ )
+	{
+		vec3_t	turn = { 0.0f, 0.0f, 0.0f }, pad = { 0.0f, 0.0f, 0.0f };
+		vec2_t	kneeAt, ankleAt;
+		float	hip = 0.0f, knee = 0.0f;
+
+		// (the body is drawn down by its drop and by what it is behind its box, so from where it is worked out here the
+		// foot has to come up by as much)
+		up[side] = legs->foot[side] + legs->drop + CG_WalkerBodyLag( cent->currentState.number, cent->lerpOrigin[2] );
+		Vector2Set( hipAt[side], DotProduct( at[side][0], forward ), at[side][0][2] );
+		Vector2Set( kneeAt, DotProduct( at[side][1], forward ), at[side][1][2] );
+		Vector2Set( ankleAt, DotProduct( at[side][2], forward ), at[side][2][2] );
+		Vector2Set( target[side], ankleAt[0] - hipAt[side][0], ankleAt[1] - hipAt[side][1] );
+		if ( cg_walkerIk && fabs( up[side] ) > 0.5f )
+		{
+			CG_WalkerLegSolve( hipAt[side], kneeAt, ankleAt, up[side], &hip, &knee, target[side] );
+		}
+		turn[PITCH] = cg_walkerIk * hip;
+		CG_WalkerBone( cent, cg_walkerLeg[side][0], turn );
+		turn[PITCH] = cg_walkerIk * knee;
+		CG_WalkerBone( cent, cg_walkerLeg[side][1], turn );
+		if ( slope[side][2] > 0.0f )
+		{
+			PM_AnglesForSlope( legsAngles[YAW], slope[side], pad );
+		}
+		pad[PITCH] += hip + knee;		// (back by what hip and knee turned it)
+		CG_WalkerBone( cent, cg_walkerLeg[side][2], pad );
+	}
+
+	// What that did: the ankles should now be where they were asked to. The angles above are worked out from the
+	// skeleton file, never seen: if the ankles keep ending up further from there than without them, the other way
+	// round, and if that is no better either, none at all.
+	if ( cg_walkerIk )
+	{
+		for ( side = 0; side < 2; side++ )
+		{
+			mdxaBone_t	boltMatrix;
+			vec3_t		now;
+			float		dx, dy, off;
+
+			if ( fabs( up[side] ) < 6.0f )
+			{
+				continue;
+			}
+			trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt[side][2], &boltMatrix, legsAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+			BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, now );
+			dx = DotProduct( now, forward ) - hipAt[side][0] - target[side][0];
+			dy = now[2] - hipAt[side][1] - target[side][1];
+			off = sqrtf( dx * dx + dy * dy );
+			if ( off <= fabs( up[side] ) * 0.5f + 2.0f )
+			{
+				cg_walkerIkMiss = 0;
+			}
+			else if ( ++cg_walkerIkMiss >= 8 )
+			{
+				cg_walkerIkMiss = 0;
+				cg_walkerIk = cg_walkerIkTurned++ ? 0 : -cg_walkerIk;
+				Com_Printf( S_COLOR_YELLOW "AT-ST feet: ankle %.1f off its place, %s\n", off, cg_walkerIk ? "angles turned round" : "switched off" );
+			}
+		}
+	}
+}
+
+// how far down from its box this walker is drawn (CG_WalkerFeet, CG_WalkerBodyLag), 0 for anything else. Also where
+// its muzzles are worked out (cg_event.c CG_CalcVehMuzzle).
+float CG_WalkerDrop( const centity_t *cent )
+{
+	const walkerLegs_t *legs = &cg_walkerLegs[cent->currentState.number];
+
+	if ( !cent->m_pVehicle || !cent->m_pVehicle->m_pVehicleInfo || cent->m_pVehicle->m_pVehicleInfo->type != VH_WALKER
+		|| !legs->time || !legs->feet || cg.time - legs->time > 100 || cg.time < legs->time )
+	{
+		return 0.0f;
+	}
+	return legs->drop + CG_WalkerBodyLag( cent->currentState.number, cent->lerpOrigin[2] );
+}
+
+static void CG_WalkerAngles( centity_t *cent, vec3_t legsAngles )
+{
+	const float		view = cent->lerpAngles[YAW];
+	walkerLegs_t	*legs = &cg_walkerLegs[cent->currentState.number];
+	vec3_t			lookAngles;
+	int				side, j;
+
+	VectorSet( lookAngles, cent->lerpAngles[PITCH], 0.0f, 0.0f );
+	if ( !CG_WalkerVision( cent ) )
+	{// as ever, without what a pilot before left on its bones
+		if ( legs->time )
+		{
+			legs->time = 0;
+			for ( side = 0; side < 2; side++ )
+			{
+				for ( j = 0; j < 3; j++ )
+				{
+					CG_WalkerBone( cent, cg_walkerLeg[side][j], vec3_origin );
+				}
+			}
+		}
+		BG_G2WalkerHeadAngles( cent->ghoul2, cg.time, vec3_origin );
+		BG_G2ATSTAngles( cent->ghoul2, cg.time, lookAngles );
+		return;
+	}
+
+	if ( legs->time != cg.time )
+	{
+		const int	msec = cg.time - legs->time;
+		float		seconds = 0.0f;
+
+		if ( !legs->time || msec < 0 || msec > 500 )
+		{
+			legs->yaw = AngleNormalize180( view );
+			legs->turn = 0;
+		}
+		else
+		{
+			seconds = msec * 0.001f;
+			CG_WalkerLegsTurn( cent, legs, view, seconds );
+		}
+		legs->time = cg.time;
+		legsAngles[YAW] = legs->yaw;
+		CG_WalkerFeet( cent, legs, legsAngles, seconds );
+	}
+	legsAngles[YAW] = legs->yaw;
+
+	// the head looks where the pilot looks, over legs that face elsewhere (the bones the game pitches too, w_saber.c)
+	lookAngles[YAW] = AngleSubtract( view, legs->yaw );
+	BG_G2WalkerHeadAngles( cent->ghoul2, cg.time, lookAngles );
+}
+
 static void CG_PlayerFootsteps( centity_t *cent, footstepType_t footStepType )
 {
 	if ( !cg_footsteps.integer )
@@ -2361,7 +2820,9 @@ void CG_PlayerAnimEventDo( centity_t *cent, animevent_t *animEvent )
 				randomSwing = Q_irand( 7, 9 );
 				break;
 			}
-			swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", randomSwing));
+			swingSound = CG_SaberSwingSound( animEvent->eventData[AED_SABER_SWING_TYPE] );
+			if ( !swingSound )
+				swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", randomSwing));
 		}
 		trap->S_StartSound(cent->currentState.pos.trBase, cent->currentState.number, CHAN_AUTO, swingSound );
 		break;
@@ -2960,7 +3421,20 @@ static void CG_SetLerpFrameAnimation( centity_t *cent, clientInfo_t *ci, lerpFra
 		//vehicles may have torso etc but we only want to animate the root bone
 		if ( cent->currentState.NPC_class == CLASS_VEHICLE )
 		{
-			trap->G2API_SetBoneAnim(cent->ghoul2, 0, "model_root", firstFrame, lastFrame, flags, animSpeed,cg.time, beginFrame, blendTime);
+			// VisionJK: the same animation at another speed goes on from the frame it is at, as below for the players.
+			// A vehicle started it over: no stock one changes its speed, but the walk of an AT-ST plays as fast as it
+			// goes (CG_PlayerAnimation), and turning while walking began the stride anew again and again.
+			float at = -1.0f;
+
+			if ( resumeFrame )
+			{
+				trap->G2API_GetBoneFrame( cent->ghoul2, "model_root", cg.time, &at, NULL, 0 );
+				if ( at < Q_min( firstFrame, lastFrame ) || at > Q_max( firstFrame, lastFrame ) )
+				{
+					at = -1.0f;
+				}
+			}
+			trap->G2API_SetBoneAnim(cent->ghoul2, 0, "model_root", firstFrame, lastFrame, flags, animSpeed,cg.time, at, blendTime);
 			return;
 		}
 
@@ -3337,6 +3811,7 @@ static void CG_PlayerAnimation( centity_t *cent, int *legsOld, int *legs, float 
 	clientInfo_t	*ci;
 	int				clientNum;
 	float			speedScale;
+	int				legsAnim;
 
 	clientNum = cent->currentState.clientNum;
 
@@ -3362,6 +3837,32 @@ static void CG_PlayerAnimation( centity_t *cent, int *legsOld, int *legs, float 
 	{
 		speedScale = 1.0f;
 	}
+	// VisionJK: the walk and run of an AT-ST that goes as the one of single player play as fast as it goes, as there
+	// (PM_SetAnimFinal of code/, g_noFootSlide), in steps of a twentieth (CG_SetLerpFrameAnimation goes on from the
+	// frame it is at). Its walk and its run are the same frames (atst animation.cfg, 114 on), made for about 167 units a
+	// second: the run at 250 plays one and a half times as fast, the most there.
+	legsAnim = cent->currentState.legsAnim;
+	if ( cent->m_pVehicle && cent->m_pVehicle->m_pVehicleInfo && cent->m_pVehicle->m_pVehicleInfo->type == VH_WALKER
+		&& CG_WalkerVision( cent ) )
+	{
+		legsAnim = CG_WalkerLegsAnim( cent );
+		if ( legsAnim == BOTH_WALK1 || legsAnim == BOTH_RUN1 || legsAnim == BOTH_WALKBACK1 || legsAnim == BOTH_RUNBACK1 )
+		{
+			const float made = 167.0f;
+			const float speed = sqrtf( cent->currentState.pos.trDelta[0] * cent->currentState.pos.trDelta[0]
+				+ cent->currentState.pos.trDelta[1] * cent->currentState.pos.trDelta[1] );
+
+			const float want = Com_Clamp( 0.25f, 1.5f, speed / made );
+			const float has = cent->pe.legs.animationSpeed;
+
+			// (kept while it is within a tenth: the speed wavers while it turns, and every new one sets the loop again)
+			speedScale = ( has >= 0.25f && has <= 1.5f && fabs( want - has ) < 0.1f ) ? has : floorf( want * 20.0f + 0.5f ) / 20.0f;
+		}
+		else
+		{
+			speedScale = 1.0f;
+		}
+	}
 
 	if (cent->currentState.eType == ET_NPC)
 	{
@@ -3373,7 +3874,7 @@ static void CG_PlayerAnimation( centity_t *cent, int *legsOld, int *legs, float 
 		ci = &cgs.clientinfo[ clientNum ];
 	}
 
-	CG_RunLerpFrame( cent, ci, &cent->pe.legs, cent->currentState.legsFlip, cent->currentState.legsAnim, speedScale, qfalse);
+	CG_RunLerpFrame( cent, ci, &cent->pe.legs, cent->currentState.legsFlip, legsAnim, speedScale, qfalse);
 
 	if (!(cent->currentState.forcePowersActive & (1 << FP_RAGE)))
 	{ //don't affect torso anim speed unless raged
@@ -4362,16 +4863,12 @@ static void CG_G2PlayerAngles( centity_t *cent, matrix3_t legs, vec3_t legsAngle
 	}
 	else if ( cent->m_pVehicle && cent->m_pVehicle->m_pVehicleInfo->type == VH_WALKER )
 	{
-		vec3_t lookAngles;
-
 		VectorCopy(cent->lerpAngles, legsAngles);
 		legsAngles[PITCH] = 0;
+		// VisionJK: as in single player the legs come after where it looks and its head looks there (and the bones of
+		// its head and feet)
+		CG_WalkerAngles( cent, legsAngles );
 		AnglesToAxis( legsAngles, legs );
-
-		VectorCopy(cent->lerpAngles, lookAngles);
-		lookAngles[YAW] = lookAngles[ROLL] = 0;
-
-		BG_G2ATSTAngles( cent->ghoul2, cg.time, lookAngles );
 	}
 	else
 	{
@@ -5761,7 +6258,7 @@ static float CG_SaberHum( void )
 // the renderer has none, v_saber3D is off, or the blade is black (light can only be added, a black blade keeps its
 // texture); draw it as before.
 static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius,
-	saber_colors_t color, const saberPast_t *past, qboolean trailMove, float hum, int renderfx )
+	saber_colors_t color, const saberPast_t *past, qboolean trailMove, float hum, int renderfx, float ignite )
 {
 	saberBlade3D_t	blade;
 	vec3_t			rgb = { 1.0f, 1.0f, 1.0f };
@@ -5781,11 +6278,11 @@ static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float
 	VectorMA( origin, length, dir, blade.end );
 	CG_SaberSweep( past, trailMove, &blade );
 	// (the halo as the blade comes out, as the flat glow had it)
-	flare = length < lengthMax ? 1.0f + 2.0f / length : 1.0f;
+	flare = ( length < lengthMax ? 1.0f + 2.0f / length : 1.0f ) * ignite;
 	h = Com_Clamp( 0.0f, 1.0f, ( hum - 0.82f ) / 0.18f );
 	blade.core = radius * 0.22f * CG_SaberScale( &v_saberCoreScale ) * flare * ( 0.95f + 0.1f * h );
 	blade.glow = radius * 1.5f * CG_SaberScale( &v_saberGlowScale ) * flare * ( 0.97f + 0.06f * h ) * ( 1.0f + 0.3f * blade.sweep );
-	VectorScale( rgb, ( 0.88f + 0.12f * h ) * ( 1.0f + 0.25f * blade.sweep ), blade.rgb );
+	VectorScale( rgb, ignite * ( 0.88f + 0.12f * h ) * ( 1.0f + 0.25f * blade.sweep ), blade.rgb );
 	blade.renderfx = renderfx & ( RF_THIRD_PERSON | RF_FIRST_PERSON );
 	trap->ext.R_AddSaberBlade( &blade );
 	return qtrue;
@@ -5793,7 +6290,7 @@ static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float
 
 // past and trailMove: see CG_AddSaberBlade3D
 void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight,
-	const saberPast_t *past, qboolean trailMove )
+	const saberPast_t *past, qboolean trailMove, float ignite )
 {
 	const float	hum = CG_SaberHum();
 	vec3_t		mid;
@@ -5821,10 +6318,11 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 		// (VisionJK: its brightness hums with the 3D blade)
 		if ( CG_Saber3D() )
 			VectorScale( rgb, hum, rgb );
+		VectorScale( rgb, ignite, rgb );
 		trap->R_AddLightToScene( mid, (length*1.4f) + (Q_flrand(0.0f, 1.0f)*3.0f), rgb[0], rgb[1], rgb[2] );
 	}
 
-	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color, past, trailMove, hum, rfx ) )
+	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color, past, trailMove, hum, rfx, ignite ) )
 	{
 		return;
 	}
@@ -5845,6 +6343,7 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	{
 		radiusmult = 1.0;
 	}
+	radiusmult *= ignite;
 
 	if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 	{ //draw the blade as a post-render so it doesn't get in the cap...
@@ -5891,6 +6390,15 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 	trap->R_AddRefEntityToScene( &saber );
+}
+
+void CG_SaberLooseBlade( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius, int color, float ignite )
+{
+	vec3_t o, d;
+
+	VectorCopy( origin, o );
+	VectorCopy( dir, d );
+	CG_DoSaber( o, d, length, lengthMax, radius, (saber_colors_t)color, 0, qtrue, NULL, qfalse, ignite );
 }
 
 // the colour of the trail of a saber, 0 to 255: the classic one and the inside of the SFX one
@@ -5962,7 +6470,7 @@ static void CG_SFXSaberTrailFill( const saberFX_t *fx, saber_colors_t color )
 // v_saberStyle 1 (ui/ui_saberfx.c). trail NULL: the blade without the place it was a moment ago.
 // past and trailMove: see CG_AddSaberBlade3D
 static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, saber_colors_t color, const vec3_t muzzle,
-	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx, const saberPast_t *past, qboolean trailMove )
+	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx, const saberPast_t *past, qboolean trailMove, float ignite )
 {
 	const float			hum = CG_SaberHum();
 	const bladeInfo_t	*blade = &client->saber[saberNum].blade[bladeNum];
@@ -5988,12 +6496,12 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 		fx.rgb[2] = (byte)rgb[2];
 	}
 	fx.renderfx = rfx;
-	fx.coreScale = CG_SaberScale( &v_saberCoreScale );
-	fx.glowScale = CG_SaberScale( &v_saberGlowScale );
+	fx.coreScale = CG_SaberScale( &v_saberCoreScale ) * ignite;
+	fx.glowScale = CG_SaberScale( &v_saberGlowScale ) * ignite;
 	// (the 3D blade ends where it strikes a wall, as the flat one; end is a unit past the tip, see CG_AddSaberBlade; and
 	// it glows over the place it swept itself, the flat fill of that place is not drawn then)
 	if ( !CG_AddSaberBlade3D( muzzle, dir, Distance( muzzle, end ) - 1.0f, blade->lengthMax, blade->radius, color, past, trailMove,
-		hum, rfx ) )
+		hum, rfx, ignite ) )
 	{
 		SaberFX_Draw( &fx );
 		if ( trail )
@@ -6003,7 +6511,7 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 	if ( client->saber[saberNum].numBlades < 3 && !( client->saber[saberNum].saberFlags2 & SFL2_NO_DLIGHT ) && blade->length >= 0.5f )
 	{
 		CG_RGBForSaberColor( color, rgb );
-		VectorScale( rgb, 0.66f, rgb );
+		VectorScale( rgb, 0.66f * ignite, rgb );
 		if ( CG_HasLineLight() )
 		{
 			// VisionJK: the blade as a tube of light, so the light runs along it on the walls and the floor and
@@ -6736,6 +7244,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	int i = 0;
 	int trailDur;
 	float saberLen;
+	float ignite;
 	float diff;
 	clientInfo_t *client;
 	centity_t *saberEnt;
@@ -7030,6 +7539,12 @@ CheckTrail:
 
 		VectorMA( org_, saberLen, axis_[0], tip );
 		past = CG_SaberPast( &client->saber[saberNum].blade[bladeNum].trail, org_, tip );
+		if ( !fromSaber )
+		{
+			CG_SaberSoundBlade( cent, saberNum, bladeNum, axis_[0] );
+			CG_SaberDrawnAdd( cent->currentState.number, saberNum, bladeNum, org_, axis_[0], saberLen,
+				client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius, scolor );
+		}
 		trailMove = (qboolean)( ( move >= 0 && move < LS_MOVE_MAX && saberMoveData[move].trailLength > 0 )
 			|| BG_SuperBreakWinAnim( cent->currentState.torsoAnim ) || ( cent->currentState.saberInFlight && saberNum == 0 ) );
 	}
@@ -7282,16 +7797,17 @@ JustDoIt:
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
 	// (the blade of a player with an outline is drawn after his figure, which is drawn after everything else then)
 	bladeRenderfx = renderfx | ( CG_SelectOutlined( cent->currentState.number ) ? ( RF_FORCEPOST | RF_AFTERGLOW ) : 0 );
+	ignite = CG_SaberIgniteFlicker( &client->saber[saberNum].blade[bladeNum], cent->currentState.number, saberNum, bladeNum );
 	if ( sfxStyle )
 	{
 		CG_DoSFXSaber( client, saberNum, bladeNum, (saber_colors_t)scolor, org_, end, axis_[0], sfxTrail ? saberTrail : NULL,
-			bladeRenderfx, trailShown ? past : NULL, trailMove );
+			bladeRenderfx, trailShown ? past : NULL, trailMove, ignite );
 		return;
 	}
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 		scolor, bladeRenderfx,
 		(qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)),
-		trailShown ? past : NULL, trailMove );
+		trailShown ? past : NULL, trailMove, ignite );
 }
 
 int CG_IsMindTricked(int trickIndex1, int trickIndex2, int trickIndex3, int trickIndex4, int client)
@@ -9773,14 +10289,14 @@ void CG_Player( centity_t *cent ) {
 					if (ci->saber[0].soundOff
 						&& !cent->currentState.saberHolstered)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[0].soundOff);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[0], qfalse));
 					}
 
 					if (ci->saber[1].soundOff &&
 						ci->saber[1].model[0] &&
 						!cent->currentState.saberHolstered)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[1].soundOff);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[1], qfalse));
 					}
 
 				}
@@ -9791,12 +10307,12 @@ void CG_Player( centity_t *cent ) {
 					//trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, trap->S_RegisterSound( "sound/weapons/saber/saberon.wav" ));
 					if (ci->saber[0].soundOn)
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[0].soundOn);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[0], qtrue));
 					}
 
-					if (ci->saber[1].soundOn)
+					if (ci->saber[1].soundOn && ci->saber[1].model[0])
 					{
-						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[1].soundOn);
+						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&ci->saber[1], qtrue));
 					}
 
 					BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
@@ -10028,6 +10544,9 @@ void CG_Player( centity_t *cent ) {
 	VectorCopy (legs.origin, legs.oldorigin);	// don't positionally lerp at all
 
 	CG_G2PlayerAngles( cent, legs.axis, rootAngles );
+	// VisionJK: an AT-ST with a foot on lower ground is drawn down towards it (CG_WalkerFeet)
+	legs.origin[2] -= CG_WalkerDrop( cent );
+	VectorCopy( legs.origin, legs.oldorigin );
 	CG_G2PlayerHeadAnims( cent );
 
 	if ( (cent->currentState.eFlags2&EF2_HELD_BY_MONSTER)
@@ -10776,7 +11295,11 @@ void CG_Player( centity_t *cent ) {
 		CG_DrawPlayerSphere(cent, cent->lerpOrigin, 1.0f, cgs.media.invulnerabilityShader );
 	}
 stillDoSaber:
-	if ((cent->currentState.eFlags & EF_DEAD) && cent->currentState.weapon == WP_SABER)
+	if ( CG_SaberDropUpdate( cent, ci ) )
+	{ // VisionJK: the hilt fell out of the dead hand (saber/cg_saberdrop.c)
+		g2HasWeapon = qfalse;
+	}
+	else if ((cent->currentState.eFlags & EF_DEAD) && cent->currentState.weapon == WP_SABER)
 	{
 		//cent->saberLength = 0;
 		BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
@@ -10826,8 +11349,7 @@ stillDoSaber:
 
 				if (hasLen)
 				{
-					trap->S_AddLoopingSound( cent->currentState.number, soundSpot, vec3_origin,
-						ci->saber[0].soundLoop );
+					CG_SaberSoundHum( cent, soundSpot, ci->saber[0].soundLoop );
 					didFirstSound = qtrue;
 				}
 			}
@@ -10850,8 +11372,7 @@ stillDoSaber:
 
 				if (hasLen)
 				{
-					trap->S_AddLoopingSound( cent->currentState.number, soundSpot, vec3_origin,
-						ci->saber[1].soundLoop );
+					CG_SaberSoundHum( cent, soundSpot, ci->saber[1].soundLoop );
 				}
 			}
 		}
@@ -11228,7 +11749,8 @@ stillDoSaber:
 		BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
 		BG_SI_SetDesiredLength(&ci->saber[1], 0, -1);
 
-		drawPlayerSaber = qtrue;
+		// (VisionJK: not in the hand while it hangs on the belt, saber/cg_saberbelt.c)
+		drawPlayerSaber = (qboolean)!CG_SaberBeltHolds( cent );
 	}
 	else
 	{

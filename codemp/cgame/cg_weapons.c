@@ -25,6 +25,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_weapons.c -- events and effects dealing with weapons
 #include "cg_local.h"
 #include "fx_local.h"
+#include "cgame/saber/cg_saberignite.h"
+#include "cgame/weapons/cg_impact.h"
+#include "cgame/weapons/cg_boltlight.h"
 
 /*
 Ghoul2 Insert Start
@@ -585,7 +588,8 @@ Ghoul2 Insert End
 		( ( cent->currentState.modelindex2 == WEAPON_CHARGING_ALT && cent->currentState.weapon == WP_BRYAR_PISTOL ) ||
 		  ( cent->currentState.modelindex2 == WEAPON_CHARGING_ALT && cent->currentState.weapon == WP_BRYAR_OLD ) ||
 		  ( cent->currentState.weapon == WP_BOWCASTER && cent->currentState.modelindex2 == WEAPON_CHARGING ) ||
-		  ( cent->currentState.weapon == WP_DEMP2 && cent->currentState.modelindex2 == WEAPON_CHARGING_ALT) ) )
+		  ( cent->currentState.weapon == WP_DEMP2 && cent->currentState.modelindex2 == WEAPON_CHARGING_ALT) ||
+		  ( cent->currentState.weapon == WP_DISRUPTOR && cent->currentState.modelindex2 == WEAPON_CHARGING_ALT) ) )
 	{
 		int		shader = 0;
 		float	val = 0.0f;
@@ -636,44 +640,54 @@ Ghoul2 Insert End
 			shader = cgs.media.lightningFlash;
 			scale = 1.75f;
 		}
-
-		if ( val < 0.0f )
-		{
-			val = 0.0f;
+		else if ( cent->currentState.weapon == WP_DISRUPTOR )
+		{	// VisionJK: the scope charges without a flash of its own or a shake, only the light
+			val = ( cg.time - cent->currentState.constantLight ) / (float)Q_max( weaponData[WP_DISRUPTOR].altMaxCharge, 1 );
 		}
-		else if ( val > 1.0f )
+
+		// VisionJK: a light at the end of the barrel that grows with the charge (a moving light, v_dlightScale)
+		CG_ChargeLight( cent->currentState.weapon, flashorigin, val );
+
+		if ( shader )
 		{
-			val = 1.0f;
-			if (ps && cent->currentState.number == ps->clientNum)
+			if ( val < 0.0f )
 			{
-				CGCam_Shake( /*0.1f*/0.2f, 100 );
+				val = 0.0f;
 			}
-		}
-		else
-		{
-			if (ps && cent->currentState.number == ps->clientNum)
+			else if ( val > 1.0f )
 			{
-				CGCam_Shake( val * val * /*0.3f*/0.6f, 100 );
+				val = 1.0f;
+				if (ps && cent->currentState.number == ps->clientNum)
+				{
+					CGCam_Shake( /*0.1f*/0.2f, 100 );
+				}
 			}
+			else
+			{
+				if (ps && cent->currentState.number == ps->clientNum)
+				{
+					CGCam_Shake( val * val * /*0.3f*/0.6f, 100 );
+				}
+			}
+
+			val += Q_flrand(0.0f, 1.0f) * 0.5f;
+
+			VectorCopy(flashorigin, fxSArgs.origin);
+			VectorClear(fxSArgs.vel);
+			VectorClear(fxSArgs.accel);
+			fxSArgs.scale = 3.0f*val*scale;
+			fxSArgs.dscale = 0.0f;
+			fxSArgs.sAlpha = 0.7f;
+			fxSArgs.eAlpha = 0.7f;
+			fxSArgs.rotation = Q_flrand(0.0f, 1.0f)*360;
+			fxSArgs.bounce = 0.0f;
+			fxSArgs.life = 1.0f;
+			fxSArgs.shader = shader;
+			fxSArgs.flags = 0x08000000;
+
+			//FX_AddSprite( flash.origin, NULL, NULL, 3.0f * val, 0.0f, 0.7f, 0.7f, WHITE, WHITE, Q_flrand(0.0f, 1.0f) * 360, 0.0f, 1.0f, shader, FX_USE_ALPHA );
+			trap->FX_AddSprite(&fxSArgs);
 		}
-
-		val += Q_flrand(0.0f, 1.0f) * 0.5f;
-
-		VectorCopy(flashorigin, fxSArgs.origin);
-		VectorClear(fxSArgs.vel);
-		VectorClear(fxSArgs.accel);
-		fxSArgs.scale = 3.0f*val*scale;
-		fxSArgs.dscale = 0.0f;
-		fxSArgs.sAlpha = 0.7f;
-		fxSArgs.eAlpha = 0.7f;
-		fxSArgs.rotation = Q_flrand(0.0f, 1.0f)*360;
-		fxSArgs.bounce = 0.0f;
-		fxSArgs.life = 1.0f;
-		fxSArgs.shader = shader;
-		fxSArgs.flags = 0x08000000;
-
-		//FX_AddSprite( flash.origin, NULL, NULL, 3.0f * val, 0.0f, 0.7f, 0.7f, WHITE, WHITE, Q_flrand(0.0f, 1.0f) * 360, 0.0f, 1.0f, shader, FX_USE_ALPHA );
-		trap->FX_AddSprite(&fxSArgs);
 	}
 
 	// make sure we aren't looking at cg.predictedPlayerEntity for LG
@@ -2122,6 +2136,7 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	// VisionJK: into standing water of the water gun (toys/cg_water.c), explosives harder
 	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
 		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
+	CG_BoltImpact( weapon, altFire, origin, dir, (qboolean)( soundType == IMPACTSOUND_METAL ) );
 
 	switch( weapon )
 	{
@@ -2705,14 +2720,14 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 			//trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, trap->S_RegisterSound( "sound/weapons/saber/saberoffquick.wav" ));
 			if (cgs.clientinfo[ps->clientNum].saber[0].soundOff && !ps->saberHolstered)
 			{
-				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[0].soundOff);
+				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&cgs.clientinfo[ps->clientNum].saber[0], qfalse));
 			}
 
 			if (cgs.clientinfo[ps->clientNum].saber[1].soundOff &&
 				cgs.clientinfo[ps->clientNum].saber[1].model[0] &&
 				!ps->saberHolstered)
 			{
-				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[1].soundOff);
+				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&cgs.clientinfo[ps->clientNum].saber[1], qfalse));
 			}
 		}
 		else if (ps->weapon == WP_SABER && cent->weapon != ps->weapon && !cent->saberWasInFlight)
@@ -2720,12 +2735,12 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 			//trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, trap->S_RegisterSound( "sound/weapons/saber/saberon.wav" ));
 			if (cgs.clientinfo[ps->clientNum].saber[0].soundOn)
 			{
-				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[0].soundOn);
+				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&cgs.clientinfo[ps->clientNum].saber[0], qtrue));
 			}
 
-			if (cgs.clientinfo[ps->clientNum].saber[1].soundOn)
+			if (cgs.clientinfo[ps->clientNum].saber[1].soundOn && cgs.clientinfo[ps->clientNum].saber[1].model[0])
 			{
-				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[1].soundOn);
+				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, CG_SaberIgniteSound(&cgs.clientinfo[ps->clientNum].saber[1], qtrue));
 			}
 
 			BG_SI_SetDesiredLength(&cgs.clientinfo[ps->clientNum].saber[0], 0, -1);

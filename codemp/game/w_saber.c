@@ -765,12 +765,27 @@ static QINLINE void G_G2NPCAngles(gentity_t *ent, matrix3_t legs, vec3_t angles)
 
 	if ( ent->client )
 	{
+		if ( ent->client->NPC_class == CLASS_ATST && !( ent->s.eType == ET_NPC && ent->s.m_iVehicleNum ) )
+		{// VisionJK: its legs face where G_ATSTLegsYaw says (the yaw the clients get too, G_ATSTFrame), its head turns
+		 // on them to where it looks and pitches there, on the bones the AT-ST of a pilot turns (BG_G2WalkerHeadAngles):
+		 // the turn on the thoracic bone, the pitch on the cranium. The old code turned the cranium by legs it never
+		 // worked out.
+			const float legsYaw = G_ATSTLegsYaw( ent );
+
+			VectorSet( angles, 0.0f, legsYaw, 0.0f );
+			AnglesToAxis( angles, legs );
+			VectorSet( lookAngles, 0.0f, AngleSubtract( ent->client->ps.viewangles[YAW], legsYaw ), 0.0f );
+			NPC_SetBoneAngles( ent, thoracicBone, lookAngles );
+			VectorSet( lookAngles, Com_Clamp( -30.0f, 30.0f, AngleNormalize180( ent->client->ps.viewangles[PITCH] ) ), 0.0f, 0.0f );
+			NPC_SetBoneAngles( ent, craniumBone, lookAngles );
+			return;
+		}
 		if ( (ent->client->NPC_class == CLASS_PROBE )
 			|| (ent->client->NPC_class == CLASS_R2D2 )
 			|| (ent->client->NPC_class == CLASS_R5D2)
 			|| (ent->client->NPC_class == CLASS_ATST) )
 		{
-			vec3_t	trailingLegsAngles;
+			vec3_t	trailingLegsAngles = { 0.0f, 0.0f, 0.0f };
 
 			if (ent->s.eType == ET_NPC &&
 				ent->s.m_iVehicleNum &&
@@ -1039,8 +1054,21 @@ static QINLINE void G_G2PlayerAngles( gentity_t *ent, matrix3_t legs, vec3_t leg
 
 		VectorCopy(ent->client->ps.viewangles, lookAngles);
 		lookAngles[YAW] = lookAngles[ROLL] = 0;
+		// VisionJK: a walker that steps (BG_WalkerSteps) pitches its head as its pilot's cgame draws it, on the cranium,
+		// so its muzzles are where he sees them; any other as ever, with the cranium of a pilot before cleared
+		{
+			const gentity_t	*pilot = (const gentity_t *)ent->m_pVehicle->m_pPilot;
 
-		BG_G2ATSTAngles( ent->ghoul2, level.time, lookAngles );
+			if ( pilot && pilot->client && BG_WalkerSteps( pilot->s.number ) )
+			{
+				BG_G2WalkerHeadAngles( ent->ghoul2, level.time, lookAngles );
+			}
+			else
+			{
+				BG_G2WalkerHeadAngles( ent->ghoul2, level.time, vec3_origin );
+				BG_G2ATSTAngles( ent->ghoul2, level.time, lookAngles );
+			}
+		}
 	}
 	else if (ent->NPC)
 	{ //an NPC not using a humanoid skeleton, do special angle stuff.

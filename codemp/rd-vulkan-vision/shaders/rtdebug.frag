@@ -5,9 +5,10 @@
 // the view as the wet places have it (rows 0-8), then row 11: the direction to the sun, w the mode.
 //   1: a ray from each pixel towards the sun. White where it gets out, dark where the level is in the way: outdoors
 //      that has to be the shadow in the lightmaps.
-//   2: a ray from the eye through each pixel against the depth of the scene: black where they agree, red where the
-//      ray stops in front of the depth (something in the structure that is not drawn), green where it goes past it
-//      (something drawn that is not in the structure: what moves, glass, grates, the sky).
+//   2: a ray from the eye through each pixel against the depth of the scene, the level and the brush models where they
+//      are now (what the moving lights trace against): black where they agree, red where the ray stops in front of the
+//      depth (something in the structure that is not drawn), green where it goes past it (something drawn that is not
+//      in the structure: the players, glass, grates, the sky).
 //   3: the rays towards the sun against the players alone (mask 2): dark where a player is in the way, their sun
 //      shadows, also on themselves.
 //   4: the light patches of the level (the textures that give light, VK_RT_Patches) as dots over the scene, larger
@@ -22,7 +23,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[319];
+	vec4	rt[372];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
@@ -103,7 +104,7 @@ void main() {
 	} else {
 		vec3 eye = W[4].xyz;
 		float depth = distance( p, eye );
-		float t = Trace( eye, normalize( p - eye ), depth + 64.0, 0x01u );
+		float t = Trace( eye, normalize( p - eye ), depth + 64.0, 0x05u );
 		float diff = clamp( ( depth - t ) / 16.0, -1.0, 1.0 );
 
 		o_color = vec4( max( diff, 0.0 ), max( -diff, 0.0 ), 0.0, 1.0 );

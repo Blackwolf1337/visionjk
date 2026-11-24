@@ -136,7 +136,7 @@ typedef struct trRefEntity_s {
 
 	float		axisLength;		// compensate for non-normalized axis
 
-	qboolean	needDlights;	// true for bmodels that touch a dlight
+	qboolean	needDlights;	// true for bmodels and models (R_ModelDlights) that touch a dlight
 	qboolean	lightingCalculated;
 	vec3_t		lightDir;		// normalized direction towards light
 	vec3_t		ambientLight;	// color normalized to 0-255
@@ -596,6 +596,7 @@ typedef struct shader_s {
 	bool		entityMergable;			// merge across entites optimizable (smoke, blood)
 	float		surfaceLight;			// VisionJK: q3map_surfacelight, the light its surfaces gave when the map was lit (vk_rt.cpp)
 	bool		lampPanel;				// VisionJK: a lamp of the level (LampPanel in tr_shader.cpp): it glows (v_panelGlow)
+	bool		alphaShine;				// VisionJK: its alpha says where it shines (MergeReflectedTexture in tr_shader.cpp)
 
 	skyParms_t	*sky;
 	fogParms_t	*fogParms;
@@ -834,6 +835,7 @@ typedef struct srfGridMesh_s {
 	int				width, height;
 	float			*widthLodError;
 	float			*heightLodError;
+	qboolean		hardEdges;		// VisionJK: folded round hard corners (a square pillar), its smoothed normals are no use
 	drawVert_t		verts[1];		// variable sized
 } srfGridMesh_t;
 
@@ -951,6 +953,7 @@ typedef struct world_s {
 	dshader_t	*shaders;
 
 	bmodel_t	*bmodels;
+	int			numBModels;			// VisionJK: the world model and the doors, lifts... after it (vk_rt.cpp)
 
 	int			numplanes;
 	cplane_t	*planes;
@@ -1438,6 +1441,8 @@ void R_AddPolygonSurfaces( void );
 void R_DecomposeSort( uint64_t sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
 
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
+void R_AddModelDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, const trRefEntity_t *ent );
+void R_ModelDlights( trRefEntity_t *ent, float radius );
 
 
 #define	CULL_IN		0		// completely unclipped
@@ -1887,6 +1892,13 @@ CRenderableSurface():
 void R_AddGhoulSurfaces( trRefEntity_t *ent );
 void RB_SurfaceGhoul( CRenderableSurface *surface );
 qboolean R_GhoulSurfaceDone( void );
+qboolean R_PointInSolid( const vec3_t p );
+#ifndef RD_VISION_GLES
+// vk_rt.cpp: a player the view of the level does not draw (himself in first person, someone outside the picture) whose
+// shadow can still be seen in it, and a surface of him for the shadows
+qboolean VK_RT_WantsHidden( const trRefEntity_t *ent );
+void VK_RT_QueueCaster( const trRefEntity_t *ent, CBoneCache *bones, const mdxmSurface_t *surface );
+#endif
 /*
 Ghoul2 Insert End
 */

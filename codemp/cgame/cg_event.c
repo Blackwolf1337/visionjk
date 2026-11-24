@@ -33,6 +33,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/menudef.h"
 
 #include "ghoul2/G2.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberignite.h"
+#include "cgame/weapons/cg_impact.h"
+#include "cgame/weapons/cg_boltlight.h"
+#include "cgame/saber/cg_saberclash.h"
 //==========================================================================
 
 extern qboolean WP_SaberBladeUseSecondBladeStyle( saberInfo_t *saber, int bladeNum );
@@ -1189,6 +1194,7 @@ void CG_G2MarkEvent(entityState_t *es)
 	}
 }
 
+float CG_WalkerDrop( const centity_t *cent );
 void CG_CalcVehMuzzle(Vehicle_t *pVeh, centity_t *ent, int muzzleNum)
 {
 	mdxaBone_t boltMatrix;
@@ -1219,6 +1225,8 @@ void CG_CalcVehMuzzle(Vehicle_t *pVeh, centity_t *ent, int muzzleNum)
 	trap->G2API_GetBoltMatrix_NoRecNoRot(ent->ghoul2, 0, pVeh->m_iMuzzleTag[muzzleNum], &boltMatrix, vehAngles,
 		ent->lerpOrigin, cg.time, NULL, ent->modelScale);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, pVeh->m_vMuzzlePos[muzzleNum]);
+	// VisionJK: an AT-ST drawn below its box has its muzzles there too (cg_players.c)
+	pVeh->m_vMuzzlePos[muzzleNum][2] -= CG_WalkerDrop( ent );
 	BG_GiveMeVectorFromMatrix(&boltMatrix, NEGATIVE_Y, pVeh->m_vMuzzleDir[muzzleNum]);
 }
 
@@ -2165,8 +2173,12 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 	case EV_SABER_ATTACK:
 		DEBUGNAME("EV_SABER_ATTACK");
 		{
-			qhandle_t swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", Q_irand(1, 8)));
+			qhandle_t swingSound = CG_SaberStyleSwingSound( cg_entities[es->number].currentState.fireflag );
 			clientInfo_t *client = NULL;
+			if ( !swingSound )
+			{
+				swingSound = trap->S_RegisterSound(va("sound/weapons/saber/saberhup%i.wav", Q_irand(1, 8)));
+			}
 			if ( cg_entities[es->number].currentState.eType == ET_NPC )
 			{
 				client = cg_entities[es->number].npcClient;
@@ -2395,6 +2407,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					trap->FX_PlayEffectID( blockFXID, es->origin, fxDir, -1, -1, qfalse );
 					// VisionJK: a burst of sparks where the renderer simulates them (v_gpuSparks)
 					CG_GpuSparks( es->origin, fxDir, GPUSPARKS_CLASH, 1.0f );
+					CG_SaberClash( es->origin, fxDir, 1.0f, (qboolean)!noFlare );
 
 					if ( !noFlare )
 					{
@@ -2413,6 +2426,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					fxDir[1] = 1;
 				}
 				trap->FX_PlayEffectID(cgs.effects.mBlasterDeflect, es->origin, fxDir, -1, -1, qfalse);
+				CG_SaberDeflect( es->origin, fxDir );
+				CG_BoltLightFlash( es->origin );
 			}
 		}
 		break;
@@ -2423,6 +2438,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			cg_saberFlashTime = cg.time-50;
 			VectorCopy( es->origin, cg_saberFlashPos );
 			CG_ScreenFxFlash( es->origin, 64.0f, 1.0f );
+			{
+				static const vec3_t up = { 0.0f, 0.0f, 1.0f };
+
+				CG_SaberClash( es->origin, up, 1.2f, qtrue );
+			}
 			trap->S_StartSound ( es->origin, -1, CHAN_WEAPON, trap->S_RegisterSound( va("sound/weapons/saber/saberhitwall%i", Q_irand(1, 3)) ) );
 		}
 		break;
@@ -2445,11 +2465,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			{
 				if (ci->saber[0].soundOn)
 				{
-					trap->S_StartSound (NULL, es->number, CHAN_AUTO, ci->saber[0].soundOn );
+					trap->S_StartSound (NULL, es->number, CHAN_AUTO, CG_SaberIgniteSound( &ci->saber[0], qtrue ) );
 				}
-				if (ci->saber[1].soundOn)
+				if (ci->saber[1].soundOn && ci->saber[1].model[0])
 				{
-					trap->S_StartSound (NULL, es->number, CHAN_AUTO, ci->saber[1].soundOn );
+					trap->S_StartSound (NULL, es->number, CHAN_AUTO, CG_SaberIgniteSound( &ci->saber[1], qtrue ) );
 				}
 			}
 		}
@@ -2529,6 +2549,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 	case EV_DISRUPTOR_SNIPER_MISS:
 		DEBUGNAME("EV_DISRUPTOR_SNIPER_MISS");
 		ByteToDir( es->eventParm, dir );
+		CG_BoltImpact( WP_DISRUPTOR, qfalse, cent->lerpOrigin, dir, qfalse );
 		if (es->weapon)
 		{ //primary
 			FX_DisruptorHitWall( cent->lerpOrigin, dir );
@@ -2549,6 +2570,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		else
 		{ //non-client
 			FX_DisruptorHitWall( cent->lerpOrigin, dir );
+			CG_BoltImpact( WP_DISRUPTOR, qfalse, cent->lerpOrigin, dir, qfalse );
 		}
 		break;
 
@@ -3245,7 +3267,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		else
 		{
 			if ( cgs.gameSounds[ es->eventParm ] ) {
-				trap->S_StartSound (NULL, es->number, es->saberEntityNum, cgs.gameSounds[ es->eventParm ] );
+				const sfxHandle_t generalSound = CG_SaberIgniteEvent( es->pos.trBase, cgs.gameSounds[ es->eventParm ] );
+
+				if ( generalSound ) {
+					trap->S_StartSound (NULL, es->number, es->saberEntityNum, generalSound );
+				}
 			} else {
 				s = CG_ConfigString( CS_SOUNDS + es->eventParm );
 				trap->S_StartSound (NULL, es->number, es->saberEntityNum, CG_CustomSound( es->number, s ) );

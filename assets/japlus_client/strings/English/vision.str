@@ -653,6 +653,12 @@ LANG_ENGLISH        "Doppler Effect"
 REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 
+REFERENCE           SABER_SOUNDS
+LANG_ENGLISH        "Saber Sounds"
+
+REFERENCE           THE_HUM_OF_A_BLADE_FOLLOWS_HOW_FAST
+LANG_ENGLISH        "The hum of a blade follows how fast it moves, each stance has swings of its own, and a blade that passes close to your head is heard."
+
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
 
@@ -779,6 +785,18 @@ LANG_ENGLISH        "Blade Glow"
 REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
 
+REFERENCE           IGNITION
+LANG_ENGLISH        "Ignition"
+
+REFERENCE           THE_BLADE_FLICKERS_AS_IT_COMES_OUT_A
+LANG_ENGLISH        "The blade flickers as it comes out and goes in and when it deflects a shot, its light grows with it, and hilts differ between the ignition sounds of the game."
+
+REFERENCE           HILTS
+LANG_ENGLISH        "Hilts"
+
+REFERENCE           A_SABER_THAT_IS_SWITCHED_OFF_HANGS_O
+LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk (not the staff). When a player dies the hilt falls to the floor and rolls."
+
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
 
@@ -841,6 +859,12 @@ LANG_ENGLISH        "Ally Model"
 
 REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
+
+REFERENCE           IMPACTS_BY_MATERIAL
+LANG_ENGLISH        "Impacts by Material"
+
+REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
@@ -1636,6 +1660,9 @@ LANG_ENGLISH        "Particles"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
+
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
 
 REFERENCE           HITS
 LANG_ENGLISH        "Hits"
@@ -3019,9 +3046,6 @@ LANG_ENGLISH        "Renamed to %s"
 
 REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
 LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
-
-REFERENCE           SABERS
-LANG_ENGLISH        "Sabers"
 
 REFERENCE           KILLFEED_SIZE
 LANG_ENGLISH        "Killfeed Size"

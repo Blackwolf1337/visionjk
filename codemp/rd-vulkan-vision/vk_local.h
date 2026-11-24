@@ -71,7 +71,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
 #define VK_RT_CASTERS		16		// players whose spheres the shadow pass tests before it traces (VK_RT_MAX_CASTERS)
-#define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 52 * 4 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (52: the tiles of the shadow maps, VK_SM_TILES), then the panels of each player
+#define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 64 * 4 + 4 + 1 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (64: the tiles of the shadow maps, 4: moving lights 2 and 3, 1: how strong the four are, VK_SM_TILES), then the panels of each player
 #define VK_BLADE_ROWS		7		// shaders/saber.glsl: seven rows a blade
 #define VK_BLADE_PORTAL		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * VK_BLADE_ROWS )	// where the view of a mirror or portal is
 #define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal
@@ -135,6 +135,9 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKP_SPECGLOSS		0x400u			// rend2's specular map in tex3: F0 in rgb, gloss in alpha
 #define VKP_SHEEN_ALBEDO	0x800u			// the sheen has the colour of the albedo (rend2's cloth)
 #define VKP_ENERGY			0x1000u			// diffuse loses what the shine takes (v_pbrEnergy)
+#define VKP_ALPHA_SHINE		0x2000u			// the alpha of the texture says where it is smooth and metal (generic.frag AlphaShine)
+#define VKP_FOLLOW			0x8000u			// a plain stage over a stage with parallax: shifted with it (generic.frag FollowParallax)
+#define VKP_RAISED			0x4000u			// a light on a tessellated stage: pbr[2] the height of its bumps in units, they cast shadows only
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
@@ -381,6 +384,7 @@ extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
 extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
 extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
+extern int		rb_surfaceDlights;	// vk_backend.cpp: the moving lights of the surface being added (R_GhoulSurfaceDone)
 extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
 extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
 qboolean	RB_ShaderPrepassed( const shader_t *shader );

@@ -65,7 +65,7 @@ void VK_InitPost( void ) {
 	v_softParticles = ri.Cvar_Get( "v_softParticles", "1", CVAR_ARCHIVE_ND,
 		"Smoke, dust and fire of the effects fade out where they meet walls and the floor and right in front of the eye, instead of cutting into them with a hard edge. Vulkan only. 0: off. Above 1: the units over which they fade (1: 10)" );
 	v_litParticles = ri.Cvar_Get( "v_litParticles", "1", CVAR_ARCHIVE_ND,
-		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
+		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor, and glow around a blade. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
 }

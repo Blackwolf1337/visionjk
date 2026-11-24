@@ -363,6 +363,9 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 	// set up lighting now that we know we aren't culled
 	//
 	if ( !personalModel ) {
+		const md3Frame_t *frame = ( md3Frame_t * )( ( byte * )header + header->ofsFrames ) + ent->e.frame;
+
+		R_ModelDlights( ent, frame->radius );
 		R_SetupEntityLighting( &tr.refdef, ent );
 	}
 
@@ -411,7 +414,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 
 		// don't add third_person objects if not viewing through a portal
 		if ( !personalModel ) {
-			R_AddDrawSurf( (surfaceType_t *)surface, shader, fogNum, qfalse );
+			R_AddModelDrawSurf( (surfaceType_t *)surface, shader, fogNum, ent );
 		}
 
 		surface = (md3Surface_t *)( (byte *)surface + surface->ofsEnd );

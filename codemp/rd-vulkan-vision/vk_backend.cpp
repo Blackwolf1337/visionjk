@@ -857,6 +857,7 @@ static qboolean	rb_softLater;
 // over a surface lies under its light then: a limit.)
 qboolean			rb_deferDlights;
 qboolean			rb_dlightsOnly;
+int					rb_surfaceDlights;
 static drawSurf_t	*rb_sweepSurfs;
 static int			rb_sweepCount;
 static qboolean		rb_entityReset;		// the run of the light passes set other entities: the run it came from sets its own again
@@ -968,9 +969,21 @@ static void RB_AddDrawSurf( const drawSurf_t *drawSurf ) {
 		( (srfTriangles_t *)drawSurf->surface )->dlightBits = drawSurf->dlightBits;
 		break;
 	default:
+		// a model (R_AddModelDrawSurf): its surface functions know nothing of them; again after it, in case it began a
+		// new batch on the way
+		tess.dlightBits |= drawSurf->dlightBits;
 		break;
 	}
+	// (the type first: a Ghoul2 surface may be freed by drawing it, R_GhoulSurfaceDone, which asks for its lights here:
+	// tess.dlightBits are gone when the surface began a new batch on the way)
+	const surfaceType_t type = *drawSurf->surface;
+
+	rb_surfaceDlights = drawSurf->dlightBits;
 	VK_AddSurface( drawSurf->surface );
+	rb_surfaceDlights = 0;
+	if ( type != SF_FACE && type != SF_GRID && type != SF_TRIANGLES ) {
+		tess.dlightBits |= drawSurf->dlightBits;
+	}
 }
 
 static void RB_DrawWet( int depthRange ) {
@@ -982,7 +995,7 @@ static void RB_DrawWet( int depthRange ) {
 	VK_GpuMark( "level" );
 #ifndef RD_VISION_GLES
 	VK_RT_Pass();
-	VK_GpuMark( "rt shadows" );
+	VK_GpuMark( VK_RT_Rays() ? "rt shadows" : "shadows (maps)" );
 #endif
 	VK_DrawWet();
 	VK_GpuMark( "wet and paint" );

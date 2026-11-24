@@ -25,13 +25,17 @@ float SceneDistance( vec2 pixel ) {
 	return W[6].w / min( depth + W[7].w, -1e-7 );
 }
 
-// the point of the level at the middle of a pixel of the target
-vec3 ScenePoint( vec2 pixel ) {
+// from the eye through a place of the target, as long as one unit in front of the eye
+vec3 SceneRay( vec2 pixel ) {
 	vec4 rect = W[8];
 	vec2 ndc = vec2( ( pixel.x - rect.x ) / rect.z * 2.0 - 1.0, 1.0 - ( pixel.y - rect.y ) / rect.w * 2.0 );
-	vec3 ray = W[5].xyz - W[6].xyz * ( ndc.x * W[4].w ) + W[7].xyz * ( ndc.y * W[5].w );
 
-	return W[4].xyz + ray * SceneDistance( pixel );
+	return W[5].xyz - W[6].xyz * ( ndc.x * W[4].w ) + W[7].xyz * ( ndc.y * W[5].w );
+}
+
+// the point of the level at the middle of a pixel of the target
+vec3 ScenePoint( vec2 pixel ) {
+	return W[4].xyz + SceneRay( pixel ) * SceneDistance( pixel );
 }
 
 // a place of the level as a pixel of the target, z: how far in front of the eye, -1 behind it
@@ -58,4 +62,14 @@ vec3 SceneSurface( vec2 pixel, vec3 p, vec3 fallback ) {
 
 	surface = ( dot( surface, surface ) > 1e-10 ) ? normalize( surface ) : fallback;
 	return ( dot( surface, W[4].xyz - p ) < 0.0 ) ? -surface : surface;
+}
+
+// A point in a trough of the bumps of a tessellated stage (generic.tese) lies up to 8 units below the triangles the rays
+// know, and its rays hit the floor from below: the place on the floor right above it. Only a surface less than 9 units
+// above: a fixed lift of 12 put the points on the floor beside a low bench inside it (jagged shadows round its seats,
+// their picture 2026-11-24). Needs LevelHitAt (a shader that traces rays).
+#define ON_LEVEL_DEPTH	9.0
+#define OnLevel( p, normal ) OnLevelWith( p, normal, LevelHitAt( p + normal * ( ON_LEVEL_DEPTH + 0.5 ), -normal, ON_LEVEL_DEPTH ) )
+vec3 OnLevelWith( vec3 p, vec3 normal, float t ) {
+	return t > 0.0 ? p + normal * ( ON_LEVEL_DEPTH + 0.5 - t ) : p;
 }

@@ -68,7 +68,10 @@ void FX_BlasterWeaponHitWall( vec3_t origin, vec3_t normal )
 {
 	trap->FX_PlayEffectID( cgs.effects.blasterWallImpactEffect, origin, normal, -1, -1, qfalse );
 	// VisionJK: hot bits off the wall where the renderer simulates sparks (v_gpuSparks)
-	CG_GpuSparks( origin, normal, GPUSPARKS_BLASTER, 1.0f );
+	// (v_weaponImpacts throws its own, by the material: weapons/cg_impact.c)
+	if ( !v_weaponImpacts.integer ) {
+		CG_GpuSparks( origin, normal, GPUSPARKS_BLASTER, 1.0f );
+	}
 }
 
 /*

@@ -173,10 +173,15 @@ void StageVertex( StageInput v ) {
 #ifndef VK_GLES
 	v_draw = DRAW;
 #endif
+	// (a patch with hard corners has short normals for the light pass, vk_world.cpp; all the rest wants them whole)
+	vec3 passedNormal = v.normal;
+	if ( dot( v.normal, v.normal ) > 0.0 && dot( v.normal, v.normal ) < 0.25 ) {
+		v.normal = normalize( v.normal );
+	}
 	v.position = Deform( d, v );
 	gl_Position = t.mvp * vec4( v.position, 1.0 );
 	v_position = v.position;
-	v_normal = v.normal;
+	v_normal = passedNormal;
 	// the view through a portal or mirror must not show what lies between the eye and the portal
 	CLIP_DISTANCE = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
 		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;

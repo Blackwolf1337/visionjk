@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // lies on the disk, and the cvars that tell a cgame of this tree what the engine can do.
 
 #include "client.h"
+#include "client/sound/spatial/snd_spatial.h"
 
 // where a file of the home folder (a pak, a part that comes in) lies on the disk
 const char *CL_HomeOSPath( const char *local ) {
@@ -60,12 +61,25 @@ static const char *const clCapabilities[] = {
 	"v_cgameSetBones",		// ext.G2_BoneNumber and ext.G2_SetBonesWorld: the ragdoll of cut bodies (cgame/cg_ragdoll.c)
 	"v_cgameBackdrop",		// ext.R_DrawBackdrop: frosted glass behind the HUD panels and the chat box
 	"v_cgameSparks",		// ext.R_EmitSparks: sparks the renderer simulates (cgame/cg_effects.c CG_GpuSparks)
+	"v_cgameSurfaceMaterial",	// ext.R_SurfaceMaterial: what the texture under a ray is made of (cgame/weapons/cg_impact.c)
 	"v_cgameFeed",			// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
 	"v_cgameVoteKeys",		// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
 	"v_screenFxDrops",		// drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	"v_screenFxSnow",		// clumps of snow on the view (SCREENFX_SNOW, the snowball)
 	"v_screenFxBlood",		// SCREENFX_BLOOD: blood on the view (cgame/screenfx/cg_screenfx.c, a cut close by)
 };
+
+// ext.R_SurfaceMaterial of the cgame: MATERIAL_NONE where the renderer can not pick or the table does not know it
+int CL_SurfaceMaterial( const vec3_t start, const vec3_t end ) {
+#ifdef JP_SPATIAL
+	materialPick_t pick;
+
+	if ( re && re->ext.MaterialPick && re->ext.MaterialPick( start, end, &pick ) ) {
+		return S_SpatialShaderMaterial( re->ShaderNameFromIndex( pick.shader ) );
+	}
+#endif
+	return MATERIAL_NONE;
+}
 
 void CL_VisionCapabilities( void ) {
 	size_t i;

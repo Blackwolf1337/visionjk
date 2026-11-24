@@ -825,6 +825,9 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 		draw->pbrFlags = VKP_LIGHTMAP;
 	}
 	draw->flags |= VKD_PBR;
+	if ( shader->alphaShine ) {
+		draw->pbrFlags |= VKP_ALPHA_SHINE;
+	}
 	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
 	if ( mat->normalMap ) {
 		draw->tex2 = mat->normalMap->texnum;
@@ -1001,6 +1004,19 @@ vkProgram_t VK_TessPass( vkDraw_t *draw, const vkDraw_t *from, vkProgram_t progr
 	return VKP_TESS;
 }
 
+// the plain texture of a stage: no lightmap, nothing that moves its coordinates away from those of the surface
+static const textureBundle_t *VK_LightBundle( const shaderStage_t *pStage ) {
+	for ( int b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
+		const textureBundle_t *candidate = &pStage->bundle[b];
+
+		if ( candidate->image && !candidate->isLightmap && !candidate->numTexMods
+			&& candidate->tcGen != TCGEN_ENVIRONMENT_MAPPED && candidate->tcGen != TCGEN_FOG ) {
+			return candidate;
+		}
+	}
+	return NULL;
+}
+
 static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	const shader_t *shader = tess.shader;
 	const shaderStage_t *textured = NULL;
@@ -1016,15 +1032,24 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		if ( pStage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) {
 			continue;
 		}
-		for ( int b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
-			const textureBundle_t *candidate = &pStage->bundle[b];
+		if ( ( bundle = VK_LightBundle( pStage ) ) != NULL ) {
+			textured = pStage;
+		}
+	}
+	// None, as in a reflection with the texture blended over it and the lightmap last (34 of the 58 maps of the game
+	// have such surfaces): the texture laid on by a blend. Without one the pass multiplies the frame, which is texture
+	// times lightmap, so in a dark room these surfaces hardly took the light. Not one that adds: that is light itself.
+	for ( int i = 0; i < shader->numUnfoggedPasses && !textured; i++ ) {
+		const shaderStage_t *pStage = &shader->stages[i];
+		const uint32_t blend = pStage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
 
-			if ( candidate->image && !candidate->isLightmap && !candidate->numTexMods
-				&& candidate->tcGen != TCGEN_ENVIRONMENT_MAPPED && candidate->tcGen != TCGEN_FOG ) {
-				textured = pStage;
-				bundle = candidate;
-				break;
-			}
+		if ( blend != ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA )
+			&& blend != ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO )
+			&& blend != ( GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR ) ) {
+			continue;
+		}
+		if ( ( bundle = VK_LightBundle( pStage ) ) != NULL ) {
+			textured = pStage;
 		}
 	}
 
@@ -1037,7 +1062,9 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			const shaderStage_t *pStage = &shader->stages[i];
 			const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
 
+			// (not a reflection under the texture: its streaks would be lit as if they were the wall)
 			if ( pStage->mat && ( pStage->mat->pbr || pStage->mat->normalMap ) && pStage->bundle[0].image && !pStage->bundle[0].isLightmap
+				&& pStage->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED
 				&& dst != GLS_DSTBLEND_ONE && dst != GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
 				matStage = pStage;
 			}
@@ -1048,6 +1075,11 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		}
 	}
 
+	// A model (MD3, Ghoul2: R_AddModelDrawSurf) is lit by the angle alone (grid1.w -1, generic.frag DynamicLight), and it
+	// takes no shadow mask: that is made for the points of the level, and on a player it would lay the shadow of his
+	// own body onto him.
+	const qboolean model = (qboolean)( bones || ( backEnd.currentEntity != &tr.worldEntity
+		&& R_GetModelByHandle( backEnd.currentEntity->e.hModel )->type != MOD_BRUSH ) );
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
@@ -1066,6 +1098,13 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		if ( matStage && VK_PbrDraw( matStage, shader, qfalse, &draw ) ) {
 			// its normal map, rmo map and numbers; the grid and the probes are no part of a lamp
 			draw.pbrFlags &= ~VKP_GRID;
+			// Tessellated: the bumps are real, no parallax on top of them, but the light does not see them as shapes
+			// (they are not in the rays or the shadow maps), so they throw the shadows of the parallax from the same
+			// height, in units.
+			if ( tessFrom ) {
+				draw.pbr[2] = tessFrom->tess[0];
+				draw.pbrFlags |= VKP_RAISED;
+			}
 		}
 		VectorScale( dl->color, Com_Clamp( 0.0f, 8.0f, v_dlightScale->value ), draw.baseColor );
 		VectorCopy( dl->transformed, draw.parm );
@@ -1078,19 +1117,21 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			VectorCopy( dl->lineEndTransformed, draw.grid1 );
 		}
 		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
-		// and tex1; only in the view of the level itself, the one the mask was made for
-		draw.grid1[3] = 0.0f;
+		// and tex1; only in the view of the level itself, the one the mask was made for. A model has it negative,
+		// -1 - the channel (generic.frag DynamicLight): the mask is made at the pixels of the scene, his own among them,
+		// so a leg behind his body is in its shadow.
+		int channel = 0;
 #ifndef RD_VISION_GLES
 		if ( levelView ) {
 			uint32_t slot;
-			const int channel = VK_RT_LightChannel( dl, &slot );
 
+			channel = VK_RT_LightChannel( dl, &slot );
 			if ( channel ) {
 				draw.tex1 = slot;
-				draw.grid1[3] = (float)channel;
 			}
 		}
 #endif
+		draw.grid1[3] = model ? -1.0f - (float)channel : (float)channel;
 		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}
@@ -1322,6 +1363,9 @@ void RB_StageIteratorGeneric( void ) {
 	// the tessellated stage of the batch, for the passes after the stages (VK_TessPass)
 	vkDraw_t tessDraw;
 	qboolean haveTessDraw = qfalse;
+	// the stage with parallax of the batch, for the plain stages over it (a detail texture)
+	vkDraw_t parallaxDraw;
+	qboolean haveParallax = qfalse;
 
 	for ( int stage = 0; stage < shader->numUnfoggedPasses; stage++ ) {
 		const shaderStage_t *pStage = &tess.xstages[stage];
@@ -1466,6 +1510,30 @@ void RB_StageIteratorGeneric( void ) {
 			}
 		}
 #endif
+		// VisionJK: a plain stage over the material stage (a detail texture, tcMod scale) lay flat on top of its parallax
+		// and under its tessellated bumps. It follows them: the same shift of the texture, or the same raised triangles.
+		// Not a stage with a second texture of its own or a groove (they use those slots), nor a reflection.
+		const qboolean plainOver = (qboolean)( !( draw.flags & ( VKD_PBR | VKD_GROOVE ) ) && !pStage->bundle[1].image && !refract
+			&& stageProgram == program && program == VKP_GENERIC && pStage->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED );
+		qboolean followsTess = qfalse;
+		if ( plainOver && haveTessDraw ) {
+			stageProgram = VK_TessPass( &draw, &tessDraw, program );
+			stateBits |= GLS_DEPTHFUNC_EQUAL;
+			followsTess = qtrue;
+		} else if ( plainOver && haveParallax ) {
+			draw.tex2 = parallaxDraw.tex2;
+			draw.flags = ( draw.flags & ~( 15u << VKD_TCGEN1_SHIFT ) ) | ( ( ( parallaxDraw.flags >> VKD_TCGEN0_SHIFT ) & 15u ) << VKD_TCGEN1_SHIFT );
+			memcpy( draw.texMat1, parallaxDraw.texMat0, sizeof( draw.texMat1 ) );
+			memcpy( draw.texTurb1, parallaxDraw.texTurb0, sizeof( draw.texTurb1 ) );
+			memcpy( draw.tcGenVec1, parallaxDraw.tcGenVec0, sizeof( draw.tcGenVec1 ) );
+			draw.pbr[2] = parallaxDraw.pbr[2];
+			draw.pbr2[0] = parallaxDraw.pbr2[0];
+			draw.pbrFlags |= VKP_FOLLOW;
+		} else if ( ( draw.flags & VKD_PBR ) && stageProgram == program && ( draw.pbrFlags & VKP_HEIGHT ) && draw.pbr[2] > 0.0f
+			&& !haveParallax ) {
+			parallaxDraw = draw;
+			haveParallax = qtrue;
+		}
 		draw.flags |= VK_AlphaTest( stateBits );
 		// VisionJK: the glow map of a lamp panel (a stage added onto it) shines brighter than its texture (v_panelGlow)
 		if ( shader->lampPanel && v_panelGlow->value > 0.0f ) {
@@ -1488,7 +1556,7 @@ void RB_StageIteratorGeneric( void ) {
 
 		// the run of the light passes draws no stage, it only keeps the tessellated one for VK_DynamicLights
 		if ( rb_dlightsOnly ) {
-			if ( stageProgram == VKP_TESS ) {
+			if ( stageProgram == VKP_TESS && !followsTess ) {
 				tessDraw = draw;
 				haveTessDraw = qtrue;
 			}
@@ -1512,7 +1580,7 @@ void RB_StageIteratorGeneric( void ) {
 		}
 		VK_DrawTess( &draw, stageProgram, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );
-		if ( stageProgram == VKP_TESS && !g_bRenderGlowingObjects ) {
+		if ( stageProgram == VKP_TESS && !followsTess && !g_bRenderGlowingObjects ) {
 			tessDraw = draw;
 			haveTessDraw = qtrue;
 		}

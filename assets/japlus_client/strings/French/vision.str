@@ -869,6 +869,14 @@ REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 LANG_FRENCH         "Ce qui s'approche ou s'éloigne change de hauteur."
 
+REFERENCE           SABER_SOUNDS
+LANG_ENGLISH        "Saber Sounds"
+LANG_FRENCH         "Sons du sabre"
+
+REFERENCE           THE_HUM_OF_A_BLADE_FOLLOWS_HOW_FAST
+LANG_ENGLISH        "The hum of a blade follows how fast it moves, each stance has swings of its own, and a blade that passes close to your head is heard."
+LANG_FRENCH         "Le bourdonnement d'une lame suit la vitesse de son mouvement, chaque style a ses propres coups, et une lame qui passe tout près de votre tête s'entend."
+
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
 LANG_FRENCH         "Son d'impact"
@@ -1037,6 +1045,22 @@ REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
 LANG_FRENCH         "La largeur de la lueur autour d'une lame."
 
+REFERENCE           IGNITION
+LANG_ENGLISH        "Ignition"
+LANG_FRENCH         "Allumage"
+
+REFERENCE           THE_BLADE_FLICKERS_AS_IT_COMES_OUT_A
+LANG_ENGLISH        "The blade flickers as it comes out and goes in and when it deflects a shot, its light grows with it, and hilts differ between the ignition sounds of the game."
+LANG_FRENCH         "La lame vacille en sortant et en rentrant et quand elle dévie un tir, sa lumière grandit avec elle, et les poignées se distinguent par les sons d'allumage du jeu."
+
+REFERENCE           HILTS
+LANG_ENGLISH        "Hilts"
+LANG_FRENCH         "Poignées"
+
+REFERENCE           A_SABER_THAT_IS_SWITCHED_OFF_HANGS_O
+LANG_ENGLISH        "A saber that is switched off hangs on the belt and swings with the walk (not the staff). When a player dies the hilt falls to the floor and rolls."
+LANG_FRENCH         "Un sabre éteint pend à la ceinture et se balance à la marche (pas le sabre double). Quand un joueur meurt, la poignée tombe au sol et roule."
+
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
 LANG_FRENCH         "Couleurs d'équipe des sabres"
@@ -1120,6 +1144,14 @@ LANG_FRENCH         "Modèle des alliés"
 REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_FRENCH         "Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien."
+
+REFERENCE           IMPACTS_BY_MATERIAL
+LANG_ENGLISH        "Impacts by Material"
+LANG_FRENCH         "Impacts selon le matériau"
+
+REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
+LANG_FRENCH         "Les tirs projettent étincelles, éclats ou poussière et sonnent selon ce qu'ils touchent, et un tir qui rebondit sur le métal part en sifflant. Les étincelles exigent GPU Sparks."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
@@ -2180,6 +2212,10 @@ LANG_FRENCH         "Particules"
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 LANG_FRENCH         "#same"
+
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
+LANG_FRENCH         "Sabres"
 
 REFERENCE           HITS
 LANG_ENGLISH        "Hits"
@@ -4024,10 +4060,6 @@ LANG_FRENCH         "Renommé en %s"
 REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
 LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
 LANG_FRENCH         "Ce qui vient de TaystJK : touches, sabres, HUD, mouvement, cosmétiques et chat."
-
-REFERENCE           SABERS
-LANG_ENGLISH        "Sabers"
-LANG_FRENCH         "Sabres"
 
 REFERENCE           KILLFEED_SIZE
 LANG_ENGLISH        "Killfeed Size"

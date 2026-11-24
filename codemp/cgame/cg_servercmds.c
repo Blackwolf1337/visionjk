@@ -29,6 +29,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cg_local.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/saber/cg_sabersound.h"
+#include "cgame/saber/cg_saberclash.h"
+#include "cgame/saber/cg_saberdrawn.h"
+#include "cgame/saber/cg_saberdrop.h"
+#include "cgame/saber/cg_saberbelt.h"
 #include "game/bg/bg_public.h"
 #include "ui/menudef.h"
 #include "ghoul2/G2.h"
@@ -123,6 +128,12 @@ This is called explicitly when the gamestate is first received,
 and whenever the server updates any serverinfo flagged cvars
 ================
 */
+// the walker of the own pilot (bg_public.h): only a server that says it moves it so; this cgame always predicts it
+qboolean BG_WalkerSteps( int pilot ) {
+	return (qboolean)( pilot == cg.clientNum
+		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & VS_CAPS_WALKER ) != 0 );
+}
+
 void CG_ParseServerinfo( void ) {
 	const char *info = NULL;
 	char *mapname;
@@ -948,6 +959,11 @@ static void CG_MapRestart( void ) {
 	CG_InitLocalEntities();
 	CG_InitMarkPolys();
 	CG_SaberScarsInit();
+	CG_SaberSoundInit();
+	CG_SaberClashInit();
+	CG_SaberDrawnInit();
+	CG_SaberDropInit();
+	CG_SaberBeltInit();
 	CG_KillCEntityInstances();
 
 	// make sure the "3 frags left" warnings play again

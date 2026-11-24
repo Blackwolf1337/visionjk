@@ -562,6 +562,45 @@ Calculates all the lighting values that will be used
 by the Calc_* functions
 =================
 */
+/*
+=================
+R_ModelDlights
+
+VisionJK: the moving lights that reach a model within radius of its origin, before R_SetupEntityLighting. Its
+surfaces get a light pass for each (R_AddModelDrawSurf), and the light of the entity leaves them out: a light passed
+into its one direction lit a player all over the same, a saber in his hand or a charged shot barely showed on him.
+=================
+*/
+void R_ModelDlights( trRefEntity_t *ent, float radius ) {
+	ent->dlightBits = 0;
+	if ( ent->e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) ) {
+		return;		// (they get no light passes, vk_backend.cpp: lit as before)
+	}
+	for ( int i = 0; i < tr.refdef.num_dlights && i < 32; i++ ) {
+		const dlight_t	*dl = &tr.refdef.dlights[i];
+		float			d;
+
+		if ( dl->lineRange > 0.0f ) {
+			vec3_t	along, to;
+			float	t, len;
+
+			VectorSubtract( dl->lineEnd, dl->lineStart, along );
+			len = VectorNormalize( along );
+			VectorSubtract( ent->e.origin, dl->lineStart, to );
+			t = Com_Clamp( 0.0f, len, DotProduct( to, along ) );
+			VectorMA( to, -t, along, to );
+			d = VectorLength( to ) - dl->lineRange;
+		} else {
+			d = Distance( dl->origin, ent->e.origin ) - dl->radius;
+		}
+		if ( d < radius ) {
+			ent->dlightBits |= 1 << i;
+		}
+	}
+	// (the back end moves the lights into the space of the model for its passes, RB_SetEntity)
+	ent->needDlights = (qboolean)( ent->dlightBits != 0 );
+}
+
 void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	int				i;
 	dlight_t		*dl;
@@ -651,6 +690,10 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 
 	for ( i = 0 ; i < refdef->num_dlights ; i++ ) {
 		dl = &refdef->dlights[i];
+		// (a model lights itself by pixel with the lights that reach it, R_ModelDlights)
+		if ( i < 32 && ( ent->dlightBits & ( 1 << i ) ) ) {
+			continue;
+		}
 		VectorSubtract( dl->origin, lightOrigin, dir );
 		d = VectorNormalize( dir );
 

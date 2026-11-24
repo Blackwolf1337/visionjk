@@ -10,14 +10,26 @@
 
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 
-// whether the level (mask 1) is in the way from origin along dir before tMax
+// whether the level (mask 1) or a door, lift or other brush model where it is now (mask 4) is in the way from origin
+// along dir before tMax
 bool LevelBlocks( vec3 origin, vec3 dir, float tMax ) {
+	rayQueryEXT query;
+
+	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0x05u, origin, 0.5, dir, tMax );
+	while ( rayQueryProceedEXT( query ) ) {
+	}
+	return rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+// how far along dir from origin the level is (from 0.5 on), -1 for nothing before tMax (scene.glsl OnLevel)
+float LevelHitAt( vec3 origin, vec3 dir, float tMax ) {
 	rayQueryEXT query;
 
 	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0x01u, origin, 0.5, dir, tMax );
 	while ( rayQueryProceedEXT( query ) ) {
 	}
-	return rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT;
+	return rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT
+		? rayQueryGetIntersectionTEXT( query, true ) : -1.0;
 }
 
 #include "lightmask.glsl"

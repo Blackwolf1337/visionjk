@@ -2576,7 +2576,7 @@ void RenderSurfaces(CRenderSurface &RS) //also ended up just ripping right from 
 			CRenderableSurface *newSurf = new CRenderableSurface;
 			newSurf->surfaceData = surface;
 			newSurf->boneCache = RS.boneCache;
-			R_AddDrawSurf( (surfaceType_t *)newSurf, (shader_t *)shader, RS.fogNum, qfalse );
+			R_AddModelDrawSurf( (surfaceType_t *)newSurf, (shader_t *)shader, RS.fogNum, tr.currentEntity );
 
 #ifdef _G2_GORE
 			if (RS.gore_set && drawGore)
@@ -2662,6 +2662,12 @@ void RenderSurfaces(CRenderSurface &RS) //also ended up just ripping right from 
 			}
 #endif
 		}
+#ifndef RD_VISION_GLES
+		else if ( RS.renderfx & RF_SHADOW_PLANE )
+		{	// VisionJK: not drawn in this view, its shadow is (vk_rt.cpp)
+			VK_RT_QueueCaster( tr.currentEntity, RS.boneCache, surface );
+		}
+#endif
 	}
 
 	// if we are turning off all descendants, then stop this recursion now
@@ -3316,16 +3322,24 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 	// cull the entire model if merged bounding box of both frames
 	// is outside the view frustum.
 	cull = R_GCullModel (ent );
+	// VisionJK: a player just outside the picture is not drawn, but his shadow can fall into it
+	qboolean hiddenCaster = qfalse;
 	if ( cull == CULL_OUT )
 	{
-		return;
+#ifndef RD_VISION_GLES
+		hiddenCaster = VK_RT_WantsHidden( ent );
+#endif
+		if ( !hiddenCaster )
+		{
+			return;
+		}
 	}
 	HackadelicOnClient=true;
 	// are any of these models setting a new origin?
 	RootMatrix(ghoul2,currentTime, ent->e.modelScale,rootMatrix);
 
    	// don't add third_person objects if not in a portal
-	personalModel = (qboolean)((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal);
+	personalModel = (qboolean)(hiddenCaster || ((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal));
 
 	int modelList[256];
 	assert(ghoul2.size()<=255);
@@ -3333,6 +3347,10 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 
 	// set up lighting now that we know we aren't culled
 	if ( !personalModel ) {
+		const float scale = Q_max( Q_max( ent->e.modelScale[0], ent->e.modelScale[1] ), Q_max( ent->e.modelScale[2], 1.0f ) );
+
+		// (players carry no radius; 64: the model and a saber held out)
+		R_ModelDlights( ent, Q_max( ent->e.radius, 64.0f ) * scale );
 		R_SetupEntityLighting( &tr.refdef, ent );
 	}
 
@@ -3534,12 +3552,22 @@ Was this the last time the surface that was just drawn is drawn in this view? Th
 for it is freed then. A ghoul model may be drawn twice: in the scene and, where its shader has a stage that glows,
 in the pass of the dynamic glow, which comes second. An entity that comes after the glow has been added
 (RF_AFTERGLOW) is drawn in the run for those entities last, and maybe in the glow pass before it.
+VisionJK: a surface the moving lights reach (R_AddModelDrawSurf) is drawn again for their light passes, in the run
+after the shadows of the players (vk_backend.cpp rb_deferDlights, RB_DrawWet), when the view waits for those.
 ==============
 */
 qboolean R_GhoulSurfaceDone( void ) {
 	extern bool g_bRenderGlowingObjects;
 	extern bool g_bDynamicGlowSupported;
 	extern bool rb_glowView, rb_lateEntities;
+	extern qboolean rb_deferDlights;
+	extern int rb_surfaceDlights;
+
+	// (the same test as the run of the light passes makes, RB_RenderDrawSurfList: it draws every solid surface with
+	// lights, also one whose shader takes none)
+	if ( rb_deferDlights && rb_surfaceDlights && !g_bRenderGlowingObjects && tess.shader->sort <= SS_OPAQUE ) {
+		return qfalse;
+	}
 
 	if ( rb_glowView && backEnd.currentEntity && ( backEnd.currentEntity->e.renderfx & RF_AFTERGLOW ) ) {
 		return (qboolean)rb_lateEntities;
