@@ -366,7 +366,7 @@ REFERENCE           PANEL_LIGHT_ON_PLAYERS
 LANG_ENGLISH        "Panel Light on Players"
 
 REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
-LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
+LANG_ENGLISH        "Players near lamp panels are lit from them, the side that faces a panel brighter, from the panels their shadow falls away from. Needs real shadows."
 
 REFERENCE           TESSELLATION
 LANG_ENGLISH        "Tessellation"

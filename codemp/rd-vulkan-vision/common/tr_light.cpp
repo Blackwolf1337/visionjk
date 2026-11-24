@@ -666,20 +666,47 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 		}
 	}
 
-	// VisionJK (v_panelLight): a player near the lamp panels his traced shadow comes from (vk_rt.cpp VK_RT_PickLamps)
-	// is lit from them too: the direction of the light of the grid turns towards them by their share. The amount stays
-	// the grid's, which has their light in it already, so his light and his shadow come from the same side.
+	// VisionJK (v_panelLight): a player near the lamp panels his shadow comes from (vk_rt.cpp VK_RT_PickLamps) is lit
+	// from them by pixel, as the moving lights light him (vk_shade.cpp VK_DynamicLights): the side that faces a panel
+	// is brighter than the other. Each takes its share of the directed light of the grid, which has their light in it
+	// already, so the grid keeps only the rest. Indoors the grid has most of the light as ambient, and by the directed
+	// part alone a panel beside him hardly showed: one within 96 units also takes 60 % of its share of the ambient
+	// light, less and less out to 192 units (as the traced shadow makes a near panel clear, rtshadow.frag GridShadow).
+	// As light it falls off from the panel, as strong at his middle as what it took (generic.frag DynamicLight on a
+	// model: window^2 / (1 + 4 x^2), x from at least 24 units).
+	ent->numLamps = 0;
 	if ( v_panelLight && v_panelLight->integer && !( refdef->rdflags & RDF_NOWORLDMODEL ) ) {
-		vec3_t	panels, mixed;
-		float	share;
+		vec3_t	lamps[3], ambient;
+		float	shares[3], taken = 0.0f, takenAmbient = 0.0f;
+		const int n = VK_RT_PlayerLamps( lightOrigin, lamps, shares );
 
-		if ( VK_RT_PlayerLamps( lightOrigin, panels, &share ) ) {
-			VectorScale( ent->lightDir, 1.0f - share, mixed );
-			VectorMA( mixed, share, panels, mixed );
-			if ( VectorNormalize( mixed ) > 0.01f ) {
-				VectorCopy( mixed, ent->lightDir );
+		VectorCopy( ent->ambientLight, ambient );
+		for ( i = 0; i < n && ent->numLamps < 3; i++ ) {
+			const float at = Distance( lamps[i], lightOrigin );
+			const float range = Q_max( at * 4.0f, 192.0f );
+			const float x = at / range, xa = Q_max( at, 24.0f ) / range;
+			const float window = 1.0f - x * x * x * x;
+			const float fall = window * window / ( 1.0f + 4.0f * xa * xa );
+
+			if ( shares[i] <= 0.01f || fall <= 0.01f ) {
+				continue;
 			}
+			float near = Com_Clamp( 0.0f, 1.0f, ( 192.0f - at ) / ( 192.0f - 96.0f ) );
+			near = near * near * ( 3.0f - 2.0f * near );
+			const float fromAmbient = 0.6f * near * shares[i];
+			vec3_t *color = &ent->lampColor[ent->numLamps];
+
+			VectorCopy( lamps[i], ent->lampOrigin[ent->numLamps] );
+			VectorScale( ent->directedLight, shares[i], *color );
+			VectorMA( *color, fromAmbient, ambient, *color );
+			VectorScale( *color, 1.0f / ( 255.0f * fall ), *color );
+			ent->lampRange[ent->numLamps] = range;
+			ent->numLamps++;
+			taken += shares[i];
+			takenAmbient += fromAmbient;
 		}
+		VectorScale( ent->directedLight, Q_max( 1.0f - taken, 0.0f ), ent->directedLight );
+		VectorScale( ent->ambientLight, Q_max( 1.0f - takenAmbient, 0.0f ), ent->ambientLight );
 	}
 
 	//

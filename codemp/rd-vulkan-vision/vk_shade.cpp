@@ -1022,7 +1022,11 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 	const shaderStage_t *textured = NULL;
 	const textureBundle_t *bundle = NULL;
 
-	if ( !backEnd.refdef.num_dlights || !tr.dlightImage ) {
+	// (the lamps of the level that light a player, R_SetupEntityLighting: entity lamps)
+	const trRefEntity_t *ent = backEnd.currentEntity;
+	const int lamps = ( ent && ent != &tr.worldEntity ) ? ent->numLamps : 0;
+
+	if ( !tr.dlightImage || ( !backEnd.refdef.num_dlights && !lamps ) ) {
 		return;
 	}
 	// the first opaque stage with a plain texture is what the light shines on
@@ -1083,18 +1087,15 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
-	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
-		const dlight_t *dl = &backEnd.refdef.dlights[l];
+	// one light pass: a point at in the space of the model reaching radius, or the tube of dl; channel: the shadow mask
+	auto pass = [&]( const vec3_t color, const vec3_t at, float radius, const dlight_t *tube, int channel, uint32_t slot ) {
 		vkDraw_t draw;
 
-		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
-			continue;	// this surface definately doesn't have any of this light
-		}
 		VK_InitDraw( &draw, transform, bones );
 		draw.flags |= VKD_DLIGHT;
 		VK_IdentityTexCoords( &draw );
 		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
-		draw.tex1 = tr.dlightImage->texnum;
+		draw.tex1 = channel ? slot : tr.dlightImage->texnum;
 		if ( matStage && VK_PbrDraw( matStage, shader, qfalse, &draw ) ) {
 			// its normal map, rmo map and numbers; the grid and the probes are no part of a lamp
 			draw.pbrFlags &= ~VKP_GRID;
@@ -1106,34 +1107,51 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 				draw.pbrFlags |= VKP_RAISED;
 			}
 		}
-		VectorScale( dl->color, Com_Clamp( 0.0f, 8.0f, v_dlightScale->value ), draw.baseColor );
-		VectorCopy( dl->transformed, draw.parm );
-		draw.parm[3] = dl->radius;
+		VectorCopy( color, draw.baseColor );
+		VectorCopy( at, draw.parm );
+		draw.parm[3] = radius;
 		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
 		draw.grid0[3] = 0.0f;
-		if ( dl->lineRange > 0.0f ) {
-			VectorCopy( dl->lineStartTransformed, draw.grid0 );
-			draw.grid0[3] = dl->lineRange;
-			VectorCopy( dl->lineEndTransformed, draw.grid1 );
+		if ( tube ) {
+			VectorCopy( tube->lineStartTransformed, draw.grid0 );
+			draw.grid0[3] = tube->lineRange;
+			VectorCopy( tube->lineEndTransformed, draw.grid1 );
 		}
 		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
-		// and tex1; only in the view of the level itself, the one the mask was made for. A model has it negative,
-		// -1 - the channel (generic.frag DynamicLight): the mask is made at the pixels of the scene, his own among them,
-		// so a leg behind his body is in its shadow.
-		int channel = 0;
-#ifndef RD_VISION_GLES
-		if ( levelView ) {
-			uint32_t slot;
-
-			channel = VK_RT_LightChannel( dl, &slot );
-			if ( channel ) {
-				draw.tex1 = slot;
-			}
-		}
-#endif
+		// and tex1. A model has it negative, -1 - the channel (generic.frag DynamicLight): the mask is made at the
+		// pixels of the scene, his own among them, so a leg behind his body is in its shadow.
 		draw.grid1[3] = model ? -1.0f - (float)channel : (float)channel;
 		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
+	};
+
+	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
+		const dlight_t *dl = &backEnd.refdef.dlights[l];
+		vec3_t color;
+		int channel = 0;
+		uint32_t slot = 0;
+
+		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
+			continue;	// this surface definately doesn't have any of this light
+		}
+		VectorScale( dl->color, Com_Clamp( 0.0f, 8.0f, v_dlightScale->value ), color );
+#ifndef RD_VISION_GLES
+		// (only in the view of the level itself, the one the mask was made for)
+		if ( levelView ) {
+			channel = VK_RT_LightChannel( dl, &slot );
+		}
+#endif
+		pass( color, dl->transformed, dl->radius, dl->lineRange > 0.0f ? dl : NULL, channel, slot );
+	}
+	// the lamps of the level that light this player, moved into the space of the model as R_TransformDlights does
+	for ( int k = 0; k < lamps; k++ ) {
+		vec3_t to, at;
+
+		VectorSubtract( ent->lampOrigin[k], backEnd.ori.origin, to );
+		for ( int i = 0; i < 3; i++ ) {
+			at[i] = DotProduct( to, backEnd.ori.axis[i] );
+		}
+		pass( ent->lampColor[k], at, ent->lampRange[k], NULL, 0, 0 );
 	}
 }
 
@@ -1593,7 +1611,8 @@ void RB_StageIteratorGeneric( void ) {
 	// stage that glows gets the light on its texture added to the glow as well, so it shines more where a blade
 	// lights it.
 	// (the first run of the list leaves them to the run of the light passes after the shadows, rb_deferDlights)
-	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
+	if ( ( tess.dlightBits || ( backEnd.currentEntity != &tr.worldEntity && backEnd.currentEntity->numLamps ) )
+		&& shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
 		&& ( rb_dlightsOnly || g_bRenderGlowingObjects || !rb_deferDlights ) ) {
 		VK_DynamicLights( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
 	}

@@ -486,8 +486,8 @@ LANG_ENGLISH        "Panel Light on Players"
 LANG_FRENCH         "Lumière des lampes sur les joueurs"
 
 REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
-LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
-LANG_FRENCH         "Les joueurs proches des lampes sont éclairés par elles, du côté opposé à leur ombre. Nécessite les ombres réelles avec le ray tracing."
+LANG_ENGLISH        "Players near lamp panels are lit from them, the side that faces a panel brighter, from the panels their shadow falls away from. Needs real shadows."
+LANG_FRENCH         "Les joueurs proches des lampes sont éclairés par elles, le côté tourné vers la lampe plus clair, depuis les lampes dont leur ombre s'éloigne. Nécessite les ombres réelles."
 
 REFERENCE           TESSELLATION
 LANG_ENGLISH        "Tessellation"

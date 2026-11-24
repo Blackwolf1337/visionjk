@@ -572,6 +572,19 @@ vec4 DynamicLight( Draw d ) {
 	} else {
 		shine = SurfaceLight( s, l, radiance, 0.0, diffuse );
 	}
+	// A model without a material of its own (cloth, skin, hair of the old models) takes no shine: the faint one of the
+	// level, by a lamp right beside a player on his round surfaces, turned into highlights and bright rims at his
+	// outline as on plastic (their picture 2026-11-24).
+	// Its light also reaches a little round its sides, as on cloth and skin: lit by the angle alone it ended where the
+	// surface turned across the light, a hard line between the lit and the dark side (their word 2026-11-24, "soften
+	// the transitions"). Full on the side that faces the light, nothing from 30 degrees behind its edge.
+	if ( model && !PBR( d.flags ) ) {
+		const float WRAP = 0.5;
+		float wrap = clamp( ( dot( s.n, l ) + WRAP ) / ( 1.0 + WRAP ), 0.0, 1.0 );
+
+		diffuse = s.albedo * radiance * wrap * wrap;
+		shine = vec3( 0.0 );
+	}
 	return vec4( pow( diffuse * occlusion + shine, vec3( 1.0 / 2.2 ) ), 1.0 );
 }
 
