@@ -1120,6 +1120,8 @@ void	G_InitGentity( gentity_t *e );
 gentity_t	*G_Spawn (void);
 gentity_t *G_TempEntity( vec3_t origin, int event );
 gentity_t	*G_PlayEffect(int fxID, vec3_t org, vec3_t ang);
+void		G_ATSTFrame( gentity_t *ent );		// npc/NPC_AI_Atst.c
+float		G_ATSTLegsYaw( gentity_t *ent );
 gentity_t	*G_PlayEffectID(const int fxID, vec3_t org, vec3_t ang);
 gentity_t *G_ScreenShake(vec3_t org, gentity_t *target, float intensity, int duration, qboolean global);
 void	G_MuteSound( int entnum, int channel );

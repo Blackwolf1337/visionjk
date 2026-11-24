@@ -765,12 +765,27 @@ static QINLINE void G_G2NPCAngles(gentity_t *ent, matrix3_t legs, vec3_t angles)
 
 	if ( ent->client )
 	{
+		if ( ent->client->NPC_class == CLASS_ATST && !( ent->s.eType == ET_NPC && ent->s.m_iVehicleNum ) )
+		{// VisionJK: its legs face where G_ATSTLegsYaw says (the yaw the clients get too, G_ATSTFrame), its head turns
+		 // on them to where it looks and pitches there, on the bones the AT-ST of a pilot turns (BG_G2WalkerHeadAngles):
+		 // the turn on the thoracic bone, the pitch on the cranium. The old code turned the cranium by legs it never
+		 // worked out.
+			const float legsYaw = G_ATSTLegsYaw( ent );
+
+			VectorSet( angles, 0.0f, legsYaw, 0.0f );
+			AnglesToAxis( angles, legs );
+			VectorSet( lookAngles, 0.0f, AngleSubtract( ent->client->ps.viewangles[YAW], legsYaw ), 0.0f );
+			NPC_SetBoneAngles( ent, thoracicBone, lookAngles );
+			VectorSet( lookAngles, Com_Clamp( -30.0f, 30.0f, AngleNormalize180( ent->client->ps.viewangles[PITCH] ) ), 0.0f, 0.0f );
+			NPC_SetBoneAngles( ent, craniumBone, lookAngles );
+			return;
+		}
 		if ( (ent->client->NPC_class == CLASS_PROBE )
 			|| (ent->client->NPC_class == CLASS_R2D2 )
 			|| (ent->client->NPC_class == CLASS_R5D2)
 			|| (ent->client->NPC_class == CLASS_ATST) )
 		{
-			vec3_t	trailingLegsAngles;
+			vec3_t	trailingLegsAngles = { 0.0f, 0.0f, 0.0f };
 
 			if (ent->s.eType == ET_NPC &&
 				ent->s.m_iVehicleNum &&

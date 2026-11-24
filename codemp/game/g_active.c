@@ -3405,6 +3405,11 @@ void ClientThink_real( gentity_t *ent ) {
 	else {
 		BG_PlayerStateToEntityState( &ent->client->ps, &ent->s, qfalse );
 	}
+	// VisionJK: an AT-ST NPC is sent the yaw of its legs, its head turns on them (npc/NPC_AI_Atst.c)
+	if ( isNPC && ent->client->NPC_class == CLASS_ATST )
+	{
+		G_ATSTFrame( ent );
+	}
 
 	if (isNPC)
 	{

@@ -5641,6 +5641,12 @@ static void PM_Footsteps( void ) {
 	{//legs are in a saber anim, and not spinning, be sure to override it
 		setAnimFlags |= SETANIM_FLAG_OVERRIDE;
 	}
+	// VisionJK: an AT-ST NPC that walks off in the middle of a turn of its legs walks at once (npc/NPC_AI_Atst.c)
+	if ( pm->ps->clientNum >= MAX_CLIENTS && pm_entSelf && pm_entSelf->s.NPC_class == CLASS_ATST
+		&& ( pm->ps->legsAnim == BOTH_TURN_LEFT1 || pm->ps->legsAnim == BOTH_TURN_RIGHT1 ) )
+	{
+		setAnimFlags |= SETANIM_FLAG_OVERRIDE;
+	}
 
 	//
 	// calculate speed and cycle to be used for
@@ -5878,6 +5884,13 @@ static void PM_Footsteps( void ) {
 					desiredAnim = BOTH_WALK1;
 				}
 			}
+			else if ( pm->ps->clientNum >= MAX_CLIENTS &&
+				pm_entSelf &&
+				pm_entSelf->s.NPC_class == CLASS_ATST )
+			{// VisionJK: the run of the AT-ST, as single player plays it (PM_Footsteps of code/); the saber stance of
+			 // the choice below picked runs it does not have, and it slid along standing
+				desiredAnim = ( pm->ps->pm_flags & PMF_BACKWARDS_RUN ) ? BOTH_RUNBACK1 : BOTH_RUN1;
+			}
 #ifdef _GAME
 			else if ( pm->ps->clientNum >= MAX_CLIENTS &&
 				pm_entSelf &&
@@ -5995,7 +6008,11 @@ static void PM_Footsteps( void ) {
 		else
 		{
 			bobmove = 0.2f;	// walking bobs slow
-			if ( pm->ps->pm_flags & PMF_BACKWARDS_RUN )
+			if ( pm->ps->clientNum >= MAX_CLIENTS && pm_entSelf && pm_entSelf->s.NPC_class == CLASS_ATST )
+			{// VisionJK: its walk (see its run above)
+				desiredAnim = ( pm->ps->pm_flags & PMF_BACKWARDS_RUN ) ? BOTH_WALKBACK1 : BOTH_WALK1;
+			}
+			else if ( pm->ps->pm_flags & PMF_BACKWARDS_RUN )
 			{
 				if ( BG_AreRunWalkAnimsFixed() && pm->ps->weapon != WP_SABER )
 				{
