@@ -51,9 +51,9 @@ static inline int VK_PuddleSize( int frame ) { return ( frame + 1 ) / 2; }
 void VK_NoteDrawSurfs( int numDrawSurfs );
 // ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
 qboolean RE_GpuProfile( gpuProfile_t *out );
-// vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the shadow of the player at origin came from, and their shares
-// of his light (v_panelLight)
-int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], float share[3] );
+// vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the shadow of the player at origin came from, their colours and
+// their shares of his light (v_panelLight)
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3] );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );
 
@@ -92,8 +92,8 @@ qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length
 void VK_SunChanged( void );
 qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
 void VK_TexCacheRecord( void );
-void VK_TexCacheLuma( float luma );
-float VK_TexCacheFoundLuma( void );
+void VK_TexCacheAverage( const vec3_t color );
+void VK_TexCacheFoundAverage( vec3_t color );
 void VK_TexCacheEnd( void );
 
 // The few OpenGL calls left in the shared files, by where they are:

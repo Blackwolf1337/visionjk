@@ -1003,16 +1003,21 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
 	if ( pic ) {
-		double sum = 0.0;
+		double sum[3] = { 0.0, 0.0, 0.0 };
 
 		// (by the alpha too: an additive stage adds the colour as its alpha lets it, a cut out one shows only that)
 		for ( int i = 0; i < width * height; i++ ) {
 			const byte *p = pic + i * 4;
 
-			sum += ( p[0] * 0.3 + p[1] * 0.59 + p[2] * 0.11 ) * p[3] / ( 255.0 * 255.0 );
+			for ( int c = 0; c < 3; c++ ) {
+				sum[c] += p[c] * p[3] / ( 255.0 * 255.0 );
+			}
 		}
-		image->averageLuma = (float)( sum / ( width * height ) );
-		VK_TexCacheLuma( image->averageLuma );
+		for ( int c = 0; c < 3; c++ ) {
+			image->averageColor[c] = (float)( sum[c] / ( width * height ) );
+		}
+		image->averageLuma = image->averageColor[0] * 0.3f + image->averageColor[1] * 0.59f + image->averageColor[2] * 0.11f;
+		VK_TexCacheAverage( image->averageColor );
 	}
 
 	if ( qglActiveTextureARB ) {
@@ -1095,7 +1100,8 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 	// decoded nor packed again, and the image is made without pixels.
 	if ( VK_TexCacheFind( name, mipmap, allowPicmip, allowTC, &width, &height ) ) {
 		image = R_CreateImage( ( char * ) name, NULL, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
-		image->averageLuma = VK_TexCacheFoundLuma();
+		VK_TexCacheFoundAverage( image->averageColor );
+		image->averageLuma = image->averageColor[0] * 0.3f + image->averageColor[1] * 0.59f + image->averageColor[2] * 0.11f;
 		VK_TexCacheEnd();
 		return image;
 	}
