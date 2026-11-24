@@ -103,6 +103,6 @@ void main() {
 		return;
 	}
 	// (what the frames before had is added by shaders/rtaccum.frag)
-	float mask = Shadow( p, SceneSurfaceWide( pixel, p, normalize( eye - p ), 32.0 ) );
+	float mask = Shadow( p, SceneSurface( pixel, p, normalize( eye - p ) ) );
 	o_color = vec4( mask, PackDistance( d ) );
 }

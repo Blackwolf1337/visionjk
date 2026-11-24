@@ -73,31 +73,3 @@ vec3 SceneSurface( vec2 pixel, vec3 p, vec3 fallback ) {
 vec3 OnLevelWith( vec3 p, vec3 normal, float t ) {
 	return t > 0.0 ? p + normal * ( ON_LEVEL_DEPTH + 0.5 - t ) : p;
 }
-
-// The way the surface faces at p as the lightmap knows it: SceneSurface from neighbours about units away on each side,
-// so the bumps of a tessellated stage (generic.tese, up to 16 units high) average out. On those bumps the way of the
-// pixel itself turned the back of each ripple away from the sun, and the shadow of a player left it out (white streaks
-// across his shadow on the sand of mp/ffa3, their picture 2026-11-24). A neighbour on something else (the player
-// standing there, a wall) faces too differently from the pixel and is not taken; with none on a side the pixel's own.
-vec3 SceneSurfaceWide( vec2 pixel, vec3 p, vec3 fallback, float units ) {
-	vec3 near = SceneSurface( pixel, p, fallback );
-	float perPixel = max( min( distance( ScenePoint( pixel - vec2( 1.0, 0.0 ) ), p ), distance( ScenePoint( pixel + vec2( 1.0, 0.0 ) ), p ) ), 0.01 );
-	float r = clamp( units / perPixel, 2.0, 96.0 );
-	vec3 q[4];
-	bool on[4];
-	for ( int i = 0; i < 4; i++ ) {
-		vec2 at = pixel + ( i < 2 ? vec2( i == 0 ? -r : r, 0.0 ) : vec2( 0.0, i == 2 ? -r : r ) );
-
-		q[i] = ScenePoint( at );
-		on[i] = distance( q[i], p ) < units * 3.0 && dot( SceneSurface( at, q[i], near ), near ) > 0.5;
-	}
-	vec3 dx = ( on[0] && on[1] ) ? q[1] - q[0] : ( on[1] ? q[1] - p : ( on[0] ? p - q[0] : vec3( 0.0 ) ) );
-	vec3 dy = ( on[2] && on[3] ) ? q[3] - q[2] : ( on[3] ? q[3] - p : ( on[2] ? p - q[2] : vec3( 0.0 ) ) );
-	vec3 surface = cross( dx, dy );
-
-	if ( dot( surface, surface ) < 1e-6 ) {
-		return near;
-	}
-	surface = normalize( surface );
-	return ( dot( surface, W[4].xyz - p ) < 0.0 ) ? -surface : surface;
-}

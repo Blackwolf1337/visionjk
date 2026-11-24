@@ -83,8 +83,46 @@ float HitAt( vec3 origin, vec3 dir, float tMax, uint mask ) {
 
 #include "grid.glsl"
 
-float LevelHitAt( vec3 origin, vec3 dir, float tMax ) {
-	return HitAt( origin, dir, tMax, 0x01u );
+// The plane of the triangles of the level under the point p of a pixel and where on them it lies, from three short rays
+// against the level alone (mask 1): a tessellated stage draws bumps the rays do not know (generic.tese), and the way the
+// pixel itself faces turned the back of each ripple away from the light (white streaks across the shadow of a player on
+// the sand of mp/ffa3, 2026-11-24), while its trough lay below the floor the rays hit from below. Neither players nor
+// anything else that is drawn get into it: the way the neighbouring pixels faced took a player standing there for the
+// floor, and his outline was cut out of his own shadow (their picture, from above). Where the three do not make one
+// plane (an edge, a step, nothing under it) the pixel's own way.
+vec3 LevelPlane( vec3 p, vec3 normal, out vec3 onLevel ) {
+	const float UP = 12.0, SPAN = 8.0;
+	vec3 t = normalize( cross( normal, abs( normal.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+	vec3 b = cross( normal, t );
+	vec3 hits[3];
+
+	onLevel = p;
+	for ( int i = 0; i < 3; i++ ) {
+		vec3 from = p + normal * UP + ( i == 1 ? t * SPAN : ( i == 2 ? b * SPAN : vec3( 0.0 ) ) );
+		float d = HitAt( from, -normal, UP * 2.0, 0x01u );
+
+		if ( d < 0.0 ) {
+			return normal;
+		}
+		hits[i] = from - normal * d;
+	}
+	vec3 plane = cross( hits[1] - hits[0], hits[2] - hits[0] );
+	if ( dot( plane, plane ) < 1e-6 ) {
+		return normal;
+	}
+	plane = normalize( plane );
+	if ( dot( plane, normal ) < 0.0 ) {
+		plane = -plane;
+	}
+	if ( dot( plane, normal ) < 0.5 ) {
+		return normal;
+	}
+	// (only up out of a trough, at most as deep as the bumps go: a point on a bump stays where it is drawn)
+	float above = dot( hits[0] - p, plane );
+	if ( above > 0.0 && above < 9.0 ) {
+		onLevel = hits[0];
+	}
+	return plane;
 }
 
 // a number in [0, 1) for this pixel, frame and ray
@@ -294,7 +332,8 @@ void main() {
 		return;
 	}
 	// (what the frames before had is added by shaders/rtaccum.frag)
-	vec3 normal = SceneSurfaceWide( pixel, p, normalize( eye - p ), 32.0 );
-	float mask = Shadow( OnLevel( p, normal ), normal );
+	vec3 onLevel;
+	vec3 normal = LevelPlane( p, SceneSurface( pixel, p, normalize( eye - p ) ), onLevel );
+	float mask = Shadow( onLevel, normal );
 	o_color = vec4( mask, PackDistance( d ) );
 }
