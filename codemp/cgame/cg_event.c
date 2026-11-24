@@ -1194,6 +1194,7 @@ void CG_G2MarkEvent(entityState_t *es)
 	}
 }
 
+float CG_WalkerDrop( const centity_t *cent );
 void CG_CalcVehMuzzle(Vehicle_t *pVeh, centity_t *ent, int muzzleNum)
 {
 	mdxaBone_t boltMatrix;
@@ -1224,6 +1225,8 @@ void CG_CalcVehMuzzle(Vehicle_t *pVeh, centity_t *ent, int muzzleNum)
 	trap->G2API_GetBoltMatrix_NoRecNoRot(ent->ghoul2, 0, pVeh->m_iMuzzleTag[muzzleNum], &boltMatrix, vehAngles,
 		ent->lerpOrigin, cg.time, NULL, ent->modelScale);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, pVeh->m_vMuzzlePos[muzzleNum]);
+	// VisionJK: an AT-ST drawn below its box has its muzzles there too (cg_players.c)
+	pVeh->m_vMuzzlePos[muzzleNum][2] -= CG_WalkerDrop( ent );
 	BG_GiveMeVectorFromMatrix(&boltMatrix, NEGATIVE_Y, pVeh->m_vMuzzleDir[muzzleNum]);
 }
 

@@ -3716,10 +3716,40 @@ static void PM_WalkMove( void ) {
 			//-----------------------------
 			else
 			{
-				//wishspeed = pm->ps->speed;
-				VectorScale( pm->ps->moveDir, pm->ps->speed, wishvel );
-				VectorCopy (wishvel, wishdir);
-				wishspeed = VectorNormalize(wishdir);
+				// VisionJK: a walker that steps (BG_WalkerSteps) moves as the AT-ST of single player, which is its pilot
+				// there: forward and sideways from where he looks (the walker faces there, WalkerNPC.c), at the speed
+				// ProcessMoveCommands set, the larger of the two keys of it; the walk button is the 64 of 127 of single
+				// player (46 here), a run back three quarters (g_active.cpp ClientAlterSpeed of code/).
+				if ( pEnt->m_pVehicle && pEnt->m_pVehicle->m_pVehicleInfo->type == VH_WALKER
+					&& pEnt->m_pVehicle->m_pPilot && BG_WalkerSteps( pEnt->m_pVehicle->m_pPilot->s.number ) )
+				{
+					// (the buttons of the pilot's command: the game leaves the walker's own only the fire buttons, g_active.c)
+					const qboolean	walking = (qboolean)( ( pEnt->m_pVehicle->m_ucmd.buttons & BUTTON_WALKING ) != 0 );
+					float			most = Q_max( fabs( fmove ), fabs( smove ) );
+
+					if ( walking )
+					{
+						most = Q_min( most * ( 64.0f / 46.0f ), 64.0f );
+					}
+					for ( i = 0 ; i < 3 ; i++ )
+					{
+						wishvel[i] = pml.forward[i]*fmove + pml.right[i]*smove;
+					}
+					VectorCopy( wishvel, wishdir );
+					VectorNormalize( wishdir );
+					wishspeed = pm->ps->speed * most / 127.0f;
+					if ( fmove < 0 && !walking )
+					{
+						wishspeed *= 0.75f;
+					}
+				}
+				else
+				{
+					//wishspeed = pm->ps->speed;
+					VectorScale( pm->ps->moveDir, pm->ps->speed, wishvel );
+					VectorCopy (wishvel, wishdir);
+					wishspeed = VectorNormalize(wishdir);
+				}
 			}
 
 			npcMovement = qtrue;
@@ -10000,6 +10030,20 @@ void BG_G2PlayerAngles(void *ghoul2, int motionBolt, entityState_t *cent, int ti
 	trap->G2API_SetBoneAngles(ghoul2, 0, "upper_lumbar", ulAngles, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, 0, 0, time);
 	trap->G2API_SetBoneAngles(ghoul2, 0, "thoracic", thoracicAngles, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, 0, 0, time);
 //	trap->G2API_SetBoneAngles(ghoul2, 0, "cervical", vec3_origin, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, 0, 0, time);
+}
+
+// VisionJK: the head of a walker that steps (BG_WalkerSteps): the turn on the thoracic bone, the pitch on the cranium
+// below it, which carries the guns, as single player pitches it (atst.gla: pelvis, thoracic, cervical, cranium). Both
+// on the thoracic bone, a head turned aside and looking up was tilted sideways: the pitch went round the axis of the
+// body, not of the turned head.
+void BG_G2WalkerHeadAngles( void *ghoul2, int time, const vec3_t angles )
+{
+	vec3_t turn, tilt;
+
+	VectorSet( turn, 0.0f, angles[YAW], 0.0f );
+	VectorSet( tilt, angles[PITCH], 0.0f, 0.0f );
+	trap->G2API_SetBoneAngles( ghoul2, 0, "thoracic", turn, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, 0, 0, time );
+	trap->G2API_SetBoneAngles( ghoul2, 0, "cranium", tilt, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z, 0, 0, time );
 }
 
 void BG_G2ATSTAngles(void *ghoul2, int time, vec3_t cent_lerpAngles )

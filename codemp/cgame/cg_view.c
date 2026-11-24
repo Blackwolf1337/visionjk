@@ -229,6 +229,7 @@ static void CG_CalcVrect (void) {
 //==============================================================================
 //==============================================================================
 // this causes a compiler bug on mac MrC compiler
+float CG_WalkerViewLag( void );
 static void CG_StepOffset( void ) {
 	int		timeDelta;
 
@@ -367,6 +368,12 @@ static void CG_CalcIdealThirdPersonViewLocation(void)
 			veh->m_pVehicle->m_pVehicleInfo->cameraOverride)
 		{ //override the range with what the vehicle wants it to be
 			thirdPersonRange = veh->m_pVehicle->m_pVehicleInfo->cameraRange;
+			// VisionJK: an AT-ST that goes as the one of single player is seen from as close as there (240,
+			// g_active.cpp of code/)
+			if ( veh->m_pVehicle->m_pVehicleInfo->type == VH_WALKER && BG_WalkerSteps( cg.clientNum ) )
+			{
+				thirdPersonRange = 240.0f;
+			}
 			if ( veh->playerState->hackingTime )
 			{
 				thirdPersonRange += fabs(((float)veh->playerState->hackingTime)/MAX_STRAFE_TIME) * 100.0f;
@@ -1094,6 +1101,10 @@ static void CG_OffsetFighterView( void )
 		//NOTE: no yaw offset?
 		pitchOffset = veh->m_pVehicle->m_pVehicleInfo->cameraPitchOffset;
 		range = veh->m_pVehicle->m_pVehicleInfo->cameraRange;
+		if ( veh->m_pVehicle->m_pVehicleInfo->type == VH_WALKER && BG_WalkerSteps( cg.clientNum ) )
+		{
+			range = 240.0f;	// (as CG_CalcIdealThirdPersonViewLocation)
+		}
 		if ( veh->playerState->hackingTime )
 		{
 			horzOffset += (((float)veh->playerState->hackingTime)/MAX_STRAFE_TIME) * -80.0f;
@@ -1560,6 +1571,9 @@ static int CG_CalcViewValues( void ) {
 	if ( !manningTurret )
 	{//not manning a turret on a vehicle
 		VectorCopy( ps->origin, cg.refdef.vieworg );
+		// VisionJK: the pilot of an AT-ST rides with its body as it is drawn, which comes after its box smoothly; the box
+		// steps up to 66 units in one go, and the camera hopped with it (cg_players.c CG_WalkerBodyLag)
+		cg.refdef.vieworg[2] -= CG_WalkerViewLag();
 #ifdef VEH_CONTROL_SCHEME_4
 		if ( cg.predictedPlayerState.m_iVehicleNum )//in a vehicle
 		{

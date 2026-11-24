@@ -128,6 +128,12 @@ This is called explicitly when the gamestate is first received,
 and whenever the server updates any serverinfo flagged cvars
 ================
 */
+// the walker of the own pilot (bg_public.h): only a server that says it moves it so; this cgame always predicts it
+qboolean BG_WalkerSteps( int pilot ) {
+	return (qboolean)( pilot == cg.clientNum
+		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & VS_CAPS_WALKER ) != 0 );
+}
+
 void CG_ParseServerinfo( void ) {
 	const char *info = NULL;
 	char *mapname;

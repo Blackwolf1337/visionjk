@@ -26,6 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/bg/bg_public.h"
 #include "game/bg/bg_vehicles.h"
+// (bg_panimate.c, in the game and the cgame alike)
+void BG_SetAnim( playerState_t *ps, animation_t *animations, int setAnimParts, int anim, int setAnimFlags );
 
 #ifdef _GAME //we only want a few of these functions for BG
 
@@ -68,6 +70,35 @@ static qboolean Board( Vehicle_t *pVeh, bgEntity_t *pEnt )
 #endif //_GAME
 
 
+// VisionJK: the legs of a walker that steps, as single player picks them for its AT-ST (PM_Footsteps of code/): a
+// stand without a key, the walk or the run back with the back key, the walk with the walk button, else the run. Not
+// the start of the run it stands still for there: taken out on their word, it runs at once. Set here, where the game
+// and the prediction of the pilot's client both come by. The turn on the spot and the stand that leans on a slope are
+// drawn by the cgame alone (cg_players.c CG_WalkerAngles), as there.
+static void Walker_Legs( Vehicle_t *pVeh, playerState_t *ps )
+{
+	animation_t		*anims = bgAllAnims[pVeh->m_pParentEntity->localAnimIndex].anims;
+	const usercmd_t	*cmd = &pVeh->m_ucmd;
+	const qboolean	walking = (qboolean)( ( cmd->buttons & BUTTON_WALKING ) != 0 );
+
+	if ( !cmd->forwardmove && !cmd->rightmove )
+	{
+		BG_SetAnim( ps, anims, SETANIM_LEGS, BOTH_STAND1, SETANIM_FLAG_NORMAL );
+	}
+	else if ( cmd->forwardmove < 0 )
+	{
+		BG_SetAnim( ps, anims, SETANIM_LEGS, walking ? BOTH_WALKBACK1 : BOTH_RUNBACK1, SETANIM_FLAG_NORMAL );
+	}
+	else if ( walking )
+	{
+		BG_SetAnim( ps, anims, SETANIM_LEGS, BOTH_WALK1, SETANIM_FLAG_NORMAL );
+	}
+	else
+	{
+		BG_SetAnim( ps, anims, SETANIM_LEGS, BOTH_RUN1, SETANIM_FLAG_NORMAL );
+	}
+}
+
 //MP RULE - ALL PROCESSMOVECOMMANDS FUNCTIONS MUST BE BG-COMPATIBLE!!!
 //If you really need to violate this rule for SP, then use ifdefs.
 //By BG-compatible, I mean no use of game-specific data - ONLY use
@@ -103,6 +134,16 @@ static void ProcessMoveCommands( Vehicle_t *pVeh )
 	else
 	{
 		speedInc = pVeh->m_pVehicleInfo->acceleration * pVeh->m_fTimeModifier;
+	}
+
+	// VisionJK: a walker that steps (BG_WalkerSteps) goes as the AT-ST of single player: its legs here (Walker_Legs),
+	// its speed the one of there at once (g_active.cpp ClientAlterSpeed of code/). PM_WalkMove makes the move of it.
+	if ( parentPS->m_iVehicleNum && pVeh->m_pPilot && BG_WalkerSteps( pVeh->m_pPilot->s.number )
+		&& parentPS->stats[STAT_HEALTH] > 0 )
+	{
+		Walker_Legs( pVeh, parentPS );
+		parentPS->speed = ( pVeh->m_ucmd.forwardmove || pVeh->m_ucmd.rightmove ) ? BG_WALKER_SPEED : 0.0f;
+		return;
 	}
 
 	if ( parentPS->speed || parentPS->groundEntityNum == ENTITYNUM_NONE  ||
@@ -276,7 +317,15 @@ static void ProcessOrientCommands( Vehicle_t *pVeh )
 	// If the player is the rider...
 	if ( rider->s.number < MAX_CLIENTS )
 	{//FIXME: use the vehicle's turning stat in this calc
-		WalkerYawAdjust(pVeh, riderPS, parentPS);
+		if ( BG_WalkerSteps( rider->s.number ) )
+		{// VisionJK: as the AT-ST of single player it faces where its pilot looks, at once: there the pilot is the AT-ST
+		 // and walks where he looks. What lags behind is its legs, and only drawn so (cg_players.c CG_WalkerAngles).
+			pVeh->m_vOrientation[YAW] = AngleNormalize180( riderPS->viewangles[YAW] );
+		}
+		else
+		{
+			WalkerYawAdjust(pVeh, riderPS, parentPS);
+		}
 		//FighterPitchAdjust(pVeh, riderPS, parentPS);
 		pVeh->m_vOrientation[PITCH] = riderPS->viewangles[PITCH];
 	}
@@ -361,6 +410,15 @@ static void AnimateVehicle( Vehicle_t *pVeh )
 	// Percentage of maximum speed relative to current speed.
 	//float fSpeed = VectorLength( client->ps.velocity );
 	fSpeedPercToMax = parent->client->ps.speed / pVeh->m_pVehicleInfo->speedMax;
+
+	// VisionJK: the legs of a walker that steps are set where its move is worked out (Walker_Legs); here only what the
+	// other clients are sent of it
+	if ( pVeh->m_pPilot && BG_WalkerSteps( pVeh->m_pPilot->s.number ) )
+	{
+		parent->s.legsAnim = parent->client->ps.legsAnim;
+		parent->s.legsFlip = parent->client->ps.legsFlip;
+		return;
+	}
 
 	// If we're moving...
 	if ( fSpeedPercToMax > 0.0f ) //fSpeedPercToMax >= 0.85f )

@@ -54,8 +54,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 XCVAR_DEF( bg_fighterAltControl,				"0",					NULL,					CVAR_SYSTEMINFO )
 // what this cgame draws that a server only sends to who asks for it, bit 0: statuses above the heads (status/cg_status.c),
-// bit 1: who plays with a client of this tree (status/cg_peers.c)
-XCVAR_DEF( v_caps,							"15",					NULL,					CVAR_USERINFO|CVAR_ROM )
+// bit 1: who plays with a client of this tree (status/cg_peers.c), bit 4: it predicts the AT-ST stepping sideways
+// and turning on the spot (BG_WalkerSteps)
+XCVAR_DEF( v_caps,							"31",					NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cjp_client,							"1.4 ^5VisionJK ^7(^5jka.vision^7)",	NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( v_vision,							GIT_TAG,				NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cl_yawspeed,							"140",					NULL,					CVAR_ARCHIVE )	// (engine cvar, read by the JA+ yawspeed check)

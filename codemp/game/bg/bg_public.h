@@ -1764,6 +1764,17 @@ void BG_G2PlayerAngles(void *ghoul2, int motionBolt, entityState_t *cent, int ti
 					   int ciTorso, int *corrTime, vec3_t lookAngles, vec3_t lastHeadAngles, int lookTime,
 					   entityState_t *emplaced, int *crazySmoothFactor);
 void BG_G2ATSTAngles(void *ghoul2, int time, vec3_t cent_lerpAngles );
+// VisionJK: the AT-ST of a pilot whose walker steps (BG_WalkerSteps) goes as the one of single player: g_speed 250
+// forward and sideways, three quarters of it back, half of it with the walk button (bg_pmove.c PM_WalkMove)
+#define BG_WALKER_SPEED		250.0f
+void BG_G2WalkerHeadAngles( void *ghoul2, int time, const vec3_t angles );
+// whether the walker of this pilot goes as the AT-ST of single player (it walks where he looks and steps sideways, its
+// legs come after, its head looks where he looks; WalkerNPC.c, cg_players.c CG_WalkerAngles): only on a server that says so
+// (vs_caps bit 10) and for a pilot whose cgame predicts it (v_caps bit 4); anywhere else the stock walker, which the
+// prediction of a legacy client and a legacy server both expect. The game and the cgame each have their own.
+#define VS_CAPS_WALKER		1024
+#define V_CAPS_WALKER		16
+qboolean BG_WalkerSteps( int pilot );
 
 //BG anim utility functions:
 

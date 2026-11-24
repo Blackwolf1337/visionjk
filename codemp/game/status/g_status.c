@@ -207,6 +207,15 @@ void G_StatusUserinfo( gentity_t *ent, const char *userinfo ) {
 	jp->statusCaps = caps;
 }
 
+// the walker of this pilot steps sideways, turns on the spot and turns its head (bg_public.h): this server says so in
+// vs_caps, and his cgame predicts it (v_caps); a legacy client keeps the stock walker its prediction expects
+qboolean BG_WalkerSteps( int pilot ) {
+	const gentity_t *ent = ( pilot >= 0 && pilot < MAX_CLIENTS ) ? &g_entities[pilot] : NULL;
+
+	return (qboolean)( ent && ent->client && ( vs_caps.integer & VS_CAPS_WALKER )
+		&& ( ent->client->pers.jp.statusCaps & V_CAPS_WALKER ) );
+}
+
 /*
 =================
 G_StatusInput

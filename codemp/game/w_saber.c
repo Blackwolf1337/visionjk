@@ -1039,8 +1039,21 @@ static QINLINE void G_G2PlayerAngles( gentity_t *ent, matrix3_t legs, vec3_t leg
 
 		VectorCopy(ent->client->ps.viewangles, lookAngles);
 		lookAngles[YAW] = lookAngles[ROLL] = 0;
+		// VisionJK: a walker that steps (BG_WalkerSteps) pitches its head as its pilot's cgame draws it, on the cranium,
+		// so its muzzles are where he sees them; any other as ever, with the cranium of a pilot before cleared
+		{
+			const gentity_t	*pilot = (const gentity_t *)ent->m_pVehicle->m_pPilot;
 
-		BG_G2ATSTAngles( ent->ghoul2, level.time, lookAngles );
+			if ( pilot && pilot->client && BG_WalkerSteps( pilot->s.number ) )
+			{
+				BG_G2WalkerHeadAngles( ent->ghoul2, level.time, lookAngles );
+			}
+			else
+			{
+				BG_G2WalkerHeadAngles( ent->ghoul2, level.time, vec3_origin );
+				BG_G2ATSTAngles( ent->ghoul2, level.time, lookAngles );
+			}
+		}
 	}
 	else if (ent->NPC)
 	{ //an NPC not using a humanoid skeleton, do special angle stuff.
