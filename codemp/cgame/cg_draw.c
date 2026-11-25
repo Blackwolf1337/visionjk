@@ -32,6 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "hud/cg_hudkit.h"
+#include "cgame/weapons/cg_boltsound.h"
 #include "ui/ui_public.h"
 
 extern float CG_RadiusForCent( centity_t *cent );
@@ -6369,7 +6370,7 @@ static void CG_DrawRocketLocking( int lockEntNum, int lockTime )
 			{
 				if ( cg.snap->ps.m_iVehicleNum )
 				{
-					trap->S_StartSound( org, 0, CHAN_AUTO, trap->S_RegisterSound( "sound/vehicles/weapons/common/tick.wav" ));
+					CG_LockTick( org, trap->S_RegisterSound( "sound/vehicles/weapons/common/tick.wav" ), dif );
 				}
 				else
 				{

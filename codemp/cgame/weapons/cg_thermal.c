@@ -41,13 +41,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RING_WAVE_HZ		3.0f
 #define RING_SPREAD			0.3f		// sine of the angle out of the plane of the ring where most of its light is gone
 #define RING_REACH			170.0f
+#define RING_RED_MSEC		900			// this long before the blast the light of the ring turns red,
+#define RING_RED_FADE		250			//	over this long
 
 #define BALL_RADIUS			3.5f		// of thermal_proj.md3
 #define BALL_CLEAR			3.0f		// it lies as low as the game has it (its box is smaller than the model)
 #define POSE_SETTLE			0.04f		// sec: a jump to a new trajectory of the server goes in about three of these
 #define POSE_JUMP			64.0f		// a jump further than this is no bounce: shown at once
 #define SPIN_AIR_KEEP		0.6f		// of its turn a second it keeps in the air
-#define THROW_SPIN			9.0f		// radians a second it leaves the hand with
+#define THROW_SPIN			3.0f		// radians a second it leaves the hand with (9 at first: the stripe of its ring flickered)
+#define ROLL_SHARE			0.15f		// of the turn a ball rolling that way really has: a real one turns 14 times a second
+#define SPIN_MOST			5.0f		//	thrown, and never more than this, or the stripe of light of its ring strobes
 
 typedef struct {
 	int		thrown, seen;
@@ -191,17 +195,21 @@ void CG_ThermalPose( const centity_t *cent, refEntity_t *ent ) {
 
 			VectorMA( step, -DotProduct( step, normal ), normal, along );
 			CrossProduct( normal, along, roll );
-			VectorScale( roll, 1.0f / ( BALL_RADIUS * dt ), t->spin );
+			VectorScale( roll, ROLL_SHARE / ( BALL_RADIUS * dt ), t->spin );
 		} else if ( dist <= 0.01f ) {
 			VectorClear( t->spin );		// lying there
 		} else {
 			VectorScale( t->spin, powf( SPIN_AIR_KEEP, dt ), t->spin );
 		}
 		{
-			const float	rate = VectorLength( t->spin );
-			vec3_t		dir, turned;
-			int			k;
+			float	rate = VectorLength( t->spin );
+			vec3_t	dir, turned;
+			int		k;
 
+			if ( rate > SPIN_MOST ) {
+				VectorScale( t->spin, SPIN_MOST / rate, t->spin );
+				rate = SPIN_MOST;
+			}
 			if ( rate * dt > 0.0001f ) {
 				VectorScale( t->spin, 1.0f / rate, dir );
 				for ( k = 0; k < 3; k++ ) {
@@ -225,13 +233,23 @@ void CG_ThermalPose( const centity_t *cent, refEntity_t *ent ) {
 // The light of the ring, once the model is turned (cg_ents.c CG_Missile, ent its refEntity): out of the body only
 // round the plane of the ring, so a stripe across the floor and up the walls where it lies on its side, a line round
 // the walls where it stands, turning as it rolls; it pulses with the glow of the ring. A renderer without bands of
-// light gets a dimmer point light.
+// light gets a dimmer point light. Shortly before the blast the light turns red (the fuse CG_ThermalFuse counts,
+// which runs before this in a frame).
 void CG_ThermalRing( const centity_t *cent, const refEntity_t *ent ) {
-	const float	wave = RING_WAVE_BASE + RING_WAVE_AMP * sinf( cg.time * 0.001f * RING_WAVE_HZ * 2.0f * M_PI );
+	static const vec3_t	cold = { 0.8f, 0.88f, 1.0f }, red = { 1.0f, 0.1f, 0.06f };
+	const float			wave = RING_WAVE_BASE + RING_WAVE_AMP * sinf( cg.time * 0.001f * RING_WAVE_HZ * 2.0f * M_PI );
+	const int			number = cent->currentState.number;
+	float				late = 0.0f;
+	vec3_t				color;
 
 	if ( cent->currentState.weapon != WP_THERMAL || !v_weaponImpacts.integer || CG_JPInSeparatedDuel() ) {
 		return;
 	}
+	if ( number >= 0 && number < MAX_GENTITIES && thermals[number].seen == cg.time ) {
+		late = Com_Clamp( 0.0f, 1.0f, ( RING_RED_MSEC - ( thermals[number].thrown + THERMAL_FUSE - cg.time ) ) / (float)RING_RED_FADE );
+	}
+	VectorScale( cold, ( 1.0f - late ) * wave, color );
+	VectorMA( color, late * wave, red, color );
 	if ( bandLight < 0 ) {
 		char value[8];
 
@@ -239,8 +257,8 @@ void CG_ThermalRing( const centity_t *cent, const refEntity_t *ent ) {
 		bandLight = ( atoi( value ) && trap->ext.R_AddBandLight ) ? 1 : 0;
 	}
 	if ( bandLight ) {
-		trap->ext.R_AddBandLight( ent->origin, ent->axis[2], RING_SPREAD, RING_REACH, 0.8f * wave, 0.88f * wave, 1.0f * wave );
+		trap->ext.R_AddBandLight( ent->origin, ent->axis[2], RING_SPREAD, RING_REACH, color[0], color[1], color[2] );
 	} else {
-		trap->R_AddLightToScene( ent->origin, RING_REACH * 0.5f, 0.5f * wave, 0.55f * wave, 0.6f * wave );
+		trap->R_AddLightToScene( ent->origin, RING_REACH * 0.5f, 0.6f * color[0], 0.6f * color[1], 0.6f * color[2] );
 	}
 }

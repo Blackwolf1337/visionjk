@@ -18,8 +18,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cg_boltsound.h -- the own shots rise as the ammunition runs out, a bolt flying past the head whizzes
-// (cg_boltsound.c, issue #22)
+// cg_boltsound.h -- the own shots rise as the ammunition runs out, a bolt flying past the head whizzes, a rocket
+// howls past, the ticks of the lock of a vehicle rise (cg_boltsound.c, issue #22)
 
 #pragma once
 
@@ -29,3 +29,5 @@ void CG_BoltSoundRegister( void );
 void CG_FireSound( int entityNum, int weapon, qboolean altFire, sfxHandle_t sfx );
 // once a frame of a missile: hears it fly past the head of the own player
 void CG_BoltWhiz( const centity_t *cent );
+// a tick of the lock of a vehicle at origin, step 1 and up, in place of S_StartSound
+void CG_LockTick( const vec3_t origin, sfxHandle_t sfx, int step );
