@@ -973,6 +973,22 @@ static qboolean VK_GlobalFog( vkDraw_t *draw ) {
 
 /*
 ===============
+VK_EntityRGBGen
+
+The rgbGen a stage is drawn with on this entity, 0: its own. VisionJK: on an entity with RF_RGB_TINT a lit stage
+stays lit, with the colour of the entity on it (a prop the toolgun coloured, game/props/g_tools.c); the stages of
+effects have no light and take the colour as it is.
+===============
+*/
+static int VK_EntityRGBGen( const shaderStage_t *pStage, const trRefEntity_t *ent ) {
+	if ( ent->e.renderfx & RF_RGB_TINT ) {
+		return ( pStage->rgbGen == CGEN_LIGHTING_DIFFUSE ) ? CGEN_LIGHTING_DIFFUSE_ENTITY : CGEN_ENTITY;
+	}
+	return 0;
+}
+
+/*
+===============
 VK_DynamicLights
 
 One more pass over the batch for every dynamic light that reaches it. The light is worked out per pixel in
@@ -1079,6 +1095,19 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		}
 	}
 
+	// What the stage the light shines on is coloured with: the colour of the entity, for rgbGen lightingDiffuseEntity
+	// and entity (the skin and the clothes a player picked, a prop the toolgun coloured). The light falls on that
+	// colour. Its texture alone is pale, made to take any colour, and a player beside a lamp or a blade lost his.
+	vec4_t tint = { 1.0f, 1.0f, 1.0f, 1.0f };
+	if ( textured && ent && ent != &tr.worldEntity ) {
+		const int forced = VK_EntityRGBGen( textured, ent );
+		const int rgbGen = forced ? forced : textured->rgbGen;
+
+		if ( rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY || rgbGen == CGEN_ENTITY ) {
+			VK_ByteColor( ent->e.shaderRGBA, tint );
+		}
+	}
+
 	// A model (MD3, Ghoul2: R_AddModelDrawSurf) is lit by the angle alone (grid1.w -1, generic.frag DynamicLight), and it
 	// takes no shadow mask: that is made for the points of the level, and on a player it would lay the shadow of his
 	// own body onto him.
@@ -1109,6 +1138,7 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			}
 		}
 		VectorCopy( color, draw.baseColor );
+		VectorCopy( tint, draw.vertColor );		// (generic.frag DynamicLight: what the texture is coloured with)
 		VectorCopy( at, draw.parm );
 		draw.parm[3] = radius;
 		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
@@ -1423,11 +1453,7 @@ void RB_StageIteratorGeneric( void ) {
 			// its depth is there already: only where it is the nearest, and nothing written
 			stateBits = ( stateBits & ~GLS_DEPTHMASK_TRUE ) | GLS_DEPTHFUNC_EQUAL;
 		}
-		if ( ent->e.renderfx & RF_RGB_TINT ) {
-			// VisionJK: a lit stage stays lit, with the colour of the entity on it (a prop the toolgun coloured,
-			// game/props/g_tools.c); the stages of effects have no light and take the colour as it is
-			forceRGBGen = ( pStage->rgbGen == CGEN_LIGHTING_DIFFUSE ) ? CGEN_LIGHTING_DIFFUSE_ENTITY : CGEN_ENTITY;
-		}
+		forceRGBGen = VK_EntityRGBGen( pStage, ent );
 
 		VK_InitDraw( &draw, transform, bones );
 		draw.parm[0] = shader->portalRange;

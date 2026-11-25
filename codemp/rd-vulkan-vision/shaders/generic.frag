@@ -519,8 +519,9 @@ vec4 DynamicLight( Draw d ) {
 		}
 		radiance *= ParallaxLight( d, uv, dx, dy, vec3( dot( stageFrame[0], l ), dot( stageFrame[1], l ), dot( stageNormal, l ) ), parallax );
 	}
+	// (vertColor: the colour of the entity on this stage, white where it has none: vk_shade.cpp VK_DynamicLights)
 	vec4 painted = texture( TEX0( d ), uv );
-	vec3 albedo = pow( painted.rgb, vec3( 2.2 ) );
+	vec3 albedo = pow( painted.rgb * d.vertColor.rgb, vec3( 2.2 ) );
 	Surface s;
 	s.flat_ = flat_;
 	s.v = toEye;
