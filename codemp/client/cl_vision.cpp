@@ -62,11 +62,14 @@ static const char *const clCapabilities[] = {
 	"v_cgameBackdrop",		// ext.R_DrawBackdrop: frosted glass behind the HUD panels and the chat box
 	"v_cgameSparks",		// ext.R_EmitSparks: sparks the renderer simulates (cgame/cg_effects.c CG_GpuSparks)
 	"v_cgameSurfaceMaterial",	// ext.R_SurfaceMaterial: what the texture under a ray is made of (cgame/weapons/cg_impact.c)
+	"v_cgameSoundPitch",	// ext.S_StartSoundPitch: a sound started higher (cgame/weapons/cg_boltsound.c, a weapon running empty)
+	"v_cgameBandLight",		// ext.R_AddBandLight: a light only round a plane, the ring of a thermal detonator (cgame/weapons/cg_thermal.c)
 	"v_cgameFeed",			// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
 	"v_cgameVoteKeys",		// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
 	"v_screenFxDrops",		// drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	"v_screenFxSnow",		// clumps of snow on the view (SCREENFX_SNOW, the snowball)
 	"v_screenFxBlood",		// SCREENFX_BLOOD: blood on the view (cgame/screenfx/cg_screenfx.c, a cut close by)
+	"v_screenFxDirt",		// SCREENFX_DIRT: dirt on the view (cgame/screenfx/cg_screenfx.c, an explosion close by)
 };
 
 // ext.R_SurfaceMaterial of the cgame: MATERIAL_NONE where the renderer can not pick or the table does not know it

@@ -2069,6 +2069,8 @@ void CL_BindCGame( void ) {
 		cgi.ext.Con_FeedRead					= Con_FeedRead;
 		cgi.ext.Con_FeedNewest					= Con_FeedNewest;
 		cgi.ext.R_SurfaceMaterial				= CL_SurfaceMaterial;
+		cgi.ext.S_StartSoundPitch				= S_StartSoundPitch;
+		cgi.ext.R_AddBandLight					= re->ext.AddBandLightToScene;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

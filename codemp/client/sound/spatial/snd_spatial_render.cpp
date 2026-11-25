@@ -117,7 +117,7 @@ static qboolean S_SpatialSamples( spatialVoice_t *v, float *out ) {
 			v->readPos += got * (double)v->rate;
 		}
 	} else {
-		// what is before its start is silence (the time it takes to get here, see v_spatialPhysical)
+		// what is before its start is silence (the time it takes to get here, see S_SpatialPlaceVoice)
 		while ( have < SPATIAL_FRAME && v->readPos < 0.0 ) {
 			out[have++] = 0.0f;
 			v->readPos += v->rate;
@@ -164,7 +164,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		v->dryRead = c;
 		// where in its sound it begins: a loop where the time of the mixer is in it, as the mixer plays loops
 		if ( v->sfx && v->sfx->iSoundLengthInSamples > 0 ) {
-			v->readPos = v->loop ? fmod( (double)c, (double)v->sfx->iSoundLengthInSamples ) : (double)( c - v->startSample - v->delay );
+			v->readPos = v->loop ? fmod( (double)c, (double)v->sfx->iSoundLengthInSamples ) : (double)( c - v->startSample ) * v->pitch - v->delay;
 		}
 	}
 	v->rate = S_SpatialRate( v );
@@ -182,11 +182,11 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		mono[i] *= from + step * i;
 		whole[i] = mono[i] * unfade;
 	}
-	// A sound that is late by the way here (v_spatialPhysical) goes into its own reflections as the game plays it:
+	// A sound that is late by the way here (S_SpatialPlaceVoice) goes into its own reflections as the game plays it:
 	// their impulse response has the time to the walls and from them in it. An MP3 can only be read once.
 	reflectIn = mono;
 	if ( v->delay && v->reflect && v->sfx->eSoundCompressionMethod == ct_16 ) {
-		const int got = S_SampleRun( v->sfx, NULL, (double)( c - v->startSample ), 1.0f, SPATIAL_FRAME, qfalse, early );
+		const int got = S_SampleRun( v->sfx, NULL, (double)( c - v->startSample ) * v->pitch, v->pitch, SPATIAL_FRAME, qfalse, early );
 
 		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 			early[i] = i < got ? early[i] * ( from + step * i ) : 0.0f;

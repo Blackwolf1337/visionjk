@@ -175,8 +175,8 @@ void S_SpatialInfo_f( void ) {
 	Com_Printf( "%i sounds in the level, rendered %i ms ahead. Last frame: %i us for what is in the way, %i us to render (most so far: %i us)\n",
 		spatial.numVoices, (int)( S_SpatialAhead() * 1000.0f ), spatial.simulateUsec, spatial.renderUsec, spatial.peakRenderUsec );
 	spatial.peakRenderUsec = 0;
-	Com_Printf( "fade with the distance: %s, doppler %s (s_doppler)\n",
-		v_spatialPhysical->integer ? "of a real source, with the air and the speed of sound (v_spatialPhysical 1)" : "the game's (v_spatialPhysical 0)",
+	Com_Printf( "fade with the distance: %s, then the air and the speed of sound, doppler %s (s_doppler)\n",
+		v_spatialPhysical->integer ? "of a real source (v_spatialPhysical 1)" : "the game's (v_spatialPhysical 0)",
 		s_doppler->integer ? "on" : "off" );
 	// What it took of the thread of the game since this was last asked. A browser counts time in steps of 0.1 ms
 	// or more: the averages are of many frames and hold, the one frame that took most is that coarse.

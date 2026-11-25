@@ -371,11 +371,13 @@ typedef struct spatialVoice_s {
 	int			startSample;
 	double		readPos;			// where in the sound the next block begins, in its samples, with fractions
 	float		rate;				// samples of the sound per sample heard in the last block: 1, or the doppler
+	float		pitch;				// of the channel it plays (S_ChannelPitch): 1, or started higher by the cgame
 	float		distance;			// units from the listener, this frame
 	float		lastDistance;		//	and when it was last measured for the doppler,
 	int			lastTime;			//	at this time of the mixer, -1: not yet
 	float		approach;			// units a second it comes closer to the listener, smoothed
 	int			delay;				// samples it begins later than the game started it: the time it takes to get here
+									//	(at its pitch: the silence before it is read at its rate like the sound)
 
 	// where, and how loud the game wants it at that distance
 	vec3_t		origin;

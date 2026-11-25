@@ -35,6 +35,8 @@ void S_AddLoopingSoundVolume( int entityNum, const vec3_t origin, const vec3_t v
 void S_StartAmbientSound( const vec3_t origin, int entityNum, unsigned char volume, sfxHandle_t sfxHandle );
 void S_MuteSound(int entityNum, int entchannel);
 void S_StartSound( const vec3_t origin, int entnum, int entchannel, sfxHandle_t sfx );
+// VisionJK: S_StartSound that much higher, pitch 1 to 2, for the cgame (ext.S_StartSoundPitch)
+void S_StartSoundPitch( const vec3_t origin, int entnum, int entchannel, sfxHandle_t sfx, float pitch );
 void S_StartLocalSound( sfxHandle_t sfx, int channelNum );
 void S_StartLocalLoopingSound( sfxHandle_t sfx);
 

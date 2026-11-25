@@ -116,7 +116,8 @@ static spatialVoice_t *S_SpatialFindVoice( spatialStream_t *stream, channel_t *c
 		unused->renderedGain = 0.0f;
 		unused->sendOnly = qfalse;
 		unused->shock = channel ? S_SpatialIsExplosion( sfx ) : qfalse;
-		unused->rate = 1.0f;
+		unused->pitch = channel ? S_ChannelPitch( channel ) : 1.0f;
+		unused->rate = unused->pitch;
 		unused->ownMix = 0.0f;
 		unused->lastTime = -1;
 		unused->approach = 0.0f;
@@ -165,11 +166,11 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 		v->lastDistance = dist;
 	}
 
-	// With v_spatialPhysical a sound the game starts is heard when it got here, at the speed of sound. Decided
-	// until its first block is rendered. A voice of the chat and a loop are not late, the own player is where the
-	// listener is.
+	// A sound the game starts is heard when it got here, at the speed of sound (issue #22: a far fight is heard
+	// late), also without v_spatialPhysical. Decided until its first block is rendered. A voice of the chat and a
+	// loop are not late, and the own player is where the listener is (S_SpatialAddSend places him there).
 	if ( v->fresh ) {
-		v->delay = ( v_spatialPhysical->integer && channel && !v->loop ) ? (int)( dist / SPATIAL_SOUND_SPEED * spatial.audio.samplingRate ) : 0;
+		v->delay = ( channel && !v->loop ) ? (int)( dist / SPATIAL_SOUND_SPEED * spatial.audio.samplingRate * v->pitch ) : 0;
 	}
 
 }
@@ -187,12 +188,16 @@ float S_SpatialBoxWet( const spatialVoice_t *v ) {
 	return Com_Clamp( 1.0f, SPATIAL_BOX_WET_MAX, v->distance / SPATIAL_BOX_WET_NEAR );
 }
 
-// samples of its sound a voice reads per sample heard: the doppler of how fast it comes closer
+// samples of its sound a voice reads per sample heard: the pitch the game started it at, and the doppler of how fast
+// it comes closer
 float S_SpatialRate( const spatialVoice_t *v ) {
-	if ( v->stream || v->sendOnly || !s_doppler->integer ) {
+	if ( v->stream ) {
 		return 1.0f;
 	}
-	return Com_Clamp( 0.5f, 2.0f, 1.0f + v->approach / SPATIAL_SOUND_SPEED );
+	if ( v->sendOnly || !s_doppler->integer ) {
+		return v->pitch;
+	}
+	return Com_Clamp( 0.5f, 2.0f, v->pitch * ( 1.0f + v->approach / SPATIAL_SOUND_SPEED ) );
 }
 
 // The time of the mixer a channel has to stay after the end the mixer sees for it, while its voice still reads
@@ -203,11 +208,11 @@ static int S_SpatialTail( const spatialVoice_t *v, const channel_t *ch ) {
 	double end;
 
 	if ( v->fresh ) {
-		end = ch->startSample + v->delay + length / rate;
+		end = ch->startSample + v->delay / v->pitch + length / rate;
 	} else {
 		end = v->rendered + ( length - v->readPos ) / rate;
 	}
-	end -= ch->startSample + length;
+	end -= ch->startSample + S_ChannelLength( ch );
 	return end > 0.0 ? (int)Q_min( end, (double)SPATIAL_MAX_TAIL ) + SPATIAL_FRAME : 0;
 }
 
