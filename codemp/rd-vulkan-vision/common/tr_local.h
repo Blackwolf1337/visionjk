@@ -87,6 +87,13 @@ Ghoul2 Insert End
 
 // VisionJK: a saber blade drawn by the renderer in 3D (ext.AddSaberBladeToScene, vk_post.cpp VK_SaberBlades)
 #define MAX_SABER_BLADES	32
+// VisionJK: what stands or blows in the grass (ext.AddGrassPushToScene, grass.vert): the surface sprites within radius
+// of origin lean away from it and lie down, force 0 to 1
+#define MAX_GRASS_PUSHES	8		// a scene, what grass.vert takes
+typedef struct grassPush_s {
+	vec3_t	origin;
+	float	radius, force;
+} grassPush_t;
 typedef saberBlade3D_t saberBlade_t;
 
 typedef struct dlight_s {
@@ -124,6 +131,14 @@ typedef struct dlight_s {
 	// detonator, ext.AddBandLightToScene), bandWidth the sine of the angle out of it where most is gone; 0: all round
 	float			bandWidth;
 	vec3_t			bandAxis, bandAxisTransformed;
+
+	// VisionJK: whose shadows the light has where the renderer traces them (ext.AddShadowLightToScene, vk_rt.cpp
+	// VK_RT_PickLights): 0 the players and the level, 1 none, 2 the players alone, 3 the level alone. With
+	// DLIGHT_SHADOW_FIRST it takes one of the few places for lights with shadows before the others, the nearest
+	// first: a light of an effect, which stays where it is and would shine through its wall without one.
+	int				shadowMode;
+#define DLIGHT_SHADOW_MODE		3
+#define DLIGHT_SHADOW_FIRST		16
 } dlight_t;
 
 
@@ -152,6 +167,7 @@ typedef struct trRefEntity_s {
 	// grid taken from directedLight (R_SetupEntityLighting); in the world, the colour as a moving light has it
 	int			numLamps;
 	vec3_t		lampOrigin[3];
+	vec3_t		lampRight[3], lampUp[3];	// the panel as a rectangle: two half edges from lampOrigin, zero: a point
 	vec3_t		lampColor[3];
 	float		lampRange[3];
 	// VisionJK: drawn cut by a plane (ext.AddCutEntityToScene): what lies on the side the normal points to is kept
@@ -500,6 +516,10 @@ typedef struct stageMaterial_s {
 	bool			autoMade;
 	// the glow of a lamp panel made at load: its emission strength follows v_panelGlow (vk_shade.cpp VK_PbrDraw)
 	bool			autoLamp;
+	// set to make its surfaces lamps of the level or not (emissive <light> in the stage, materialParms_t light):
+	// light is how much, 0 none. Not set: as vk_rt.cpp finds it.
+	bool			lightSet;
+	float			light;
 } stageMaterial_t;
 
 // tr_automat.cpp: what a texture of the level gets when it has no material (v_autoMaterials)
@@ -692,6 +712,9 @@ typedef struct trRefdef_s {
 
 	int			numSaberBlades;			// VisionJK: the blades drawn in 3D (ext.AddSaberBladeToScene, vk_post.cpp)
 	saberBlade_t		*saberBlades;
+
+	int			numGrassPushes;			// VisionJK: ext.AddGrassPushToScene, vk_world.cpp VK_BindGrass
+	grassPush_t	*grassPushes;
 
 	int			numPolys;
 	struct srfPoly_s	*polys;
@@ -1613,7 +1636,7 @@ image_t		*R_MadeImage( const char *name, byte *pic, int width, int height );
 //
 // tr_material.cpp: the material debug menu (refexport_t ext.Material*)
 //
-void		R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] );
+void		R_MaterialLevelView( const refdef_t *fd );
 void		R_MaterialWorldLoaded( void );
 qboolean	RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *out );
 int			RE_MaterialList( qboolean all, int first, qhandle_t *out, int max );
@@ -1623,8 +1646,10 @@ qboolean	RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 qboolean	RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
 qboolean	RE_MaterialText( qhandle_t shader, char *buf, int size, char *file, int fileSize );
 qboolean	RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
+qboolean	RE_MaterialLight( qhandle_t shader, int mode, float light );
 void		RE_SetLightOverride( const lightOverride_t *light );
 qboolean	RE_LevelView( vec3_t origin, vec3_t forward );
+qboolean	RE_LevelViewRay( float x, float y, vec3_t origin, vec3_t dir );
 const lightOverride_t *R_LightOverride( void );
 
 //
@@ -1827,7 +1852,9 @@ void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, fl
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 void RE_AddBandLightToScene( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
+void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float g, float b, int shadows );
 void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
+void RE_AddGrassPushToScene( const vec3_t origin, float radius, float force );
 void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );
 // VisionJK: bones placed by the cgame (G2_API.cpp, ext.G2_BoneNumber and ext.G2_SetBonesWorld)
 int G2API_VJK_BoneNumber( void *ghoul2, int modelIndex, const char *boneName, int *parent );
@@ -2087,6 +2114,7 @@ typedef struct backEndData_s {
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 	dlight_t	dlights[MAX_DLIGHTS];
 	saberBlade_t	saberBlades[MAX_SABER_BLADES];
+	grassPush_t	grassPushes[MAX_GRASS_PUSHES * 4];
 	trRefEntity_t	entities[MAX_REFENTITIES];
 	trMiniRefEntity_t	miniEntities[MAX_MINI_ENTITIES];
 	srfPoly_t	*polys;//[MAX_POLYS];

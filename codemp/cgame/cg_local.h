@@ -2641,3 +2641,5 @@ typedef enum {
 	GPUSPARKS_DEFLECT
 } gpuSparks_t;
 qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, float scale );
+qboolean CG_GpuSparksReady( void );
+qboolean CG_EmitSparks( const sparkBurst_t *burst );

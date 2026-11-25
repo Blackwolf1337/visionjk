@@ -38,6 +38,8 @@ impactKind_t CG_ImpactKindOf( int material );
 // MATERIAL_NONE where nobody named one, metal: take it for metal then. qfalse: no surface there, or the sky or one
 // that takes no impacts. surfaceFlags (may be NULL): the SURF_* of it
 qboolean CG_ImpactMaterial( const vec3_t at, const vec3_t normal, qboolean metal, int *material, int *surfaceFlags );
+// the picture of a puff of dust, tinted by CG_ImpactDustColor
+qhandle_t CG_ImpactDustShader( void );
 // the colour of the dust a kind throws up; qfalse: it throws none (metal, glass)
 qboolean CG_ImpactDustColor( impactKind_t kind, vec3_t color );
 

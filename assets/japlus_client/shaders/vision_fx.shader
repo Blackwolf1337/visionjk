@@ -335,3 +335,19 @@ gfx/vision/impact_dust
 		alphaGen vertex
 	}
 }
+
+// the leaves a Force Push or an explosion throws up from a floor of plants (cgame/level/cg_gust.c): four shapes in a
+// sheet, tinted by the game with the light of the place
+gfx/vision/leaves
+{
+	nopicmip
+	surfaceparm	nomarks
+	surfaceparm	trans
+	cull	none
+	q3map_nolightmap
+	{
+		map gfx/vision/leaves
+		alphaFunc GE128
+		rgbGen vertex
+	}
+}

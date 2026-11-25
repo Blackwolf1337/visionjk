@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the view of the level of the last frame, the ray of a pick from its middle
 static vec3_t			levelViewOrigin;
 static vec3_t			levelViewAxis[3];
+static float			levelViewRect[4];	// its part of the window: x, y, width, height in pixels
+static float			levelViewTan[2];	// the tangents of half its angles of view
 static const world_t	*levelViewWorld;
 static int				levelViewLoads;		// r_worldLoads when it was set
 
@@ -110,12 +112,39 @@ qboolean RE_LevelView( vec3_t origin, vec3_t forward ) {
 	return qtrue;
 }
 
-void R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] )
+// ext.LevelViewRay: the ray of that view through a point of the window (x, y from 0 at the left and top to 1), for a
+// pick with the mouse. qfalse before the first view and for a point outside of it.
+qboolean RE_LevelViewRay( float x, float y, vec3_t origin, vec3_t dir ) {
+	if ( !tr.world || levelViewWorld != tr.world || levelViewLoads != r_worldLoads || levelViewRect[2] <= 0.0f
+		|| levelViewRect[3] <= 0.0f ) {
+		return qfalse;
+	}
+	const float u = ( x * glConfig.vidWidth - levelViewRect[0] ) / levelViewRect[2] * 2.0f - 1.0f;
+	const float v = ( y * glConfig.vidHeight - levelViewRect[1] ) / levelViewRect[3] * 2.0f - 1.0f;
+
+	if ( u < -1.0f || u > 1.0f || v < -1.0f || v > 1.0f ) {
+		return qfalse;
+	}
+	VectorCopy( levelViewOrigin, origin );
+	// (axis 1 points left, axis 2 up)
+	VectorMA( levelViewAxis[0], -u * levelViewTan[0], levelViewAxis[1], dir );
+	VectorMA( dir, -v * levelViewTan[1], levelViewAxis[2], dir );
+	VectorNormalize( dir );
+	return qtrue;
+}
+
+void R_MaterialLevelView( const refdef_t *fd )
 {
-	VectorCopy( origin, levelViewOrigin );
-	VectorCopy( axis[0], levelViewAxis[0] );
-	VectorCopy( axis[1], levelViewAxis[1] );
-	VectorCopy( axis[2], levelViewAxis[2] );
+	VectorCopy( fd->vieworg, levelViewOrigin );
+	VectorCopy( fd->viewaxis[0], levelViewAxis[0] );
+	VectorCopy( fd->viewaxis[1], levelViewAxis[1] );
+	VectorCopy( fd->viewaxis[2], levelViewAxis[2] );
+	levelViewRect[0] = (float)fd->x;
+	levelViewRect[1] = (float)fd->y;
+	levelViewRect[2] = (float)fd->width;
+	levelViewRect[3] = (float)fd->height;
+	levelViewTan[0] = tanf( DEG2RAD( fd->fov_x ) * 0.5f );
+	levelViewTan[1] = tanf( DEG2RAD( fd->fov_y ) * 0.5f );
 	levelViewWorld = tr.world;
 	levelViewLoads = r_worldLoads;
 	R_ApplySun();
@@ -477,6 +506,7 @@ qboolean RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *
 		VectorInverse( out->normal );
 	}
 	out->shader = best->shader->index;
+	out->contents = best->shader->contentFlags;
 	VectorMA( ray.start, ray.fraction, ray.dir, out->point );
 	out->distance = ray.fraction * VectorLength( ray.dir );
 	return qtrue;
@@ -557,6 +587,8 @@ qboolean RE_MaterialInfo( qhandle_t shader, materialInfo_t *out )
 		memcpy( out->emissive, sh->emissive, sizeof( out->emissive ) );
 	}
 	out->surfaceLight = sh->surfaceLight;
+	out->lightMode = sh->emissiveSet ? ( sh->emissive[3] > 0.0f ? 1 : 2 ) : 0;
+	out->lightFound = VK_RT_ShaderLight( sh );
 
 	for ( int i = 0; i < sh->numUnfoggedPasses && out->numStages < MATERIAL_MAX_STAGES; i++ ) {
 		const shaderStage_t *st = &sh->stages[i];
@@ -574,6 +606,7 @@ qboolean RE_MaterialInfo( qhandle_t shader, materialInfo_t *out )
 			// of the texture the material was made from, not of a made albedo
 			ms->luma = ( st->mat && st->mat->baseImage ) ? st->mat->baseImage->averageLuma : st->bundle[0].image->averageLuma;
 		}
+		ms->light = VK_RT_StageLight( st );
 		out->numStages++;
 	}
 	return qtrue;
@@ -609,6 +642,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	VectorSet( out->emission, 1.0f, 1.0f, 1.0f );
 	out->emissionThreshold = 0.7f;
 	out->normalScale = 1.0f;
+	out->light = -1.0f;
 	R_DefaultMaterialGen( &out->gen );
 	if ( shader <= 0 || shader >= tr.numShaders ) {
 		return qfalse;
@@ -662,6 +696,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	}
 	out->specularReflectance = mat->specularReflectance;
 	out->normalScale = mat->normalScale;
+	out->light = mat->lightSet ? mat->light : -1.0f;
 	return qtrue;
 }
 
@@ -771,6 +806,16 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 		mat->specularReflectance = Com_Clamp( 0.0f, 1.0f, in->specularReflectance );
 		mat->normalScale = Com_Clamp( 0.0f, 8.0f, in->normalScale );
 	}
+	if ( fields & MATP_LIGHT ) {
+		const bool set = in->light >= 0.0f;
+		const float light = set ? Com_Clamp( 0.0f, 100000.0f, in->light ) : 0.0f;
+
+		if ( set != mat->lightSet || light != mat->light ) {
+			mat->lightSet = set;
+			mat->light = light;
+			VK_RT_LampsChanged();
+		}
+	}
 	if ( fields & MATP_GEN ) {
 		// made again from the texture the record had them from (the stage shows the albedo now), into its images
 		mat->gen = in->gen;
@@ -788,6 +833,44 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 
 /*
 ===============
+RE_MaterialLight
+
+ext.MaterialLight: whether the shader is a lamp of the level. mode 0: as the renderer finds it (what its text says, its
+glow stages, q3map_surfacelight); 1: it gives light, as much as light says in the units of q3map_surfacelight, in the
+colour it had or white; 2: none. That is the shader keyword emissive, set on every variant of the name; the text of the
+shader gets the line (MaterialText). The light patches of the level are made anew.
+===============
+*/
+qboolean RE_MaterialLight( qhandle_t shader, int mode, float light )
+{
+	if ( shader <= 0 || shader >= tr.numShaders ) {
+		return qfalse;
+	}
+
+	shader_t *variants[MAX_VARIANTS];
+	const int count = R_ShadersNamed( tr.shaders[shader]->name, variants, MAX_VARIANTS );
+
+	for ( int i = 0; i < count; i++ ) {
+		shader_t *sh = variants[i];
+
+		if ( mode == 0 ) {
+			sh->emissiveSet = false;
+			sh->emissive[0] = sh->emissive[1] = sh->emissive[2] = sh->emissive[3] = 0.0f;
+			continue;
+		}
+		if ( !sh->emissiveSet || sh->emissive[0] + sh->emissive[1] + sh->emissive[2] <= 0.0f ) {
+			VectorSet( sh->emissive, 1.0f, 1.0f, 1.0f );
+			sh->emissiveShadows = true;
+		}
+		sh->emissiveSet = true;
+		sh->emissive[3] = mode == 1 ? Com_Clamp( 1.0f, 100000.0f, light ) : 0.0f;
+	}
+	VK_RT_LampsChanged();
+	return qtrue;
+}
+
+/*
+===============
 The text of a shader with its materials, and saving it
 ===============
 */
@@ -796,7 +879,7 @@ The text of a shader with its materials, and saving it
 static const char *const materialWords[] = { "normalMap", "normalHeightMap", "rmoMap", "ormMap", "roughness", "gloss",
 	"metalness", "parallaxDepth", "parallaxPlane", "albedoGen", "normalGen", "rmoGen", "specular", "wrapLight", "sparkle",
 	"transmission", "ior", "thickness", "absorption", "clearcoat", "sheen", "anisotropy", "emission", "specMap",
-	"specularMap", "specularReflectance", "normalScale", "cloth", "tessellation", NULL };
+	"specularMap", "specularReflectance", "normalScale", "cloth", "tessellation", "emissive", NULL };
 
 static qboolean IsMaterialWord( const char *word ) {
 	for ( int i = 0; materialWords[i]; i++ ) {
@@ -830,6 +913,18 @@ static void QDECL Out( textOut_t *out, const char *fmt, ... ) {
 		return;
 	}
 	out->length += written;
+}
+
+// the line of a shader that was set to give light or none (ext.MaterialLight), as the keyword emissive reads it
+static void OutLight( textOut_t *out, const shader_t *sh ) {
+	if ( !sh->emissiveSet ) {
+		return;
+	}
+	Out( out, "\temissive %g", sh->emissive[3] );
+	if ( sh->emissive[3] > 0.0f ) {
+		Out( out, " %g %g %g%s", sh->emissive[0], sh->emissive[1], sh->emissive[2], sh->emissiveShadows ? "" : " noshadows" );
+	}
+	Out( out, "\n" );
 }
 
 static void OutIndent( textOut_t *out, int depth ) {
@@ -941,6 +1036,12 @@ static void OutMaterial( textOut_t *out, const stageMaterial_t *mat, int depth )
 		OutIndent( out, depth );
 		Out( out, "sparkle %g\n", mat->sparkle );
 	}
+	// (at depth 1, under implicitMap, the word would be the one of the whole shader: a shader without text has one
+	// texture, and its light is set for the shader)
+	if ( mat->lightSet && depth > 1 ) {
+		OutIndent( out, depth );
+		Out( out, "emissive %g\n", mat->light );
+	}
 }
 
 // a word as the parser reads it again: in quotes when it has a space
@@ -964,6 +1065,7 @@ static qboolean MaterialText( shader_t *sh, char *buf, int size, const char **fi
 
 	buf[0] = '\0';
 	Out( &out, "%s\n{\n", sh->name );
+	OutLight( &out, sh );
 	if ( !text ) {
 		const stageMaterial_t *mat = R_MaterialFor( sh->name, 1, qfalse, NULL );
 
@@ -1008,7 +1110,8 @@ static qboolean MaterialText( shader_t *sh, char *buf, int size, const char **fi
 			continue;
 		}
 		// a line: its first word and the rest of it
-		const qboolean material = IsMaterialWord( token );
+		// (the line of the light is given again from the shader, OutLight)
+		const qboolean material = (qboolean)( IsMaterialWord( token ) || ( depth == 1 && !Q_stricmp( token, "emissive" ) ) );
 		const qboolean implicit = ( depth == 1 && !Q_stricmp( token, "implicitMap" ) ) ? qtrue : qfalse;
 
 		if ( !material ) {

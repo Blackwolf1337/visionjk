@@ -33,6 +33,8 @@ static	int			r_firstSceneDrawSurf;
 static	int			r_numdlights;
 static	int			r_numSaberBlades;		// VisionJK: ext.AddSaberBladeToScene
 static	int			r_firstSceneSaberBlade;
+static	int			r_numGrassPushes;		// VisionJK: ext.AddGrassPushToScene
+static	int			r_firstSceneGrassPush;
 static	int			r_firstSceneDlight;
 
 static	int			r_numentities;
@@ -64,6 +66,8 @@ void R_InitNextFrame( void ) {
 	r_firstSceneDlight = 0;
 	r_numSaberBlades = 0;
 	r_firstSceneSaberBlade = 0;
+	r_numGrassPushes = 0;
+	r_firstSceneGrassPush = 0;
 
 	r_numentities = 0;
 	r_firstSceneEntity = 0;
@@ -87,6 +91,7 @@ RE_ClearScene
 void RE_ClearScene( void ) {
 	r_firstSceneDlight = r_numdlights;
 	r_firstSceneSaberBlade = r_numSaberBlades;
+	r_firstSceneGrassPush = r_numGrassPushes;
 	r_firstSceneEntity = r_numentities;
 	r_firstScenePoly = r_numpolys;
 	refEntParent = -1;
@@ -424,6 +429,27 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	dl->additive = additive;
 	dl->lineRange = 0.0f;
 	dl->bandWidth = 0.0f;
+	dl->shadowMode = 0;
+}
+
+/*
+=====================
+RE_AddShadowLightToScene
+
+VisionJK: a point light with a say in whose shadows it has (ext.AddShadowLightToScene): shadows 0 the players and the
+level, 1 none (it never takes one of the few places for lights with shadows), 2 the players alone, 3 the level alone.
+The lights of effects of the level, set in the material tool of the client (cl_fxlight.cpp).
+=====================
+*/
+void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float g, float b, int shadows ) {
+	const int before = r_numdlights;
+
+	RE_AddDynamicLightToScene( origin, radius, r, g, b, qfalse );
+	if ( r_numdlights > before ) {
+		const int mode = Com_Clampi( 0, 3, shadows );
+
+		backEndData->dlights[before].shadowMode = mode | ( mode != 1 ? DLIGHT_SHADOW_FIRST : 0 );
+	}
 }
 
 /*
@@ -454,6 +480,7 @@ void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, 
 	VectorCopy( start, dl->lineStart );
 	VectorCopy( end, dl->lineEnd );
 	dl->bandWidth = 0.0f;
+	dl->shadowMode = 0;
 }
 
 /*
@@ -481,7 +508,30 @@ void RE_AddBandLightToScene( const vec3_t origin, const vec3_t axis, float width
 	dl->additive = qfalse;
 	dl->lineRange = 0.0f;
 	dl->bandWidth = Com_Clamp( 0.02f, 1.0f, width );
+	dl->shadowMode = 0;
 	VectorCopy( dir, dl->bandAxis );
+}
+
+/*
+=====================
+RE_AddGrassPushToScene
+
+VisionJK: somebody stands in the grass at origin, or a push of air goes over it: the surface sprites of the level
+within radius lean away from the spot and lie down, most at the spot, by force (0 to 1). The first MAX_GRASS_PUSHES of
+a scene count (grass.vert).
+=====================
+*/
+void RE_AddGrassPushToScene( const vec3_t origin, float radius, float force ) {
+	grassPush_t	*push;
+
+	if ( !tr.registered || radius <= 0.0f || force <= 0.0f || r_numGrassPushes - r_firstSceneGrassPush >= MAX_GRASS_PUSHES
+		|| r_numGrassPushes >= (int)ARRAY_LEN( backEndData->grassPushes ) ) {
+		return;
+	}
+	push = &backEndData->grassPushes[r_numGrassPushes++];
+	VectorCopy( origin, push->origin );
+	push->radius = radius;
+	push->force = Q_min( force, 1.0f );
 }
 
 /*
@@ -634,6 +684,8 @@ void RE_RenderScene( const refdef_t *fd ) {
 	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
 	tr.refdef.numSaberBlades = r_numSaberBlades - r_firstSceneSaberBlade;
 	tr.refdef.saberBlades = &backEndData->saberBlades[r_firstSceneSaberBlade];
+	tr.refdef.numGrassPushes = r_numGrassPushes - r_firstSceneGrassPush;
+	tr.refdef.grassPushes = &backEndData->grassPushes[r_firstSceneGrassPush];
 
 	// Add the decals here because decals add polys and we need to ensure
 	// that the polys are added before the the renderer is prepared
@@ -687,7 +739,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	if ( !( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		R_ProbeViews( &parms );
 		// and the view the material debug menu picks along (ext.MaterialPick)
-		R_MaterialLevelView( fd->vieworg, fd->viewaxis );
+		R_MaterialLevelView( fd );
 	}
 	R_RenderView( &parms );
 

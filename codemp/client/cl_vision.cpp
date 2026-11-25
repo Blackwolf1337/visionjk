@@ -64,6 +64,9 @@ static const char *const clCapabilities[] = {
 	"v_cgameSurfaceMaterial",	// ext.R_SurfaceMaterial: what the texture under a ray is made of (cgame/weapons/cg_impact.c)
 	"v_cgameSoundPitch",	// ext.S_StartSoundPitch: a sound started higher (cgame/weapons/cg_boltsound.c, a weapon running empty)
 	"v_cgameBandLight",		// ext.R_AddBandLight: a light only round a plane, the ring of a thermal detonator (cgame/weapons/cg_thermal.c)
+	"v_cgameGrassPush",		// ext.R_AddGrassPush: the grass of the level parts round players and pushes (cgame/level/cg_gust.c)
+	"v_cgameSurfacePick",	// ext.R_SurfacePick: the drawn surface under a ray and the contents of its shader (cgame/level/cg_motes.c)
+	"v_cgameLamps",			// ext.R_LampsNear: the lamps of the level near a place (cgame/level/cg_motes.c, dust in their light)
 	"v_cgameFeed",			// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
 	"v_cgameVoteKeys",		// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
 	"v_screenFxDrops",		// drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
@@ -82,6 +85,19 @@ int CL_SurfaceMaterial( const vec3_t start, const vec3_t end ) {
 	}
 #endif
 	return MATERIAL_NONE;
+}
+
+// ext.R_SurfacePick of the cgame: the first surface of the level that is drawn along the ray. qfalse: none, or the
+// renderer can not pick
+qboolean CL_SurfacePick( const vec3_t start, const vec3_t end, vec3_t point, int *contents ) {
+	materialPick_t pick;
+
+	if ( !re || !re->ext.MaterialPick || !re->ext.MaterialPick( start, end, &pick ) ) {
+		return qfalse;
+	}
+	VectorCopy( pick.point, point );
+	*contents = pick.contents;
+	return qtrue;
 }
 
 void CL_VisionCapabilities( void ) {

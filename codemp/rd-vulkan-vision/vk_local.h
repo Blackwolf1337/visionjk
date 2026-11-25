@@ -71,7 +71,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
 #define VK_RT_CASTERS		16		// players whose spheres the shadow pass tests before it traces (VK_RT_MAX_CASTERS)
-#define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 64 * 4 + 4 + 1 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (64: the tiles of the shadow maps, 4: moving lights 2 and 3, 1: how strong the four are, VK_SM_TILES), then the panels of each player
+#define VK_RT_EXTRA_ROWS		10		// at its end: moving lights 4 to 7 (two each), how strong they are, the height of a light mask
+#define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 64 * 4 + 4 + 1 + VK_RT_CASTERS * 4 + VK_RT_EXTRA_ROWS )	// the shadows of the players (vk_rt.cpp): the same view, then their own (64: the tiles of the shadow maps, 4: moving lights 2 and 3, 1: how strong the four are, VK_SM_TILES), then the panels of each player
 #define VK_BLADE_ROWS		7		// shaders/saber.glsl: seven rows a blade
 #define VK_BLADE_PORTAL		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * VK_BLADE_ROWS )	// where the view of a mirror or portal is
 #define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal

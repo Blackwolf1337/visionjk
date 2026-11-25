@@ -27,7 +27,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[372];
+	vec4	rt[382];
 	vec4	lights[34];
 	vec4	ssr[7];
 	vec4	blades[236];

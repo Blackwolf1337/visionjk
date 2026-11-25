@@ -32,7 +32,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[372];
+	vec4	rt[382];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
@@ -225,11 +225,33 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 		vec4 shares = W[LAMPS + i * LAMP_ROWS + 3];
 		float strength = min( ratio, 0.85 );
 		float taken = 0.0;
+		// A light of an effect that stands where the grid has his light from (a fire of the level given a moving light,
+		// cl_fxlight.cpp; W[381].z: which of the lights 0 to 3 are such) casts his shadow itself where it reaches him, and
+		// where the level hides it from him nothing does: the grid knows the fire, not the pedestal between it and him.
+		// Its share of the grid leaves his shadow (their picture 2026-11-26: in the shadow of the fire bowl and a shadow
+		// all the same).
+		float gridOwn = 1.0;
+		if ( dot( gridDir, gridDir ) > 1e-4 ) {
+			int fixedLights = int( W[381].z + 0.5 );
+
+			for ( int k = 0; k < 4; k++ ) {
+				vec4 at = W[k < 2 ? 38 + k * 2 : 303 + ( k - 2 ) * 2];
+
+				if ( ( fixedLights & ( 1 << k ) ) == 0 || at.w <= 0.0 ) {
+					continue;
+				}
+				vec3 toLight = at.xyz - s.xyz;
+				float away = max( length( toLight ), 1.0 );
+				float agree = smoothstep( 0.5, 0.8, dot( normalize( gridDir ), toLight / away ) );
+
+				gridOwn *= 1.0 - agree * ( 1.0 - smoothstep( 0.7, 1.0, away / at.w ) );
+			}
+		}
 		// the share of the grid: its direction, the cone wide where the light is mostly ambient, as narrow as
 		// v_rtLightSize says where most of it comes from one side
 		if ( shares.w > 0.01 && dot( gridDir, gridDir ) > 1e-4 ) {
 			float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
-			taken += strength * shares.w * TakenFrom( origin, normal, normalize( gridDir ), reach, tangent, s,
+			taken += strength * shares.w * gridOwn * TakenFrom( origin, normal, normalize( gridDir ), reach, tangent, s,
 				max( 1, int( ceil( float( rays ) * shares.w ) ) ), false );
 		}
 		// the panels: towards each from this point, the cone from its disk, the rays end before it (fewer rays for a small

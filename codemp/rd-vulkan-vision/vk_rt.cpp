@@ -80,6 +80,9 @@ static const uint32_t vk_rtLightMaskFrag[] =
 static const uint32_t vk_rtAccumFrag[] =
 #include "shaders/rtaccum_frag.inc"
 ;
+static const uint32_t vk_rtLightResolveFrag[] =
+#include "shaders/rtlightresolve_frag.inc"
+;
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
 ;
@@ -107,7 +110,11 @@ static const uint32_t vk_rtLampsComp[] =
 #define VK_SM_TILE					256
 #define VK_SM_COLUMNS				8
 #define VK_SM_POINTS				3
-#define VK_RT_LIGHTS					4				// moving lights with shadows in one frame, one channel of the mask each
+#define VK_RT_LIGHTS					4				// moving lights with shadows of players and level in one frame, one channel of the mask each
+// Where the device traces rays, four more with the shadows of the level alone (no cubes of the players for them): the
+// lower half of the mask, which is two masks high. The fires of a level are many (cl_fxlight.cpp), and a light with no
+// place shines through its wall.
+#define VK_RT_ALL_LIGHTS			8
 #define VK_RT_TUBES					2				// of them blades at most
 #define VK_SM_TILES					( VK_RT_MAX_CASTERS + VK_RT_TUBES * VK_SM_POINTS * 6 + ( VK_RT_LIGHTS - VK_RT_TUBES ) * 6 )
 #define VK_SM_LIGHT_TILE( k, point )	( VK_RT_MAX_CASTERS + ( ( k ) < VK_RT_TUBES ? ( ( k ) * VK_SM_POINTS + ( point ) ) * 6 \
@@ -118,7 +125,8 @@ static const uint32_t vk_rtLampsComp[] =
 // have no rows; lightmask.glsl LightShadow reads them at 64 + 6 k.
 #define VK_SM_OWN_TILE( k )			( VK_SM_TILES + ( k ) * 6 )
 #define VK_RT_LAMP_ROWS				4
-#define VK_RT_LAMP_ROW				( VK_RT_VEC4S - VK_RT_CASTERS * VK_RT_LAMP_ROWS )	// the panels of each player (VK_RT_PickLamps)
+#define VK_RT_LAMP_ROW				( VK_RT_VEC4S - VK_RT_EXTRA_ROWS - VK_RT_CASTERS * VK_RT_LAMP_ROWS )	// the panels of each player (VK_RT_PickLamps)
+#define VK_RT_EXTRA_ROW				( VK_RT_VEC4S - VK_RT_EXTRA_ROWS )	// lights 4 to 7 two each, then their strength, then the height of a mask
 #define VK_RT_LAMP_SHOWN			3		// panels a player casts from in the shader
 // Without rays, after those: a tile for each panel the first players cast from (VK_RT_PickLamps), looking from the panel
 // at him (VK_SM_LampView). The shader works their views out from the rows of the panels, so they have no rows either;
@@ -129,7 +137,8 @@ static const uint32_t vk_rtLampsComp[] =
 #define VK_SM_FIRST_ROW				47				// of the rt globals: four a tile, its view and projection
 #define VK_RT_POWER_ROW				( VK_SM_FIRST_ROW + VK_SM_TILES * 4 + 4 )	// how strong each moving light is (rtresolve.frag)
 #define VK_SM_OWN_LIGHT				56.0f			// a point of light this near a player can be his own weapon (VK_SM_DrawAtlas)
-#define VK_RT_LIGHT_ROW( k )		( ( k ) < 2 ? 38 + ( k ) * 2 : VK_SM_FIRST_ROW + VK_SM_TILES * 4 + ( ( k ) - 2 ) * 2 )	// two a light
+#define VK_RT_LIGHT_ROW( k )		( ( k ) < 2 ? 38 + ( k ) * 2 : ( k ) < VK_RT_LIGHTS ? VK_SM_FIRST_ROW + VK_SM_TILES * 4 + ( ( k ) - 2 ) * 2 \
+										: VK_RT_EXTRA_ROW + ( ( k ) - VK_RT_LIGHTS ) * 2 )	// two a light
 
 cvar_t	*v_rtDebug;
 static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
@@ -155,6 +164,9 @@ typedef struct vkRtLight_s {		// a moving light whose players' shadows are trace
 	qboolean					inSolid;		// a point inside a wall or floor: an explosion on what it hit
 	float						power;			// how bright, as the light pass has it
 	qboolean					tube;
+	int							shadowMode;		// dlight_t shadowMode: 0 players and level, 2 players alone, 3 level alone
+	qboolean					fixed;			// a light of an effect with the shadows of players and level: it stands where the
+												// level has its light from (a fire), rtshadow.frag GridShadow
 	vec3_t						start, end;		// a point light has both at its place
 	float						range;			// how far it reaches from that point or tube
 } vkRtLight_t;
@@ -243,6 +255,12 @@ static struct {
 	// shaders/rtaccum.frag (its layout: the sets of the frame, of the raw mask, of the depth, of the mask before)
 	vkTarget_t					raw;
 	VkDescriptorSet				rawSet;
+	// the mask of the moving lights as it is traced, at the size of v_rtMaskScale, before shaders/rtlightresolve.frag
+	// brings it to the size of the frame into lightMask
+	vkTarget_t					lightRaw;
+	VkDescriptorSet				lightRawSet;
+	VkShaderModule				lightResolveFragment;
+	VkPipeline					lightResolvePipeline;
 	VkPipelineLayout			accumLayout;
 	VkShaderModule				accumFragment;
 	VkPipeline					accumPipeline;
@@ -261,8 +279,8 @@ static struct {
 	vkTarget_t					lightMask[2];
 	int							lightShown[2];	// the texture slot each was last written into, -1: none
 	int							lightWrite;		// the one this frame writes
-	vkRtLight_t					lights[VK_RT_LIGHTS];		// the lights of this frame's mask
-	vkRtLight_t					readLights[VK_RT_LIGHTS];	// the lights of the mask the light passes read now
+	vkRtLight_t					lights[VK_RT_ALL_LIGHTS];		// the lights of this frame's mask
+	vkRtLight_t					readLights[VK_RT_ALL_LIGHTS];	// the lights of the mask the light passes read now
 	// The surfaces of the players the view does not draw (VK_RT_QueueCaster, front end), taken by VK_RT_Pass after
 	// those it drew, so a full list keeps the players on the screen.
 	struct {
@@ -834,6 +852,43 @@ static float VK_RT_StageColor( const shaderStage_t *stage ) {
 	}
 }
 
+// the texture of a stage: not the lightmap it may be drawn with in one pass
+static const image_t *VK_RT_StageTexture( const shaderStage_t *stage ) {
+	if ( stage->bundle[0].isLightmap ) {
+		return ( stage->bundle[1].image && !stage->bundle[1].isLightmap ) ? stage->bundle[1].image : NULL;
+	}
+	return stage->bundle[0].image;
+}
+
+/* The light a stage adds to that of its shader (VK_RT_Emission), 1: about a white texture that glows. A stage that was
+   set (emissive <light> in the stage, the material tool) gives what it says. Else it is found: a glow stage or one
+   that adds its colour, as bright as its texture. Not what mirrors the surroundings (an environment map, as the
+   shine of glass and chrome: textures/common/env_glass counted as a lamp, their picture 2026-11-25) and not glass. */
+static float VK_RT_StageEmission( const shaderStage_t *stage ) {
+	const image_t	*image = stage->bundle[0].image;
+	const uint32_t	src = stage->stateBits & GLS_SRCBLEND_BITS, dst = stage->stateBits & GLS_DSTBLEND_BITS;
+
+	if ( !stage->active ) {
+		return 0.0f;
+	}
+	if ( stage->mat && stage->mat->lightSet ) {
+		return stage->mat->light * 0.001f;
+	}
+	if ( !image || stage->bundle[0].isLightmap || stage->bundle[0].tcGen == TCGEN_ENVIRONMENT_MAPPED
+		|| ( stage->mat && stage->mat->transmission > 0.0f ) ) {
+		return 0.0f;
+	}
+	if ( stage->glow || ( dst == GLS_DSTBLEND_ONE && ( src == GLS_SRCBLEND_ONE || src == GLS_SRCBLEND_SRC_ALPHA ) ) ) {
+		return image->averageLuma * VK_RT_StageColor( stage );
+	}
+	return 0.0f;
+}
+
+// the same in the units of q3map_surfacelight, for the material tool
+float VK_RT_StageLight( const shaderStage_t *stage ) {
+	return VK_RT_StageEmission( stage ) * 1000.0f;
+}
+
 /* How much light the surfaces of a shader give, 0: none. A shader with a material of the material tool of jka.vision
    says it itself (emissive <light> <r> <g> <b> [noshadows], in the units of q3map_surfacelight; one that gives light
    but no shadows is no patch, its light stays a part of the light of the grid). For the others it is guessed from
@@ -855,22 +910,18 @@ static float VK_RT_Emission( const shader_t *shader ) {
 		return shader->emissive[3] * 0.001f * ( shader->emissive[0] * 0.3f + shader->emissive[1] * 0.59f + shader->emissive[2] * 0.11f );
 	}
 	for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
-		const shaderStage_t	*stage = &shader->stages[i];
-		const image_t		*image = stage->bundle[0].image;
-		const uint32_t		src = stage->stateBits & GLS_SRCBLEND_BITS, dst = stage->stateBits & GLS_DSTBLEND_BITS;
-
-		if ( !stage->active || !image || stage->bundle[0].isLightmap ) {
-			continue;
-		}
-		if ( stage->glow || ( dst == GLS_DSTBLEND_ONE && ( src == GLS_SRCBLEND_ONE || src == GLS_SRCBLEND_SRC_ALPHA ) ) ) {
-			emission += image->averageLuma * VK_RT_StageColor( stage );
-		}
+		emission += VK_RT_StageEmission( &shader->stages[i] );
 	}
 	// (q3map_surfacelight 1000 gives about the light of a white texture)
 	if ( shader->surfaceLight > 0.0f ) {
 		emission += shader->surfaceLight * 0.001f;
 	}
 	return emission;
+}
+
+// the light a shader gives as the renderer takes it now, in the units of q3map_surfacelight (the material tool shows it)
+float VK_RT_ShaderLight( const shader_t *shader ) {
+	return VK_RT_Emission( shader ) * 1000.0f;
 }
 
 /* The colour of the light of a shader that gives light (VK_RT_Emission), scaled to the brightness of white, so it only
@@ -887,14 +938,26 @@ static void VK_RT_EmissionTint( const shader_t *shader, vec3_t tint ) {
 		for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
 			const shaderStage_t	*stage = &shader->stages[i];
 			const image_t		*image = stage->bundle[0].image;
-			const uint32_t		src = stage->stateBits & GLS_SRCBLEND_BITS, dst = stage->stateBits & GLS_DSTBLEND_BITS;
+			const float			emission = VK_RT_StageEmission( stage );
 			vec3_t				stageColor = { 1.0f, 1.0f, 1.0f };
 
-			if ( !stage->active || !image || stage->bundle[0].isLightmap || VK_RT_StageColor( stage ) <= 0.0f ) {
+			if ( !stage->active ) {
 				continue;
 			}
-			if ( stage->glow || ( dst == GLS_DSTBLEND_ONE && ( src == GLS_SRCBLEND_ONE || src == GLS_SRCBLEND_SRC_ALPHA ) )
-				|| ( shader->surfaceLight > 0.0f && i == 0 ) ) {
+			if ( stage->mat && stage->mat->lightSet ) {
+				// a stage set to give light: the colour of its texture, as much as its light
+				const image_t	*texture = VK_RT_StageTexture( stage );
+				const float		luma = texture ? texture->averageColor[0] * 0.3f + texture->averageColor[1] * 0.59f + texture->averageColor[2] * 0.11f : 0.0f;
+
+				for ( int c = 0; c < 3; c++ ) {
+					color[c] += emission * ( luma > 0.001f ? texture->averageColor[c] / luma : 1.0f );
+				}
+				continue;
+			}
+			if ( !image || stage->bundle[0].isLightmap || VK_RT_StageColor( stage ) <= 0.0f ) {
+				continue;
+			}
+			if ( emission > 0.0f || ( shader->surfaceLight > 0.0f && i == 0 ) ) {
 				if ( stage->rgbGen == CGEN_CONST ) {
 					for ( int c = 0; c < 3; c++ ) {
 						stageColor[c] = stage->constantColor[c] / 255.0f;
@@ -1285,6 +1348,75 @@ static int VK_SM_NearLamps( const vec3_t middle, const vec3_t dir, int *candidat
 		}
 		score[at] = sc;
 		candidate[at] = n;
+	}
+	return count;
+}
+
+/*
+===============
+VK_RT_LampsNear
+
+ext.LampsNear: the panels of the level that glow, within radius of origin, the strongest for that place first (area times
+brightness over the square of the distance). A list of its own, made when a level is asked about first: the one the
+shadows use is only there while they are on.
+===============
+*/
+static void VK_RT_PatchRect( const vkPatch_t *p, vec3_t right, vec3_t up );
+
+static int vk_lampsChange;		// counts up when a shader was made a lamp or no lamp (VK_RT_LampsChanged)
+
+/*
+===============
+VK_RT_LampsChanged
+
+A shader was set to give light or none (ext.MaterialLight, the material tool): the light patches of the level are made
+anew, with all that hangs on them (the next frame prepares the level again, as after a change of level).
+===============
+*/
+void VK_RT_LampsChanged( void ) {
+	vk_lampsChange++;
+	rt.world = NULL;
+}
+
+int VK_RT_LampsNear( const vec3_t origin, float radius, levelLamp_t *out, int max ) {
+	static std::vector<vkPatch_t>	lamps;
+	static const world_t			*lampsWorld;
+	static int						lampsLoads = -1, lampsChange = -1;
+	float							score[64];
+	int								count = 0;
+
+	if ( !tr.world || !out || max <= 0 ) {
+		return 0;
+	}
+	if ( lampsWorld != tr.world || lampsLoads != r_worldLoads || lampsChange != vk_lampsChange ) {
+		lampsWorld = tr.world;
+		lampsLoads = r_worldLoads;
+		lampsChange = vk_lampsChange;
+		lamps.clear();
+		VK_RT_Patches( lamps );
+	}
+	max = Q_min( max, (int)ARRAY_LEN( score ) );
+	for ( const vkPatch_t &p : lamps ) {
+		const float d2 = DistanceSquared( p.origin, origin );
+
+		if ( d2 > radius * radius ) {
+			continue;
+		}
+		const float sc = p.emission * p.area / Q_max( d2, 1024.0f );
+		if ( sc <= 0.0f || ( count == max && sc <= score[count - 1] ) ) {
+			continue;
+		}
+		int at = count < max ? count++ : count - 1;
+		for ( ; at > 0 && score[at - 1] < sc; at-- ) {
+			score[at] = score[at - 1];
+			out[at] = out[at - 1];
+		}
+		score[at] = sc;
+		VectorCopy( p.origin, out[at].origin );
+		VectorCopy( p.normal, out[at].normal );
+		VectorCopy( p.tint, out[at].color );
+		out[at].strength = p.emission * p.area;
+		VK_RT_PatchRect( &p, out[at].right, out[at].up );
 	}
 	return count;
 }
@@ -1969,7 +2101,7 @@ static void VK_RT_CreateLayouts( void ) {
 		sizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		sizes[0].descriptorCount = VK_FRAMES;
 		sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sizes[1].descriptorCount = VK_FRAMES + 5;
+		sizes[1].descriptorCount = VK_FRAMES + 6;
 		pool.poolSizeCount = 2;
 	} else {
 		sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
@@ -1977,10 +2109,10 @@ static void VK_RT_CreateLayouts( void ) {
 		sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		sizes[1].descriptorCount = VK_FRAMES * 3;
 		sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sizes[2].descriptorCount = VK_FRAMES + 5;
+		sizes[2].descriptorCount = VK_FRAMES + 6;
 		pool.poolSizeCount = 3;
 	}
-	pool.maxSets = VK_FRAMES + 5;
+	pool.maxSets = VK_FRAMES + 6;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &rt.pool ) );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
@@ -1996,6 +2128,7 @@ static void VK_RT_CreateLayouts( void ) {
 	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, rt.lightMaskSets ) );
 	alloc.descriptorSetCount = 1;
 	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &rt.rawSet ) );
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &rt.lightRawSet ) );
 
 	passSets[0] = vk.frameSetLayout;
 	passSets[1] = rt.setLayout;
@@ -2012,9 +2145,11 @@ void VK_RT_Init( void ) {
 	VkPhysicalDeviceAccelerationStructurePropertiesKHR	accel = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR };
 	VkPhysicalDeviceProperties2							props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &accel };
 
-	v_rtDebug = ri.Cvar_Get( "v_rtDebug", "0", CVAR_CHEAT,
+	// (no cheat cvar since 2026-11-25, to look at the light patches on a server; not saved)
+	v_rtDebug = ri.Cvar_Get( "v_rtDebug", "0", 0,
 		"What the rays of the ray tracing see. 1: towards the sun, 2: from the eye against the depth, 3: the players towards the sun, "
 		"4: the light patches, 5: the direction of the strongest light" );
+	ri.Cvar_Get( "v_lightShadowPlaces", "4", CVAR_ROM, "How many moving lights have shadows in one frame: 8 where the graphics card traces rays, else 4" );
 	v_rtShadows = ri.Cvar_Get( "v_rtShadows", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players where the graphics card traces rays (cg_shadows 2). 0: none" );
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
@@ -2036,6 +2171,10 @@ void VK_RT_Init( void ) {
 	// the mask of this frame onto the one before, into a target of its own (7)
 	rt.accumFragment = VK_CreateShader( vk_rtAccumFrag, sizeof( vk_rtAccumFrag ) );
 	rt.accumPipeline = VK_CreatePipeline( vk.postVertexShader, rt.accumFragment, 0, 7, VKP_GENERIC, rt.accumLayout );
+	// the mask of the moving lights from the size it is traced at to the size of the frame (the same sets: the frame,
+	// a picture, the depth)
+	rt.lightResolveFragment = VK_CreateShader( vk_rtLightResolveFrag, sizeof( vk_rtLightResolveFrag ) );
+	rt.lightResolvePipeline = VK_CreatePipeline( vk.postVertexShader, rt.lightResolveFragment, 0, 7, VKP_GENERIC, rt.accumLayout );
 	// the shadow maps: the shadows from the moving lights on both ways (rays to them cost over a millisecond with a
 	// saber in the hand, the cube of a light 0.03 ms), everything without ray tracing
 	VK_SM_Create();
@@ -2093,7 +2232,11 @@ static void VK_RT_EnsureMask( void ) {
 		VK_TargetLayout( vk.frame->cmd, &rt.mask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		VK_WriteSet( rt.maskSets[i], vk.postSampler, rt.mask[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		VK_DestroyTarget( &rt.lightMask[i] );
-		VK_CreateTarget( &rt.lightMask[i], halfWidth, halfHeight, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		// (two masks, one above the other: lights 0 to 3, then 4 to 7. At the size of the frame: the light passes read
+		// it pixel for pixel. It is traced at the size of v_rtMaskScale into lightRaw and brought here with a look at
+		// the depth, shaders/rtlightresolve.frag: read at half the size without that, a player in the shadow of a
+		// pillar had a dark rim against the lit floor behind him, their picture 2026-11-26.)
+		VK_CreateTarget( &rt.lightMask[i], vk.width, vk.height * 2, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 		VK_TargetLayout( vk.frame->cmd, &rt.lightMask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		VK_WriteSet( rt.lightMaskSets[i], vk.postSampler, rt.lightMask[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -2104,6 +2247,11 @@ static void VK_RT_EnsureMask( void ) {
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_TargetLayout( vk.frame->cmd, &rt.raw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_WriteSet( rt.rawSet, vk.postSampler, rt.raw.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_DestroyTarget( &rt.lightRaw );
+	VK_CreateTarget( &rt.lightRaw, halfWidth, halfHeight * 2, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_TargetLayout( vk.frame->cmd, &rt.lightRaw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_WriteSet( rt.lightRawSet, vk.postSampler, rt.lightRaw.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	rt.previousValid = qfalse;
 	rt.readValid = qfalse;
 }
@@ -2125,6 +2273,9 @@ void VK_RT_Shutdown( void ) {
 	VK_DestroyTarget( &rt.raw );
 	qvkDestroyPipeline( vk.device, rt.accumPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.accumFragment, NULL );
+	qvkDestroyPipeline( vk.device, rt.lightResolvePipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.lightResolveFragment, NULL );
+	VK_DestroyTarget( &rt.lightRaw );
 	qvkDestroyPipelineLayout( vk.device, rt.accumLayout, NULL );
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
@@ -2665,9 +2816,18 @@ where a level has no mesh for the cubes a light has to reach a player to cast an
 ===============
 */
 static void VK_RT_PickLights( void ) {
-	vkRtLight_t	picked[VK_RT_LIGHTS];
-	float		scores[VK_RT_LIGHTS] = { 0.0f };
+	// (the lights past the first four have the shadows of the level alone, by rays: none of them with shadow maps)
+	const int	most = rt.maps ? VK_RT_LIGHTS : VK_RT_ALL_LIGHTS;
+	static int	told = -1;
+	vkRtLight_t	picked[VK_RT_ALL_LIGHTS];
+	float		scores[VK_RT_ALL_LIGHTS] = { 0.0f };
 	int			count = 0, next = 0;
+
+	// the client asks how many lights of effects it may show with shadows (cl_fxlight.cpp)
+	if ( told != most ) {
+		told = most;
+		ri.Cvar_Set( "v_lightShadowPlaces", va( "%d", most ) );
+	}
 
 	memset( rt.lights, 0, sizeof( rt.lights ) );
 	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
@@ -2676,8 +2836,14 @@ static void VK_RT_PickLights( void ) {
 		float score, nearest = 1e9f;
 		int slot = -1, tubes = 0;
 
+		// a light set to have no shadows takes none of the places
+		if ( ( dl->shadowMode & DLIGHT_SHADOW_MODE ) == 1 ) {
+			continue;
+		}
 		memset( &light, 0, sizeof( light ) );
 		light.active = qtrue;
+		light.shadowMode = dl->shadowMode & DLIGHT_SHADOW_MODE;
+		light.fixed = (qboolean)( ( dl->shadowMode & DLIGHT_SHADOW_FIRST ) && light.shadowMode == 0 );
 		light.tube = (qboolean)( dl->lineRange > 0.0f );
 		if ( light.tube ) {
 			VectorCopy( dl->lineStart, light.start );
@@ -2703,6 +2869,12 @@ static void VK_RT_PickLights( void ) {
 		if ( score <= 0.0f ) {
 			continue;
 		}
+		// The light of an effect comes before the others, the nearest first, whatever its flicker makes of its reach:
+		// by the score above the fires of a level changed places every few frames, and one without a place shines
+		// through its wall (their picture 2026-11-25, mp/ffa2). The client sends few of them (cl_fxlight.cpp).
+		if ( dl->shadowMode & DLIGHT_SHADOW_FIRST ) {
+			score = 1e9f / ( 1.0f + Distance( dl->origin, backEnd.viewParms.ori.origin ) );
+		}
 		for ( int i = 0; i < count; i++ ) {
 			tubes += picked[i].tube ? 1 : 0;
 		}
@@ -2712,7 +2884,7 @@ static void VK_RT_PickLights( void ) {
 					slot = i;
 				}
 			}
-		} else if ( count < VK_RT_LIGHTS ) {
+		} else if ( count < most ) {
 			slot = count++;
 			scores[slot] = 0.0f;
 		} else {
@@ -2732,10 +2904,20 @@ static void VK_RT_PickLights( void ) {
 			rt.lights[next++] = picked[i];
 		}
 	}
-	for ( int i = 0; i < count; i++ ) {
-		if ( !picked[i].tube ) {
-			rt.lights[next++] = picked[i];
+	// then the points, the best first: the first four places have the shadows of the players too
+	while ( next < count ) {
+		int best = -1;
+
+		for ( int i = 0; i < count; i++ ) {
+			if ( !picked[i].tube && scores[i] >= 0.0f && ( best < 0 || scores[i] > scores[best] ) ) {
+				best = i;
+			}
 		}
+		if ( best < 0 ) {
+			break;
+		}
+		rt.lights[next++] = picked[best];
+		scores[best] = -1.0f;
 	}
 }
 
@@ -2867,10 +3049,49 @@ typedef struct {
 	vec3_t	lamp[VK_RT_LAMP_SHOWN];
 	vec3_t	tint[VK_RT_LAMP_SHOWN];
 	float	share[VK_RT_LAMP_SHOWN];
+	vec3_t	right[VK_RT_LAMP_SHOWN], up[VK_RT_LAMP_SHOWN];	// the panel as a rectangle (VK_RT_PatchRect)
 } vkPlayerLamps_t;
 
-// the colours of the panels in the rows of each player this frame (VK_RT_PickLamps), for vk_playerLamps
+// the colours of the panels in the rows of each player this frame (VK_RT_PickLamps), for vk_playerLamps, and their
+// rectangles
 static vec3_t	vk_lampTints[VK_RT_CASTERS][VK_RT_LAMP_SHOWN];
+static vec3_t	vk_lampRights[VK_RT_CASTERS][VK_RT_LAMP_SHOWN], vk_lampUps[VK_RT_CASTERS][VK_RT_LAMP_SHOWN];
+
+// The rectangle a patch of a panel fills, as two half edges from its middle: the longest side of its box as it lies in
+// the plane of the panel, and across it as far as the box reaches. Both zero for one that lights all round. The light
+// on a player comes from all of it (generic.frag DynamicLight), not from its middle.
+static void VK_RT_PatchRect( const vkPatch_t *p, vec3_t right, vec3_t up ) {
+	vec3_t	n, edge[3], across;
+	float	len[3], reach = 0.0f;
+	int		longest = 0;
+
+	VectorClear( right );
+	VectorClear( up );
+	if ( VectorNormalize2( p->normal, n ) < 0.5f ) {
+		return;
+	}
+	for ( int i = 0; i < 3; i++ ) {
+		VectorClear( edge[i] );
+		edge[i][i] = ( p->maxs[i] - p->mins[i] ) * 0.5f;
+		VectorMA( edge[i], -DotProduct( edge[i], n ), n, edge[i] );
+		len[i] = VectorLength( edge[i] );
+		if ( len[i] > len[longest] ) {
+			longest = i;
+		}
+	}
+	if ( len[longest] < 1.0f ) {
+		return;
+	}
+	VectorCopy( edge[longest], right );
+	CrossProduct( n, right, across );
+	VectorNormalize( across );
+	for ( int i = 0; i < 3; i++ ) {
+		if ( i != longest ) {
+			reach = Q_max( reach, fabsf( DotProduct( edge[i], across ) ) );
+		}
+	}
+	VectorScale( across, Q_max( reach, 1.0f ), up );
+}
 
 static vkPlayerLamps_t	vk_playerLamps[VK_RT_CASTERS];
 static int				vk_numPlayerLamps;
@@ -3083,6 +3304,7 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 			out[k][3] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
 			out[3][k] = me->share[order[k]] * scale;
 			VectorCopy( patch->tint, vk_lampTints[i][k] );
+			VK_RT_PatchRect( patch, vk_lampRights[i][k], vk_lampUps[i][k] );
 		}
 		out[3][3] = Com_Clamp( 0.0f, 1.0f, 1.0f - all );
 	}
@@ -3104,6 +3326,8 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 			}
 			VectorCopy( out[k], p->lamp[p->count] );
 			VectorCopy( vk_lampTints[i][k], p->tint[p->count] );
+			VectorCopy( vk_lampRights[i][k], p->right[p->count] );
+			VectorCopy( vk_lampUps[i][k], p->up[p->count] );
 			p->share[p->count] = out[3][k];
 			p->count++;
 		}
@@ -3115,11 +3339,12 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 VK_RT_PlayerLamps
 
 The panels the shadow of the player standing at origin came from in the frame before (VK_RT_PickLamps), up to
-three, the colour of each (as bright as white) and the share of his light each has; how many, 0 when no player of
-that frame stood within 32 units (or v_rtLamps 0)
+three, the colour of each (as bright as white), the share of his light each has and the rectangle it fills (two half
+edges from lamp, zero for one that lights all round); how many, 0 when no player of that frame stood within 32 units
+(or v_rtLamps 0)
 ===============
 */
-int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3] ) {
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3], vec3_t right[3], vec3_t up[3] ) {
 	for ( int i = 0; i < vk_numPlayerLamps; i++ ) {
 		const vkPlayerLamps_t *p = &vk_playerLamps[i];
 
@@ -3127,6 +3352,8 @@ int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], floa
 			for ( int k = 0; k < p->count; k++ ) {
 				VectorCopy( p->lamp[k], lamp[k] );
 				VectorCopy( p->tint[k], tint[k] );
+				VectorCopy( p->right[k], right[k] );
+				VectorCopy( p->up[k], up[k] );
 				share[k] = Com_Clamp( 0.0f, 1.0f, p->share[k] );
 			}
 			return p->count;
@@ -3167,7 +3394,7 @@ static void VK_RT_TraceLamps( VkCommandBuffer cmd ) {
 VK_RT_LightChannel
 
 For the light pass of a moving light in the view of the level: which channel of the mask the light passes read
-now has its shadows (1 to 4: red to alpha, 0 none), found by where the light was when the mask was made (this frame: the
+now has its shadows (1 to 4: red to alpha of the upper mask, 5 to 8: of the lower, 0 none), found by where the light was when the mask was made (this frame: the
 light passes wait for the shadows, rb_deferDlights), and the slot of the texture table that shows that mask
 ===============
 */
@@ -3184,7 +3411,7 @@ int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
 	// (a saber swings: the middle of its blade moves up to two hands' width in a frame of a fast swing)
 	float best = 48.0f;
 
-	for ( int k = 0; k < VK_RT_LIGHTS; k++ ) {
+	for ( int k = 0; k < VK_RT_ALL_LIGHTS; k++ ) {
 		const vkRtLight_t *was = &rt.readLights[k];
 		vec3_t middle;
 		float d;
@@ -3235,13 +3462,24 @@ static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobal
 		return;
 	}
 	const VkDescriptorSet	lightSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
+	const VkDescriptorSet	resolveSets[4] = { vk.frame->set, rt.lightRawSet, vk.depthSet, rt.lightRawSet };
 	vkTarget_t				*target = &rt.lightMask[rt.lightWrite];
 	const int				slot = (int)tr.rtLightImage[rt.lightWrite]->texnum;
 
-	VK_BeginTarget( target, NULL, 1, qfalse );
+	// traced at the size of v_rtMaskScale
+	VK_BeginTarget( &rt.lightRaw, NULL, 1, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.smLightsPipeline );
 	vk.boundPipeline = rt.smLightsPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
+	VK_RT_WholeTarget( cmd, &rt.lightRaw );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_EndTarget();
+	VK_TargetLayout( cmd, &rt.lightRaw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	// and brought to the size of the frame, each pixel from those around it on its surface (rtlightresolve.frag)
+	VK_BeginTarget( target, NULL, 1, qfalse );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.lightResolvePipeline );
+	vk.boundPipeline = rt.lightResolvePipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, resolveSets, 0, NULL );
 	VK_RT_WholeTarget( cmd, target );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	VK_EndTarget();
@@ -3353,14 +3591,36 @@ void VK_RT_Pass( void ) {
 	// the moving lights whose shadows are traced this frame (38-41), and the view the mask the light passes read
 	// was made in (42-46: view and projection, its rect)
 	VK_RT_PickLights();
-	for ( int k = 0; k < VK_RT_LIGHTS; k++ ) {
+	for ( int k = 0; k < VK_RT_ALL_LIGHTS; k++ ) {
 		const int row = VK_RT_LIGHT_ROW( k );
 
 		VectorCopy( rt.lights[k].start, rows[row] );
 		rows[row][3] = rt.lights[k].active ? rt.lights[k].range : 0.0f;
 		VectorCopy( rt.lights[k].end, rows[row + 1] );
-		rows[row + 1][3] = rt.lights[k].tube ? 1.0f : ( rt.lights[k].inSolid ? -1.0f : 0.0f );
-		rows[VK_RT_POWER_ROW][k] = rt.lights[k].active ? rt.lights[k].power : 0.0f;
+		// what the mask reads of a point light (lightmask.glsl LightShadow): 0 the shadows of players and level, -1 the
+		// same with the light inside what it hit, -2 the players alone, -3 the level alone, -4 that inside what it hit
+		rows[row + 1][3] = rt.lights[k].tube ? 1.0f
+			: rt.lights[k].shadowMode == 2 ? -2.0f
+			: rt.lights[k].shadowMode == 3 ? ( rt.lights[k].inSolid ? -4.0f : -3.0f )
+			: ( rt.lights[k].inSolid ? -1.0f : 0.0f );
+		rows[k < VK_RT_LIGHTS ? VK_RT_POWER_ROW : VK_RT_EXTRA_ROW + 8][k % VK_RT_LIGHTS] = rt.lights[k].active ? rt.lights[k].power : 0.0f;
+	}
+	// the height of one of the two light masks in its pixels (lightmask.glsl main)
+	rows[VK_RT_EXTRA_ROW + 9][0] = (float)( ( vk.height + VK_RT_MaskScale() - 1 ) / VK_RT_MaskScale() );
+	// how many pixels of the frame one of its pixels stands for, and the height of one mask at the size of the frame
+	// (rtlightresolve.frag)
+	rows[VK_RT_EXTRA_ROW + 9][1] = (float)VK_RT_MaskScale();
+	rows[VK_RT_EXTRA_ROW + 9][3] = (float)vk.height;
+	// which of the first four lights are lights of effects that cast the shadows of the players themselves (bits)
+	{
+		int fixedLights = 0;
+
+		for ( int k = 0; k < VK_RT_LIGHTS; k++ ) {
+			if ( rt.lights[k].active && rt.lights[k].fixed && !rt.lights[k].tube ) {
+				fixedLights |= 1 << k;
+			}
+		}
+		rows[VK_RT_EXTRA_ROW + 9][2] = (float)fixedLights;
 	}
 	memcpy( rows[42], rt.readView, sizeof( rt.readView ) );
 	// the players as spheres: a pixel whose light passes none of them traces nothing

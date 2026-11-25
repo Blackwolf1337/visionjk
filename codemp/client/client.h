@@ -537,6 +537,7 @@ int CL_RepNetworks( const netadr_t *adr );
 const char *CL_HomeOSPath( const char *local );
 void CL_VisionCapabilities( void );
 int CL_SurfaceMaterial( const vec3_t start, const vec3_t end );
+qboolean CL_SurfacePick( const vec3_t start, const vec3_t end, vec3_t point, int *contents );
 
 #define CL_TV_SERVICE	"https://jka.vision/tv/"	// default of v_tvService, where the TV of the boombox fetches its pictures
 

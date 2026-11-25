@@ -9,13 +9,21 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[372];
+	vec4	rt[382];
 } globals;
 layout( set = 1, binding = 4 ) uniform sampler2D u_atlas;	// the depth of the shadow maps
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
 
 #define W		globals.rt
 #define TILE	256.0
+
+// The target is two masks high: lights 0 to 3 above, 4 to 7 below (vk_rt.cpp). g_maskCoord is the pixel within the one
+// this pixel is of, set by main; everything here that asked gl_FragCoord asks it.
+vec2 g_maskCoord;
+#define MASK_COORD	g_maskCoord
+// how many pixels of the frame a pixel of this mask stands for (v_rtMaskScale, vk_rt.cpp; rtlightresolve.frag brings
+// the mask to the size of the frame afterwards)
+#define MASK_SCALE	W[381].y
 #define COLUMNS	8
 
 layout( location = 0 ) out vec4 o_color;
@@ -82,7 +90,7 @@ float CubeShadow( int first, int atlas, vec3 center, vec3 q, vec3 normal, float 
 	float a = dot( vec3( view[0][2], view[1][2], view[2][2] ), ahead );
 	float b = clip.z - a * clip.w;
 	float plane = dot( d, normal );
-	float spin = 6.2831853 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+	float spin = 6.2831853 * fract( 52.9829189 * fract( dot( MASK_COORD, vec2( 0.06711056, 0.00583715 ) ) ) );
 
 	// what is in the way, and how far in front of the surface
 	float nearer = 0.0, found = 0.0;
@@ -142,8 +150,8 @@ float LevelTaken( vec3 q, vec3 p, vec3 normal, vec3 a, vec3 b, bool lifted ) {
 #ifdef LEVEL_RAYS
 	const int POINTS = 4;
 	const vec2 across[POINTS] = vec2[POINTS]( vec2( -0.375, -0.125 ), vec2( 0.125, -0.375 ), vec2( 0.375, 0.125 ), vec2( -0.125, 0.375 ) );
-	vec2 middle = ( floor( gl_FragCoord.xy ) + 0.5 ) * W[15].z;
-	uvec3 v = uvec3( uvec2( gl_FragCoord.xy ), uint( W[13].w ) );
+	vec2 middle = ( floor( MASK_COORD ) + 0.5 ) * MASK_SCALE;
+	uvec3 v = uvec3( uvec2( MASK_COORD ), uint( W[13].w ) );
 	float hidden = 0.0, counted = 0.0;
 
 	v = v * 1664525u + 1013904223u;
@@ -161,7 +169,7 @@ float LevelTaken( vec3 q, vec3 p, vec3 normal, vec3 a, vec3 b, bool lifted ) {
 			}
 			point += normal * max( 16.0 - above, 0.0 );
 		}
-		vec3 ray = SceneRay( middle + across[i] * W[15].z );
+		vec3 ray = SceneRay( middle + across[i] * MASK_SCALE );
 		float facing = dot( ray, normal );
 		vec3 from = q;
 		if ( abs( facing ) > 1e-4 ) {
@@ -189,7 +197,8 @@ float LevelTaken( vec3 q, vec3 p, vec3 normal, vec3 a, vec3 b, bool lifted ) {
 // (as VK_SM_DrawAtlas has them), blended, so their shadow is soft along the blade and sweeps as it turns; the level by
 // LevelTaken. What the one does not take the other may.
 float LightShadow( int k, vec3 p, vec3 normal ) {
-	int row = k < 2 ? 38 + k * 2 : 303 + ( k - 2 ) * 2;
+	// (lights 4 to 7: rows 372 on, the level alone hides them, by rays)
+	int row = k < 2 ? 38 + k * 2 : k < 4 ? 303 + ( k - 2 ) * 2 : 372 + ( k - 4 ) * 2;
 	vec4 a = W[row], b = W[row + 1];
 	float range = a.w;
 
@@ -213,7 +222,16 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 	if ( b.w <= 0.0 ) {
 		int first = k < 2 ? 16 + k * 18 : 52 + ( k - 2 ) * 6;
 #ifdef LEVEL_RAYS
-		players = CubeShadow( first, first, a.xyz, q, normal, 0.8, true );
+		// a light may be set to have the shadows of the players alone (-2) or of the level alone (-3, -4: inside what
+		// it hit), vk_rt.cpp; without rays the level is in the cubes of the players and both stay
+		bool lifted = ( b.w < -0.5 && b.w > -1.5 ) || b.w < -3.5;
+		if ( b.w > -2.5 && k < 4 ) {
+			players = CubeShadow( first, first, a.xyz, q, normal, 0.8, true );
+		}
+		if ( b.w < -1.5 && b.w > -2.5 ) {
+			return players;
+		}
+		return 1.0 - ( 1.0 - players ) * ( 1.0 - LevelTaken( q, p, normal, a.xyz, a.xyz, lifted ) );
 #else
 		// The level is in this cube, so the shooter right at the light is not (vk_rt.cpp VK_SM_DrawAtlas): he is in
 		// tiles of his own (64 + 6 k, empty for anyone else's light), and only his shadow is made a light one there.
@@ -238,6 +256,20 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 #include "rtmask.glsl"
 
 void main() {
+	// which of the two masks this pixel is in (W[381].x: the height of one)
+	bool lower = gl_FragCoord.y >= W[381].x;
+	g_maskCoord = lower ? gl_FragCoord.xy - vec2( 0.0, W[381].x ) : gl_FragCoord.xy;
+#ifndef LEVEL_RAYS
+	if ( lower ) {
+		o_color = vec4( 0.0 );
+		return;
+	}
+#endif
+	if ( lower && W[372].w <= 0.0 ) {
+		// (they are filled from the front: no light 4, none after it)
+		o_color = vec4( 0.0 );
+		return;
+	}
 	vec2 pixel = FramePixel();
 	vec3 p = ScenePoint( pixel );
 	vec3 eye = W[4].xyz;
@@ -252,5 +284,13 @@ void main() {
 #ifdef LEVEL_RAYS
 	p = OnLevel( p, normal );
 #endif
+	if ( lower ) {
+#ifdef LEVEL_RAYS
+		o_color = vec4( LightShadow( 4, p, normal ), LightShadow( 5, p, normal ), LightShadow( 6, p, normal ), LightShadow( 7, p, normal ) );
+#else
+		o_color = vec4( 0.0 );
+#endif
+		return;
+	}
 	o_color = vec4( LightShadow( 0, p, normal ), LightShadow( 1, p, normal ), LightShadow( 2, p, normal ), LightShadow( 3, p, normal ) );
 }

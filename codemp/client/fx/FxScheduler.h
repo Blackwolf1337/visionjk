@@ -681,9 +681,23 @@ public:
 	CPrimitiveTemplate	*GetPrimitiveCopy( SEffectTemplate *effectCopy, const char *componentName );
 
 	void	MaterialImpact(trace_t *tr, CEffect *effect);
+
+public:
+	// VisionJK: the name an effect id was registered with, NULL for none
+	const char *EffectName( int id ) const {
+		for ( TEffectID::const_iterator it = mEffectIDs.begin(); it != mEffectIDs.end(); ++it ) {
+			if ( it->second == id ) {
+				return it->first.c_str();
+			}
+		}
+		return NULL;
+	}
 };
 
 //-------------------
 // The one and only
 //-------------------
 extern CFxScheduler theFxScheduler;
+
+// VisionJK: the name an effect id was registered with, NULL for none (client/cl_fxlight.cpp)
+const char *FX_EffectName( int id );

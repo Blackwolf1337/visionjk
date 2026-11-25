@@ -55,3 +55,12 @@ void		CL_MatDebug_Init( void );
 void		CL_MatDebug_Shutdown( void );
 void		CL_MatLight_Init( void );
 void		CL_MatLight_Toggle( void );
+
+// cl_fxlight.cpp: effects of the level that give a moving light (the tab Effects of the material tool)
+void		CL_FxLight_Init( void );
+void		CL_FxLight_Shutdown( void );
+void		CL_FxLight_Reset( void );
+void		CL_FxLight_Played( int id, const vec3_t origin, const vec3_t dir );
+void		CL_FxLight_AddToScene( void );
+qboolean	CL_FxLight_PickAt( const vec3_t origin, const vec3_t dir, float maxDistance );
+void		CL_FxLight_DrawMenu( void );

@@ -215,6 +215,7 @@ XCVAR_DEF( v_saberIgnition,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_saberHilts,						"1",					NULL,					CVAR_ARCHIVE )
 // a shot throws sparks, splinters or dust and sounds by what it hits, and whines away off metal (weapons/cg_impact.c);
 // a bolt flying past the head whizzes, and the own shots rise as the ammunition runs out (weapons/cg_boltsound.c)
+XCVAR_DEF( v_levelFx,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_weaponImpacts,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelEffect,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelColour,						"50 50 255 100 0",		NULL,					CVAR_ARCHIVE )

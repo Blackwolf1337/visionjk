@@ -74,6 +74,35 @@ float Sparkle( vec3 p, vec3 n, vec3 l, vec3 toEye ) {
 	return near * pow( mirror, 120.0 ) * ( 1.0 - smoothstep( 0.3, 0.9, length( fwidth( q ) ) ) );
 }
 
+// The normal of the surface without its bumps, on the side that is looked at: the one of the vertices. A patch folded
+// round hard corners (a square pillar, a wall with its end faces in one patch) has them smoothed across its flat sides,
+// by up to 45 degrees each way, and comes with short normals (vk_world.cpp, srfGridMesh_t::hardEdges). Taken as they
+// are, a flat side is lit as if it were bent, and where they lean further from the eye than the side is turned it was
+// taken for its back and lit from the wrong side: a band round the far end of the tunnel on mp/ffa3 that stood out as an
+// arch in the view of the normals (their pictures 2026-11-25). Such a patch takes the plane of the triangle; where the
+// smoothed normal is close to it, on its curved parts, that one, so they do not show their triangles.
+vec3 FlatNormal( vec3 toEye ) {
+	if ( dot( v_normal, v_normal ) > 0.25 ) {
+		vec3 n = normalize( v_normal );
+		return dot( n, toEye ) < 0.0 ? -n : n;
+	}
+	vec3 plane = cross( dFdx( v_position ), dFdy( v_position ) );
+	float area = dot( plane, plane );
+	vec3 n = normalize( v_normal );
+	if ( area < 1e-20 ) {
+		return dot( n, toEye ) < 0.0 ? -n : n;
+	}
+	plane *= inversesqrt( area );
+	if ( dot( plane, toEye ) < 0.0 ) {
+		plane = -plane;
+	}
+	if ( dot( n, plane ) < 0.0 ) {
+		n = -n;
+	}
+	// (all of the smoothed one within 8 degrees of the plane, none of it from 25 on)
+	return normalize( mix( plane, n, smoothstep( 0.906, 0.99, dot( n, plane ) ) ) );
+}
+
 // A stage of a model with a material (shader keywords normalMap, specular, wrapLight and sparkle): lit per pixel by
 // the light of its entity as the vertices are lit otherwise (ambient, directed and its direction in model space),
 // with a broad shine of the surface, a sharp one of a clear coat over it that is smooth over the bumps, and the
@@ -262,10 +291,7 @@ vec2 FollowParallax( Draw d, vec2 uv ) {
 	float parallax = d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 );
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
-	vec3 n = normalize( v_normal );
-	if ( dot( n, toEye ) < 0.0 ) {
-		n = -n;
-	}
+	vec3 n = FlatNormal( toEye );
 	mat3 frame = CotangentFrame( n, v_position, base );
 	vec2 moved = Parallax( d, base, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( n, toEye ) ), parallax, d.pbr2.x,
 		clamp( 320.0 / max( v_depth, 1.0 ), 0.25, 1.0 ) );
@@ -444,8 +470,15 @@ vec4 DynamicLight( Draw d ) {
 		}
 	}
 	bool tube = d.grid0.w > 0.0;
+	// A rectangle that glows (grid0.w -2, a lamp panel of the level on a player, vk_shade.cpp VK_DynamicLights): round
+	// parm with the half edges grid0.xyz and grid1.xyz. It lights from all of its face: how far it is counts from its
+	// nearest point, the angle from where its face lies on average (its corners and its middle, so a large panel beside
+	// somebody lights him from a wide angle and its light ends softly), the shine from where it shows in the surface as
+	// in a mirror. Until 2026-11-25 a panel lit from its middle alone, a point.
+	bool rect = d.grid0.w < -1.5;
 	float range = tube ? d.grid0.w : d.parm.w;
-	vec3 lightPos = tube ? NearestOnSegment( d.grid0.xyz, d.grid1.xyz, v_position ) : d.parm.xyz;
+	vec3 lightPos = tube ? NearestOnSegment( d.grid0.xyz, d.grid1.xyz, v_position )
+		: rect ? NearestOnRect( d.parm.xyz, d.grid0.xyz, d.grid1.xyz, v_position ) : d.parm.xyz;
 	vec3 toLight = lightPos - v_position;
 	float dist = length( toLight );
 	if ( dist >= range ) {
@@ -461,6 +494,11 @@ vec4 DynamicLight( Draw d ) {
 		discard;
 	}
 	vec3 l = model ? toLight / max( dist, 0.001 ) : normalize( toLight + flat_ * max( 16.0 - above, 0.0 ) );
+	if ( rect ) {
+		vec3 c = d.parm.xyz - v_position, r = d.grid0.xyz, u = d.grid1.xyz;
+
+		l = normalize( normalize( c ) + 0.5 * ( normalize( c + r + u ) + normalize( c + r - u ) + normalize( c - r + u ) + normalize( c - r - u ) ) );
+	}
 
 	float x = dist / range;
 	float window = clamp( 1.0 - x * x * x * x, 0.0, 1.0 );
@@ -472,7 +510,7 @@ vec4 DynamicLight( Draw d ) {
 	// A band of light (grid0.w negative, ext.AddBandLightToScene): it leaves only round the plane through it across
 	// its axis grid0.xyz, as the glowing ring of a thermal detonator lets it out past the body, and softly less out of
 	// that plane; -grid0.w is how far out of it it still has most of it (the sine of the angle).
-	if ( d.grid0.w < 0.0 ) {
+	if ( d.grid0.w < 0.0 && !rect ) {
 		float off = dot( toLight, d.grid0.xyz ) / ( max( dist, 0.001 ) * -d.grid0.w );
 		fall *= exp( -off * off );
 	}
@@ -489,9 +527,15 @@ vec4 DynamicLight( Draw d ) {
 			vec2 ndc = clip.xy / clip.w;
 			vec4 rect = globals.rt[46];
 			vec2 pixel = vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
-			// (the mask is half the size of the frame, globals.rt[15].z)
-			vec4 mask = texture( TEX1( d ), pixel / ( vec2( textureSize( TEX1( d ), 0 ) ) * max( globals.rt[15].z, 1.0 ) ) );
-			radiance *= 1.0 - mask[channel - 1];
+			// (the mask has the size of the frame, shaders/rtlightresolve.frag; its picture is two masks high, channels
+			// 5 to 8 in the lower one, vk_rt.cpp)
+			vec2 maskSize = vec2( textureSize( TEX1( d ), 0 ) );
+			vec2 at = pixel / vec2( maskSize.x, maskSize.y * 0.5 );
+			at.y = clamp( at.y, 0.0, 1.0 ) * 0.5;
+			// (not into the other mask at the edge of the screen)
+			at.y = clamp( at.y, 0.5 / maskSize.y, 0.5 - 0.5 / maskSize.y ) + ( channel > 4 ? 0.5 : 0.0 );
+			vec4 mask = texture( TEX1( d ), at );
+			radiance *= 1.0 - mask[( channel - 1 ) & 3];
 		}
 	}
 #endif
@@ -501,10 +545,7 @@ vec4 DynamicLight( Draw d ) {
 	// texture as PbrStage worked out (with the normal it took), and the bumps throw shadows from this light.
 	float parallax = PBR( d.flags ) && ( d.pbrFlags & PBR_HEIGHT ) != 0u ? d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 ) : 0.0;
 	if ( parallax > 0.0 ) {
-		vec3 stageNormal = normalize( v_normal );
-		if ( dot( stageNormal, toEye ) < 0.0 ) {
-			stageNormal = -stageNormal;
-		}
+		vec3 stageNormal = FlatNormal( toEye );
 		mat3 stageFrame = CotangentFrame( stageNormal, v_position, uv );
 		vec2 dx = dFdx( uv ), dy = dFdy( uv );
 
@@ -519,9 +560,12 @@ vec4 DynamicLight( Draw d ) {
 		}
 		radiance *= ParallaxLight( d, uv, dx, dy, vec3( dot( stageFrame[0], l ), dot( stageFrame[1], l ), dot( stageNormal, l ) ), parallax );
 	}
-	// (vertColor: the colour of the entity on this stage, white where it has none: vk_shade.cpp VK_DynamicLights)
+	// (vertColor: the colour of the entity on this stage, white where it has none: vk_shade.cpp VK_DynamicLights. Its
+	// alpha 2: the stage lies under the same texture drawn again by its alpha in no colour, as the players with a colour
+	// to pick are made, so the colour is only where that alpha leaves it open.)
 	vec4 painted = texture( TEX0( d ), uv );
-	vec3 albedo = pow( painted.rgb * d.vertColor.rgb, vec3( 2.2 ) );
+	vec3 entityColor = d.vertColor.a > 1.5 ? mix( d.vertColor.rgb, vec3( 1.0 ), painted.a ) : d.vertColor.rgb;
+	vec3 albedo = pow( painted.rgb * entityColor, vec3( 2.2 ) );
 	Surface s;
 	s.flat_ = flat_;
 	s.v = toEye;
@@ -578,6 +622,17 @@ vec4 DynamicLight( Draw d ) {
 		vec3 ls = normalize( specPos - v_position + ( model ? vec3( 0.0 ) : flat_ * max( 16.0 - dot( flat_, specPos - v_position ), 0.0 ) ) );
 		SurfaceLight( s, l, radiance, 0.0, diffuse );
 		shine = SurfaceLight( s, ls, radiance, 0.15, unused );
+	} else if ( rect ) {
+		// the shine: where the mirrored ray meets the plane of the panel, or the point of the panel nearest to that
+		vec3 unused = vec3( 0.0 );
+		vec3 mirrored = reflect( -s.v, s.n );
+		vec3 face = normalize( cross( d.grid0.xyz, d.grid1.xyz ) );
+		float along = dot( mirrored, face );
+		float t = abs( along ) > 1e-4 ? dot( d.parm.xyz - v_position, face ) / along : -1.0;
+		vec3 specPos = NearestOnRect( d.parm.xyz, d.grid0.xyz, d.grid1.xyz, t > 0.0 ? v_position + mirrored * t : lightPos );
+
+		SurfaceLight( s, l, radiance, 0.0, diffuse );
+		shine = SurfaceLight( s, normalize( specPos - v_position ), radiance, 0.15, unused );
 	} else {
 		shine = SurfaceLight( s, l, radiance, 0.0, diffuse );
 	}
@@ -650,18 +705,16 @@ vec3 DebugLights( Transform t, Surface s, inout vec3 diffuse ) {
    the straight one, both carried thickness units on (a thin pane 4) and projected to the screen. It is blurred by the
    roughness (frosted), coloured by the absorption over the path through it (a thin pane by the colour alone) and
    by the texture as far as its alpha says. On top, what it mirrors of the probes by Fresnel (F0 from ior) and the
-   shine of the lamps. pbr: roughness, -, ior, v_pbr; pbr2: transmission, thickness, absorption distance; material:
-   the absorption colour. */
+   shine of the lamps. A stage that adds its colour (pbr2.w) does not colour what shows through with its texture: black
+   in it means nothing added. pbr: roughness, -, ior, v_pbr; pbr2: transmission, thickness, absorption distance, whether
+   the stage adds; material: the absorption colour. */
 vec4 GlassStage( Draw d ) {
 	const vec2 disk[12] = vec2[12]( vec2( -0.326, -0.406 ), vec2( -0.840, -0.074 ), vec2( -0.696, 0.457 ), vec2( -0.203, 0.621 ),
 		vec2( 0.962, -0.195 ), vec2( 0.473, -0.480 ), vec2( 0.519, 0.767 ), vec2( 0.185, -0.893 ), vec2( 0.507, 0.064 ),
 		vec2( 0.896, 0.412 ), vec2( -0.322, -0.933 ), vec2( -0.792, -0.598 ) );
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
-	vec3 flat_ = normalize( v_normal );
-	if ( dot( flat_, toEye ) < 0.0 ) {
-		flat_ = -flat_;
-	}
+	vec3 flat_ = FlatNormal( toEye );
 	vec3 n = flat_;
 	if ( ( d.pbrFlags & PBR_NORMAL ) != 0u ) {
 		mat3 frame = CotangentFrame( flat_, v_position, v_texCoord0 );
@@ -708,6 +761,12 @@ vec4 GlassStage( Draw d ) {
 	vec3 passed = back * absorbed * mix( vec3( 1.0 ), tintLinear, tint.a );
 	// what is not let through is the texture, as dim as the light around
 	vec3 own = tintLinear * pow( max( v_color.rgb, vec3( 0.25 ) ), vec3( 2.2 ) ) * 0.5;
+	if ( d.pbr2.w > 0.5 ) {
+		// a stage that adds: clear glass where it lets through, and the scene with the texture added, as the stage
+		// was drawn before, where it does not
+		passed = back * absorbed;
+		own = pow( texture( TEX1( d ), gl_FragCoord.xy / globals.screen.xy ).rgb + tint.rgb, vec3( 2.2 ) );
+	}
 
 	// what it mirrors
 	float f0 = ( ior - 1.0 ) / ( ior + 1.0 );
@@ -799,10 +858,7 @@ vec4 PbrStage( Draw d ) {
 #endif
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
-	vec3 flat_ = normalize( v_normal );
-	if ( dot( flat_, toEye ) < 0.0 ) {
-		flat_ = -flat_;		// the side of a two sided surface that is looked at
-	}
+	vec3 flat_ = FlatNormal( toEye );		// (the side of a two sided surface that is looked at)
 	vec2 uv = v_texCoord0;
 	mat3 frame = CotangentFrame( flat_, v_position, uv );
 

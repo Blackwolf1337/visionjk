@@ -450,6 +450,30 @@ static void MatDebug_Pick( void ) {
 	}
 }
 
+static int wantTab;		// a click on the level opens the tab of what it hit: 1 Surfaces, 2 Effects
+
+// the surface under the mouse, at x and y of the window from 0 to 1 (a click on the level)
+static void MatDebug_PickAt( float x, float y ) {
+	materialPick_t pick;
+	vec3_t origin, dir, end;
+
+	if ( !re->ext.LevelViewRay || !re->ext.LevelViewRay( x, y, origin, dir ) ) {
+		return;
+	}
+	VectorMA( origin, 16384.0f, dir, end );
+	const qboolean hit = re->ext.MaterialPick( origin, end, &pick );
+
+	// an effect that plays in front of the surface (a fire) is picked before it, into the tab Effects
+	if ( CL_FxLight_PickAt( origin, dir, hit ? pick.distance : 16384.0f ) ) {
+		wantTab = 2;
+		return;
+	}
+	if ( hit ) {
+		MatDebug_Select( pick.shader );
+		wantTab = 1;
+	}
+}
+
 static void MatDebug_Set( int fields ) {
 	materialParms_t before, now;
 
@@ -1016,13 +1040,63 @@ static void MatDebug_DrawText( void ) {
 	ImGui::PopFont();
 }
 
+// Whether the stage picked makes the surfaces lamps: a shader of several stages gives the light of those that glow or
+// add their colour, and each can be set (the stage keyword emissive <light>). The setting of the whole shader above
+// stands before it.
+static void MatDebug_DrawStageLight( const materialInfo_t *info ) {
+	static const char *const modes[] = { "As found", "Yes", "No" };
+	const materialStage_t *stage = NULL;
+	int mode = selParms.light < 0.0f ? 0 : ( selParms.light > 0.0f ? 1 : 2 );
+
+	for ( int i = 0; i < info->numStages; i++ ) {
+		if ( info->stages[i].sourceStage == selStage ) {
+			stage = &info->stages[i];
+		}
+	}
+	if ( !stage || !Q_stricmp( stage->image, "$lightmap" ) ) {
+		return;
+	}
+	ImGui::BeginDisabled( info->lightMode != 0 || showOriginal );
+	ImGui::SetNextItemWidth( 110.0f );
+	if ( ImGui::Combo( va( "Stage %d gives light", selStage ), &mode, modes, IM_ARRAYSIZE( modes ) ) ) {
+		// Yes starts with what was found, else with the brightness of its texture
+		selParms.light = mode == 0 ? -1.0f : mode == 2 ? 0.0f
+			: ( stage->light > 0.0f ? stage->light : Com_Clamp( 50.0f, 5000.0f, stage->luma * 1000.0f ) );
+		MatDebug_Set( MATP_LIGHT );
+	}
+	ImGui::SetItemTooltip( "Whether this stage makes the surfaces lamps of the level, in the colour of its texture.\n"
+		"As found: a glow stage or one that adds its colour does, what mirrors the surroundings does not.\n"
+		"Saved with the shader (emissive in the stage)." );
+	if ( mode == 1 ) {
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth( 150.0f );
+		ImGui::SliderFloat( "##stagelight", &selParms.light, 50.0f, 5000.0f, "%.0f", ImGuiSliderFlags_Logarithmic );
+		// (set when the slider is let go: the lamps of the level are made anew with it)
+		if ( ImGui::IsItemDeactivatedAfterEdit() ) {
+			MatDebug_Set( MATP_LIGHT );
+		}
+		ImGui::SetItemTooltip( "How much light, in the units of q3map_surfacelight: 1000 is about a white texture that glows" );
+	}
+	ImGui::SameLine();
+	if ( stage->light > 0.0f ) {
+		ImGui::TextDisabled( "now %.0f", stage->light );
+	} else {
+		ImGui::TextDisabled( "now none" );
+	}
+	ImGui::EndDisabled();
+	if ( info->lightMode != 0 ) {
+		ImGui::SameLine();
+		ImGui::TextDisabled( "(set for the whole shader above)" );
+	}
+}
+
 static void MatDebug_DrawShader( void ) {
 	materialInfo_t info;
 
 	if ( !selShader || !re->ext.MaterialInfo( selShader, &info ) || Q_stricmp( info.name, selName ) ) {
 		// nothing picked, or the level changed under it
 		selShader = 0;
-		ImGui::TextDisabled( "Pick a surface (P) or choose a shader in the list" );
+		ImGui::TextDisabled( "Click a surface of the level, pick the one under the crosshair (P) or choose a shader in the list.\nA click on an effect (a fire) opens the tab Effects." );
 		if ( message[0] ) {
 			ImGui::TextColored( messageBad ? ImVec4( 1.0f, 0.45f, 0.4f, 1.0f ) : ImVec4( 0.55f, 0.9f, 0.55f, 1.0f ), "%s", message );
 		}
@@ -1032,8 +1106,48 @@ static void MatDebug_DrawShader( void ) {
 	ImGui::TextDisabled( "%s%s%s%s  %.1f m2", ( info.flags & MATI_SCRIPT ) ? "shader text" : "no shader text (implicit)",
 		( info.flags & MATI_SKY ) ? ", sky" : "", ( info.flags & MATI_FOG ) ? ", fog" : "", ( info.flags & MATI_NODRAW ) ? ", not drawn" : "",
 		info.area / 1600.0f );
-	if ( info.emissive[3] > 0.0f || info.surfaceLight > 0.0f ) {
-		ImGui::TextDisabled( "gives light: emissive %.0f, surfacelight %.0f", info.emissive[3], info.surfaceLight );
+	// Whether it is a lamp of the level: a face the renderer takes for a light (the dots of v_rtDebug 4). As found: by
+	// its glow stages and q3map_surfacelight. Yes and No are the shader keyword emissive, saved with the shader.
+	{
+		static const char *const modes[] = { "As found", "Yes", "No" };
+		int mode = info.lightMode;
+		float light = info.lightMode == 1 ? info.emissive[3] : ( info.lightFound > 0.0f ? info.lightFound : 1000.0f );
+		qboolean set = qfalse;
+
+		ImGui::SetNextItemWidth( 110.0f );
+		if ( ImGui::Combo( "Gives light", &mode, modes, IM_ARRAYSIZE( modes ) ) ) {
+			set = qtrue;
+		}
+		if ( ImGui::IsItemHovered() ) {
+			ImGui::SetTooltip( "A lamp of the level: its faces count as lights for the shadows of the players indoors,\n"
+				"their lamp light and the dust in its light (v_rtDebug 4 shows them as dots).\n"
+				"As found: by its glow stages and q3map_surfacelight. Yes and No are saved with the shader." );
+		}
+		if ( mode == 1 ) {
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth( 150.0f );
+			ImGui::SliderFloat( "##light", &light, 50.0f, 5000.0f, "%.0f", ImGuiSliderFlags_Logarithmic );
+			if ( ImGui::IsItemDeactivatedAfterEdit() ) {
+				set = qtrue;
+			}
+			if ( ImGui::IsItemHovered() ) {
+				ImGui::SetTooltip( "How much light, in the units of q3map_surfacelight: 1000 is about a white texture that glows" );
+			}
+		}
+		ImGui::SameLine();
+		if ( info.lightFound > 0.0f ) {
+			ImGui::TextDisabled( "now %.0f", info.lightFound );
+		} else {
+			ImGui::TextDisabled( "now none" );
+		}
+		if ( info.surfaceLight > 0.0f ) {
+			ImGui::SameLine();
+			ImGui::TextDisabled( "(surfacelight %.0f)", info.surfaceLight );
+		}
+		if ( set && re->ext.MaterialLight && re->ext.MaterialLight( selShader, mode, light ) ) {
+			MatDebug_Message( qfalse, "%s: %s. The lamps of the level are made anew; Save keeps it", info.name,
+				mode == 0 ? "light as found" : mode == 1 ? "gives light" : "gives no light" );
+		}
 	}
 
 	ImGui::SeparatorText( "Stages" );
@@ -1052,6 +1166,7 @@ static void MatDebug_DrawShader( void ) {
 	if ( selStage < 0 ) {
 		return;
 	}
+	MatDebug_DrawStageLight( &info );
 	ImGui::Separator();
 	MatDebug_DrawActions();
 	MatDebug_DrawLab();
@@ -1067,6 +1182,7 @@ static void MatDebug_DrawList( void ) {
 	if ( ImGui::Button( "Pick under crosshair (P)" ) ) {
 		MatDebug_Pick();
 	}
+	ImGui::SetItemTooltip( "Or click a surface of the level with the mouse" );
 	ImGui::SameLine();
 	bool all = listAll ? true : false;
 	if ( ImGui::Checkbox( "All loaded", &all ) ) {
@@ -1198,20 +1314,35 @@ static void MatDebug_Draw( debugWindow_t *window ) {
 	if ( !io.WantTextInput && !io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_P, false ) ) {
 		MatDebug_Pick();
 	}
+	// a click on the level, beside the windows, picks the surface under the mouse
+	if ( !io.WantCaptureMouse && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) && io.DisplaySize.x > 0.0f && io.DisplaySize.y > 0.0f ) {
+		MatDebug_PickAt( io.MousePos.x / io.DisplaySize.x, io.MousePos.y / io.DisplaySize.y );
+	}
 
 	ImGui::SetNextWindowSize( ImVec2( 1100.0f, 760.0f ), ImGuiCond_FirstUseEver );
 	if ( ImGui::Begin( "Materials", &open ) ) {
 		MatDebug_DrawViews();
-		ImGui::Separator();
-		if ( ImGui::BeginChild( "list", ImVec2( ImGui::GetContentRegionAvail().x * 0.4f, 0.0f ), ImGuiChildFlags_ResizeX ) ) {
-			MatDebug_DrawList();
+		if ( ImGui::BeginTabBar( "what" ) ) {
+			if ( ImGui::BeginTabItem( "Surfaces", NULL, wantTab == 1 ? ImGuiTabItemFlags_SetSelected : 0 ) ) {
+				if ( ImGui::BeginChild( "list", ImVec2( ImGui::GetContentRegionAvail().x * 0.4f, 0.0f ), ImGuiChildFlags_ResizeX ) ) {
+					MatDebug_DrawList();
+				}
+				ImGui::EndChild();
+				ImGui::SameLine();
+				if ( ImGui::BeginChild( "shader" ) ) {
+					MatDebug_DrawShader();
+				}
+				ImGui::EndChild();
+				ImGui::EndTabItem();
+			}
+			// effects of the level that give a moving light (cl_fxlight.cpp)
+			if ( ImGui::BeginTabItem( "Effects", NULL, wantTab == 2 ? ImGuiTabItemFlags_SetSelected : 0 ) ) {
+				CL_FxLight_DrawMenu();
+				ImGui::EndTabItem();
+			}
+			wantTab = 0;
+			ImGui::EndTabBar();
 		}
-		ImGui::EndChild();
-		ImGui::SameLine();
-		if ( ImGui::BeginChild( "shader" ) ) {
-			MatDebug_DrawShader();
-		}
-		ImGui::EndChild();
 	}
 	ImGui::End();
 	if ( !open ) {
@@ -1304,6 +1435,8 @@ static const matField_t matFields[] = {
 	MF( "normalGen.detail", gen.normalDetail, 1, qfalse, MATP_GEN ),
 	MF( "rmoGen.variation", gen.rmoVariation, 1, qfalse, MATP_GEN ),
 	MF( "rmoGen.occlusion", gen.rmoOcclusion, 1, qfalse, MATP_GEN ),
+	// whether the stage makes the surfaces lamps: -1 as found, 0 no, else how much (units of q3map_surfacelight)
+	MF( "light", light, 1, qfalse, MATP_LIGHT ),
 };
 #undef MF
 
@@ -1407,7 +1540,7 @@ static void MatSet_f( void ) {
 		}
 	}
 	// a value of a material makes it one
-	if ( fields & ~( MATP_PBR | MATP_GEN ) ) {
+	if ( fields & ~( MATP_PBR | MATP_GEN | MATP_LIGHT ) ) {
 		m.pbr = qtrue;
 		fields |= MATP_PBR | MATP_ROUGHNESS;
 	}
@@ -1429,6 +1562,25 @@ static void MatSet_f( void ) {
 	if ( shader == selShader && stage == selStage ) {
 		MatDebug_SelectStage( stage );
 	}
+}
+
+// v_matlamp <shader> <auto|on|off> [light]: whether the shader is a lamp of the level, as the menu sets it
+static void MatLamp_f( void ) {
+	const qhandle_t	shader = Cmd_Argc() >= 3 ? MatCmd_Shader( Cmd_Argv( 1 ) ) : 0;
+	const char		*word = Cmd_Argv( 2 );
+	materialInfo_t	info;
+	int				mode;
+
+	if ( !shader || !re->ext.MaterialLight ) {
+		Com_Printf( "usage: v_matlamp <shader> <auto|on|off> [light, 1000: about a white texture that glows]\n" );
+		return;
+	}
+	mode = !Q_stricmp( word, "on" ) ? 1 : !Q_stricmp( word, "off" ) ? 2 : 0;
+	if ( !re->ext.MaterialLight( shader, mode, Cmd_Argc() >= 4 ? atof( Cmd_Argv( 3 ) ) : 1000.0f ) || !re->ext.MaterialInfo( shader, &info ) ) {
+		return;
+	}
+	Com_Printf( "matlamp %s %s light %.0f (v_matsave keeps it)\n", info.name, info.lightMode == 0 ? "auto" : info.lightMode == 1 ? "on" : "off",
+		info.lightFound );
 }
 
 static void MatSave_f( void ) {
@@ -1549,6 +1701,7 @@ void CL_MatDebug_Init( void ) {
 	Cmd_AddCommand( "v_matdebug", MatDebug_Toggle_f, "Opens or closes the material debug menu: the material of the surfaces live, needs rd-vulkan-vision" );
 	Cmd_AddCommand( "v_matinfo", MatInfo_f, "All values of the material of a shader stage on one line: v_matinfo <shader> [stage|-]" );
 	Cmd_AddCommand( "v_matset", MatSet_f, "Changes the material of a shader stage live: v_matset <shader> <stage|-> <field> <value...> ..." );
+	Cmd_AddCommand( "v_matlamp", MatLamp_f, "Whether a shader is a lamp of the level: v_matlamp <shader> <auto|on|off> [light]" );
 	Cmd_AddCommand( "v_matsave", MatSave_f, "Saves the materials of a shader into shaders/zz_mat_<file>.oshader of the profile: v_matsave <shader>" );
 	Cmd_AddCommand( "v_matstatus", MatStatus_f, "How far the material of a shader is: v_matstatus <shader> [none|draft|check|done]" );
 	Cmd_AddCommand( "v_matshow", MatShow_f, "The test objects of vjk_matlab show a shader: v_matshow <shader|->" );

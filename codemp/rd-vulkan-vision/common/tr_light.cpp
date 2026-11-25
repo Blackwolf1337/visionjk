@@ -683,13 +683,26 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	// VK_RT_EmissionTint). The brightness stays the grid's.
 	ent->numLamps = 0;
 	if ( v_panelLight && v_panelLight->integer && !( refdef->rdflags & RDF_NOWORLDMODEL ) ) {
-		vec3_t	lamps[3], tints[3], ambient;
+		vec3_t	lamps[3], tints[3], rights[3], ups[3], ambient;
 		float	shares[3], taken = 0.0f, takenAmbient = 0.0f;
-		const int n = VK_RT_PlayerLamps( lightOrigin, lamps, tints, shares );
+		const int n = VK_RT_PlayerLamps( lightOrigin, lamps, tints, shares, rights, ups );
 
 		VectorCopy( ent->ambientLight, ambient );
 		for ( i = 0; i < n && ent->numLamps < 3; i++ ) {
-			const float at = Distance( lamps[i], lightOrigin );
+			// (how far the panel is: its nearest point, as the pass measures it now that the whole panel lights him)
+			vec3_t nearest, to;
+
+			VectorCopy( lamps[i], nearest );
+			VectorSubtract( lightOrigin, lamps[i], to );
+			for ( int e = 0; e < 2; e++ ) {
+				const float *edge = e ? ups[i] : rights[i];
+				const float len2 = DotProduct( edge, edge );
+
+				if ( len2 > 1.0f ) {
+					VectorMA( nearest, Com_Clamp( -1.0f, 1.0f, DotProduct( to, edge ) / len2 ), edge, nearest );
+				}
+			}
+			const float at = Distance( nearest, lightOrigin );
 			const float range = Q_max( at * 4.0f, 192.0f );
 			const float x = at / range, xa = Q_max( at, 24.0f ) / range;
 			const float window = 1.0f - x * x * x * x;
@@ -704,6 +717,8 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 			vec3_t *color = &ent->lampColor[ent->numLamps];
 
 			VectorCopy( lamps[i], ent->lampOrigin[ent->numLamps] );
+			VectorCopy( rights[i], ent->lampRight[ent->numLamps] );
+			VectorCopy( ups[i], ent->lampUp[ent->numLamps] );
 			VectorScale( ent->directedLight, shares[i], *color );
 			VectorMA( *color, fromAmbient, ambient, *color );
 			const float bright = ( *color )[0] * 0.3f + ( *color )[1] * 0.59f + ( *color )[2] * 0.11f;

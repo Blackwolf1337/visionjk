@@ -42,7 +42,7 @@ static const uint32_t vk_sparksComp[] =
 #define VK_SPARK_BODIES		32			// characters of the frame nothing lies on (shaders/sparks.comp OnBody)
 #define VK_SPARK_HEADER		( 12 + VK_SPARK_BODIES )	// rows before the bursts in the frame buffer: the view, the numbers
 													// of the frame, the bodies
-#define VK_SPARK_BURST_ROWS	5
+#define VK_SPARK_BURST_ROWS	6
 
 cvar_t	*v_gpuSparks;
 static cvar_t	*v_gpuSparksAmount;
@@ -208,7 +208,11 @@ void VK_SparksSimulate( void ) {
 		Vector4Set4( e[1], s->dir[0], s->dir[1], s->dir[2], (float)sp.counts[b] );
 		Vector4Set4( e[2], s->color[0], s->color[1], s->color[2], Com_Clamp( 0.05f, 10.0f, s->life ) );
 		Vector4Set4( e[3], s->speed, Com_Clamp( 0.0f, 2.0f, s->spread ), Com_Clamp( 0.1f, 16.0f, s->size ), s->gravity );
-		Vector4Set4( e[4], Com_Clamp( 0.0f, 20.0f, s->drag ), Com_Clamp( 0.0f, 1.0f, s->bounce ), Com_Clamp( 0.1f, 8.0f, s->cooling ), s->rest );
+		Vector4Set4( e[4], Com_Clamp( 0.0f, 20.0f, s->drag ), Com_Clamp( 0.0f, 1.0f, s->bounce ),
+			// (0 for one that floats: dust, it does not glow of its own)
+			( s->swirl > 0.0f && s->rest <= 0.0f && s->cooling <= 0.0f ) ? 0.0f : Com_Clamp( 0.1f, 8.0f, s->cooling ), s->rest );
+		// (those that float never lie)
+		Vector4Set4( e[5], s->rest > 0.0f ? 0.0f : Com_Clamp( 0.0f, 400.0f, s->swirl ), Com_Clamp( 0.0f, 0.5f, s->streak ), Com_Clamp( 0.0f, 0.95f, s->age ), 0.0f );
 	}
 	sp.numBursts = 0;
 
@@ -229,8 +233,10 @@ void VK_SparksSimulate( void ) {
 	{
 		struct {
 			VkDeviceAddress	ring, frame;
-			uint32_t		count, pad[3];
-		} push = { sp.ringAddress, sp.frameAddress[vk.frameIndex], VK_SPARKS, { 0, 0, 0 } };
+			uint32_t		count;
+			float			time;		// seconds, for the air that carries those that float (it wraps every hour and a bit)
+			uint32_t		pad[2];
+		} push = { sp.ringAddress, sp.frameAddress[vk.frameIndex], VK_SPARKS, ( now & 0x3fffff ) * 0.001f, { 0, 0 } };
 
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, sp.pipeline );
 		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, sp.layout, 0, 1, &vk.softSet, 0, NULL );

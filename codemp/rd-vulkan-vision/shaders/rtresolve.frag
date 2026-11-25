@@ -12,7 +12,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[372];
+	vec4	rt[382];
 } globals;
 layout( set = 1, binding = 0 ) uniform sampler2D u_mask;		// the shadow mask, read pixel for pixel
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
@@ -29,14 +29,22 @@ layout( location = 0 ) out vec4 o_color;
 // how much of a moving light reaches the point p, the strongest of them, 0 to 1: the fall of generic.frag DynamicLight
 // and what hides it. Rows 38 + 2k (2 and 3: 303 + 2 (k - 2)): where each is and its reach, row 307: how strong.
 float MovingLight( vec3 p ) {
-	vec4 hidden = texture( u_lights, gl_FragCoord.xy / ( vec2( textureSize( u_lights, 0 ) ) * max( W[15].z, 1.0 ) ) );
+	// (the picture is two masks high: lights 0 to 3 in the upper one, 4 to 7 in the lower, rows 372 on, their strength
+	// in row 380)
+	vec2 maskSize = vec2( textureSize( u_lights, 0 ) );
+	vec2 at = gl_FragCoord.xy / vec2( maskSize.x, maskSize.y * 0.5 );
+	at.y = clamp( at.y * 0.5, 0.5 / maskSize.y, 0.5 - 0.5 / maskSize.y );
+	vec4 hiddenUpper = texture( u_lights, at );
+	vec4 hiddenLower = W[372].w > 0.0 ? texture( u_lights, at + vec2( 0.0, 0.5 ) ) : vec4( 0.0 );
 	float most = 0.0;
 
-	for ( int k = 0; k < 4; k++ ) {
-		int row = k < 2 ? 38 + k * 2 : 303 + ( k - 2 ) * 2;
+	for ( int k = 0; k < 8; k++ ) {
+		int row = k < 2 ? 38 + k * 2 : k < 4 ? 303 + ( k - 2 ) * 2 : 372 + ( k - 4 ) * 2;
 		vec4 a = W[row], b = W[row + 1];
+		float power = k < 4 ? W[307][k] : W[380][k - 4];
+		float hiddenK = k < 4 ? hiddenUpper[k] : hiddenLower[k - 4];
 
-		if ( a.w <= 0.0 || W[307][k] <= 0.0 ) {
+		if ( a.w <= 0.0 || power <= 0.0 ) {
 			continue;
 		}
 		float x = distance( NearestOnSegment( a.xyz, b.xyz, p ), p ) / a.w;
@@ -46,7 +54,7 @@ float MovingLight( vec3 p ) {
 		float window = 1.0 - x * x * x * x;
 		float fall = window * window / ( 1.0 + 4.0 * x * x ) * 1.6;
 
-		most = max( most, clamp( fall * W[307][k] * 1.25, 0.0, 1.0 ) * ( 1.0 - hidden[k] ) );
+		most = max( most, clamp( fall * power * 1.25, 0.0, 1.0 ) * ( 1.0 - hiddenK ) );
 	}
 	return most;
 }

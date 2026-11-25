@@ -365,7 +365,7 @@ static void VK_BuildGrass( const vec4_t *xyz, const vec4_t *normal, const color4
 VK_BindGrass
 
 The surface sprites of one stage on the surfaces of the batch: their runs of indexes, and the view and the wind
-of this frame for grass.vert in the bone buffer (twelve rows, see there). qfalse: there are none.
+of this frame for grass.vert in the bone buffer (thirty rows, see there). qfalse: there are none.
 ===============
 */
 qboolean VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones ) {
@@ -396,7 +396,7 @@ qboolean VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones )
 	}
 	const int start = ( frame->numBones + VK_BONE_ALIGN - 1 ) / VK_BONE_ALIGN * VK_BONE_ALIGN;
 
-	if ( !numRanges || start + 4 > VK_MAX_BONES ) {
+	if ( !numRanges || start + 10 > VK_MAX_BONES ) {
 		return qfalse;
 	}
 
@@ -427,10 +427,22 @@ qboolean VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones )
 	}
 	VectorSet4( row[8], fadedist * fadedist, 1.0f / ( cutdist * cutdist - fadedist * fadedist ),
 		Q_min( 250.0f / ( cutdist - fadedist ), 1.0f ), ss->fadeScale );		// FADE_RANGE of tr_surfacesprites.cpp
-	VectorSet4( row[9], ss->wind, ss->windIdle, 0.0f, 0.0f );
+	VectorSet4( row[9], ss->wind, ss->windIdle, (float)tr.refdef.numGrassPushes, 0.0f );
 	VectorSet4( row[10], ssViewRight[0], ssViewRight[1], ssViewRight[2], 0.0f );
 	VectorSet4( row[11], ssViewUp[0], ssViewUp[1], ssViewUp[2], 0.0f );
-	frame->numBones = start + 4;
+	// what stands or blows in the grass (ext.AddGrassPushToScene), two rows each
+	for ( int i = 0; i < MAX_GRASS_PUSHES; i++ ) {
+		if ( i < tr.refdef.numGrassPushes ) {
+			const grassPush_t *push = &tr.refdef.grassPushes[i];
+
+			VectorSet4( row[12 + i * 2], push->origin[0], push->origin[1], push->origin[2], push->radius );
+			VectorSet4( row[13 + i * 2], push->force, 0.0f, 0.0f, 0.0f );
+		} else {
+			VectorSet4( row[12 + i * 2], 0.0f, 0.0f, 0.0f, 0.0f );
+			VectorSet4( row[13 + i * 2], 0.0f, 0.0f, 0.0f, 0.0f );
+		}
+	}
+	frame->numBones = start + 10;
 	*bones = (uint32_t)start * 3;
 
 	VK_BindVertexBuffer( &vk_grassVertexes, &offset, 1 );

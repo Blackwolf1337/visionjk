@@ -1641,6 +1641,16 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			StageMaterial( stage )->sparkle = token[0] ? atof( token ) : 0.0f;
 		}
 		//
+		// VisionJK: emissive <light>, whether the stage makes its surfaces lamps of the level (vk_rt.cpp): 0 none, else
+		// as much light in the units of q3map_surfacelight, in the colour of its texture
+		//
+		else if ( !Q_stricmp( token, "emissive" ) )
+		{
+			token = COM_ParseExt( text, qfalse );
+			StageMaterial( stage )->lightSet = true;
+			StageMaterial( stage )->light = token[0] ? Q_max( (float)atof( token ), 0.0f ) : 0.0f;
+		}
+		//
 		// clampmap <name>
 		//
 		else if ( !Q_stricmp( token, "clampmap" ) )

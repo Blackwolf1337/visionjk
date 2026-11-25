@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client/client.h"
 #include "client/cl_cgameapi.h"
+#include "client/cl_imgui.h"
 #include "FxScheduler.h"
 #include "qcommon/q_shared.h"
 
@@ -227,6 +228,9 @@ void CFxScheduler::Clean(bool bRemoveTemplates /*= true*/, int idToPreserve /*= 
 
 			mEffectTemplates[i].mInUse = false;
 		}
+
+		// VisionJK: the ids mean other effects from now on
+		CL_FxLight_Reset();
 
 		if (idToPreserve == 0)
 		{
@@ -862,6 +866,13 @@ void CFxScheduler::PlayEffect( int id, vec3_t origin, matrix3_t axis, const int 
 	int						modelNum = 0, boltNum = -1;
 	int						entityNum = -1;
 
+	// VisionJK: an effect of the world may give a moving light where it plays (client/cl_fxlight.cpp); one bolted to
+	// a model has no place of the world here
+	if ( boltInfo <= 0 && !isPortal && !isRelative )
+	{
+		CL_FxLight_Played( id, origin, axis[0] );
+	}
+
 	if ( boltInfo > 0 )
 	{
 		// extract the wraith ID from the bolt info
@@ -1115,6 +1126,8 @@ void CFxScheduler::AddScheduledEffects( bool portal )
 	else
 	{
 		AddLoopedEffects();
+		// VisionJK: the lights of the effects that give one
+		CL_FxLight_AddToScene();
 	}
 
 	for ( itr = mFxSchedule.begin(); itr != mFxSchedule.end(); /* do nothing */ )
@@ -1791,3 +1804,9 @@ void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, SScheduledEffect *sched
 	PlayEffect( fx->mPlayFxHandles.GetHandle(), scheduledFx->mOrigin, scheduledFx->mAxis, boltInfo );
 }
 
+
+// VisionJK: the name an effect id was registered with, NULL for none
+const char *FX_EffectName( int id )
+{
+	return theFxScheduler.EffectName( id );
+}

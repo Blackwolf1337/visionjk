@@ -1328,16 +1328,9 @@ switch off): the caller plays its effect as before.
 =================
 */
 qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, float scale ) {
-	static int		checked = -1;
 	sparkBurst_t	b;
 
-	if ( checked < 0 ) {
-		char value[8];
-
-		trap->Cvar_VariableStringBuffer( "v_cgameSparks", value, sizeof( value ) );
-		checked = atoi( value ) ? 1 : 0;
-	}
-	if ( !checked || !trap->ext.R_EmitSparks ) {
+	if ( !CG_GpuSparksReady() ) {
 		return qfalse;
 	}
 	memset( &b, 0, sizeof( b ) );
@@ -1421,4 +1414,22 @@ qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, 
 	}
 	b.count = (int)( b.count * scale + 0.5f );
 	return trap->ext.R_EmitSparks( &b );
+}
+
+// qtrue: the renderer simulates sparks (CG_EmitSparks takes a burst)
+qboolean CG_GpuSparksReady( void ) {
+	static int checked = -1;
+
+	if ( checked < 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameSparks", value, sizeof( value ) );
+		checked = atoi( value ) ? 1 : 0;
+	}
+	return (qboolean)( checked && trap->ext.R_EmitSparks );
+}
+
+// a burst of one's own making; qfalse as CG_GpuSparks
+qboolean CG_EmitSparks( const sparkBurst_t *burst ) {
+	return (qboolean)( CG_GpuSparksReady() && trap->ext.R_EmitSparks( burst ) );
 }

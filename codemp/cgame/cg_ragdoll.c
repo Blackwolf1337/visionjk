@@ -44,6 +44,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cg_local.h"
 #include "ghoul2/G2.h"
+#include "cgame/level/cg_gust.h"
 
 #define RAG_MAX			10			// cut bodies
 #define RAG_PARTS		8			// (a cut, then joints cut by later hits on the lying parts, CG_RagCutJoint)
@@ -1505,8 +1506,8 @@ static void Rag_Kick( ragBody_t *rag, int body, const vec3_t dir, float speed ) 
 
 // the players and NPCs that push parts this frame, and force push and pull
 static void Rag_GatherMovers( void ) {
-	static int	pushing[MAX_CLIENTS];
-	int			i, b, k;
+	const forcePush_t	*pushes;
+	int					i, b, k, numPushes;
 
 	ragNumMovers = 0;
 	for ( i = 0; i < MAX_GENTITIES && ragNumMovers < (int)ARRAY_LEN( ragMovers ); i++ ) {
@@ -1536,29 +1537,13 @@ static void Rag_GatherMovers( void ) {
 		}
 	}
 
-	// force push and pull: when the hand effect of a player begins (PW_DISINT_4, PW_PULL for pull), the bodies in front
-	// of him within reach
-	for ( i = 0; i < MAX_CLIENTS; i++ ) {
-		const centity_t	*cent = &cg_entities[i];
-		const qboolean	own = (qboolean)( cg.snap && i == cg.snap->ps.clientNum );
-		const int		now = ( ( own || cent->currentValid ) && ( cent->currentState.powerups & ( 1 << PW_DISINT_4 ) ) ) ? 1 : 0;
-		vec3_t			from, forward;
-		qboolean		pull;
+	// force push and pull: when the hand effect of a player begins (level/cg_gust.c sees it), the bodies in front of
+	// him within reach
+	numPushes = CG_ForcePushes( &pushes );
+	for ( i = 0; i < numPushes; i++ ) {
+		const vec_t		*from = pushes[i].from, *forward = pushes[i].forward;
+		const qboolean	pull = pushes[i].pull;
 
-		if ( !now || pushing[i] ) {
-			pushing[i] = now;
-			continue;
-		}
-		pushing[i] = now;
-		pull = (qboolean)( ( cent->currentState.powerups & ( 1 << PW_PULL ) ) != 0 );
-		if ( own ) {
-			VectorCopy( cg.predictedPlayerState.origin, from );
-			AngleVectors( cg.predictedPlayerState.viewangles, forward, NULL, NULL );
-		} else {
-			VectorCopy( cent->lerpOrigin, from );
-			AngleVectors( cent->lerpAngles, forward, NULL, NULL );
-		}
-		from[2] += 20.0f;
 		for ( b = 0; b < RAG_MAX; b++ ) {
 			if ( !rags[b].active ) {
 				continue;

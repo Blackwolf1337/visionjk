@@ -240,6 +240,7 @@ set(MPVulkanVisionRTShaders
 	sparks.vert
 	smdepth.vert
 	rtlightmask.frag
+	rtlightresolve.frag
 	smlights.frag
 	smshadow.frag
 	)

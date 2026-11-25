@@ -1228,8 +1228,24 @@ qboolean RE_GpuProfile( gpuProfile_t *out ) {
 	return qfalse;
 }
 
-int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3] ) {
+// (vk_rt.cpp is not a part of this device: no lamps of the level here)
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3], vec3_t right[3], vec3_t up[3] ) {
 	return 0;
+}
+
+int VK_RT_LampsNear( const vec3_t origin, float radius, levelLamp_t *out, int max ) {
+	return 0;
+}
+
+float VK_RT_ShaderLight( const struct shader_s *shader ) {
+	return 0.0f;
+}
+
+float VK_RT_StageLight( const struct shaderStage_s *stage ) {
+	return 0.0f;
+}
+
+void VK_RT_LampsChanged( void ) {
 }
 
 /*
