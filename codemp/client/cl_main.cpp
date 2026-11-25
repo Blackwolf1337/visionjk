@@ -1348,6 +1348,19 @@ void CL_DownloadsComplete( void ) {
 	// will be cleared, note that this is done after the hunk mark has been set
 	Com_LoadBegin( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "mapname" ) );
 	Com_LoadPush( "client restart", NULL );
+	// VisionJK: the renderer counts the levels to know which pictures and models the new one no longer uses, and gives
+	// those up when the load is done (CL_FirstSnapshot, RegisterMedia_LevelLoadEnd). Only a local server said that a
+	// level begins (SV_SpawnServer), so on somebody else's server every picture of every level stayed: after eleven
+	// changes of level on jka.vision the 4096 texture slots of rd-vulkan-vision were full and the game ended with
+	// "VK_NewSlot: more than 4096 textures" (their crash log 2026-11-26 00:18).
+	// It has to be said here, before the client starts again, as the local server says it before: what the menus and
+	// the client game load for the new level must count as of the new level. Said in CL_InitCGame, after the menus had
+	// loaded, their models and pictures were given up at the first snapshot while in use (crash in G2_TransformBone
+	// right after connecting, their crash log 00:22).
+	if ( !com_sv_running->integer && re ) {
+		re->RegisterMedia_LevelLoadBegin( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "mapname" ),
+			eForceReload_NOTHING );
+	}
 	CL_FlushMemory();
 	Com_LoadPop();
 
