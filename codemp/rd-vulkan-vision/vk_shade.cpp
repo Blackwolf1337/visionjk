@@ -1087,7 +1087,8 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
-	// one light pass: a point at in the space of the model reaching radius, or the tube of dl; channel: the shadow mask
+	// one light pass: a point at in the space of the model reaching radius, or the tube or band of dl; channel: the
+	// shadow mask
 	auto pass = [&]( const vec3_t color, const vec3_t at, float radius, const dlight_t *tube, int channel, uint32_t slot ) {
 		vkDraw_t draw;
 
@@ -1112,10 +1113,14 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		draw.parm[3] = radius;
 		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
 		draw.grid0[3] = 0.0f;
-		if ( tube ) {
+		if ( tube && tube->lineRange > 0.0f ) {
 			VectorCopy( tube->lineStartTransformed, draw.grid0 );
 			draw.grid0[3] = tube->lineRange;
 			VectorCopy( tube->lineEndTransformed, draw.grid1 );
+		} else if ( tube && tube->bandWidth > 0.0f ) {
+			// a band: its axis in grid0, how wide negative in grid0.w
+			VectorCopy( tube->bandAxisTransformed, draw.grid0 );
+			draw.grid0[3] = -tube->bandWidth;
 		}
 		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
 		// and tex1. A model has it negative, -1 - the channel (generic.frag DynamicLight): the mask is made at the
@@ -1141,7 +1146,7 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			channel = VK_RT_LightChannel( dl, &slot );
 		}
 #endif
-		pass( color, dl->transformed, dl->radius, dl->lineRange > 0.0f ? dl : NULL, channel, slot );
+		pass( color, dl->transformed, dl->radius, ( dl->lineRange > 0.0f || dl->bandWidth > 0.0f ) ? dl : NULL, channel, slot );
 	}
 	// the lamps of the level that light this player, moved into the space of the model as R_TransformDlights does
 	for ( int k = 0; k < lamps; k++ ) {

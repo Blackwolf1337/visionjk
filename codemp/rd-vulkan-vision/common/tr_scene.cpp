@@ -423,6 +423,7 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	dl->color[2] = b;
 	dl->additive = additive;
 	dl->lineRange = 0.0f;
+	dl->bandWidth = 0.0f;
 }
 
 /*
@@ -452,6 +453,35 @@ void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, 
 	dl->lineRange = range;
 	VectorCopy( start, dl->lineStart );
 	VectorCopy( end, dl->lineEnd );
+	dl->bandWidth = 0.0f;
+}
+
+/*
+=====================
+RE_AddBandLightToScene
+
+VisionJK: a point light at origin reaching radius that leaves only round the plane across axis, width the sine of
+the angle out of it where most of it is gone: the glowing ring of a thermal detonator throws a stripe of light onto
+the floor and the walls (generic.frag DynamicLight). Everything else sees a point light.
+=====================
+*/
+void RE_AddBandLightToScene( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b ) {
+	dlight_t	*dl;
+	vec3_t		dir;
+
+	if ( !tr.registered || r_numdlights >= MAX_DLIGHTS || radius <= 0.0f || VectorNormalize2( axis, dir ) <= 0.0f ) {
+		return;
+	}
+	dl = &backEndData->dlights[r_numdlights++];
+	VectorCopy( origin, dl->origin );
+	dl->radius = radius;
+	dl->color[0] = r;
+	dl->color[1] = g;
+	dl->color[2] = b;
+	dl->additive = qfalse;
+	dl->lineRange = 0.0f;
+	dl->bandWidth = Com_Clamp( 0.02f, 1.0f, width );
+	VectorCopy( dir, dl->bandAxis );
 }
 
 /*

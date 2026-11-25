@@ -119,6 +119,11 @@ typedef struct dlight_s {
 	float			lineRange;
 	vec3_t			lineStart, lineEnd;
 	vec3_t			lineStartTransformed, lineEndTransformed;	// in the local coordinate system as transformed
+
+	// VisionJK: a point light that leaves only round the plane through origin across bandAxis (the ring of a thermal
+	// detonator, ext.AddBandLightToScene), bandWidth the sine of the angle out of it where most is gone; 0: all round
+	float			bandWidth;
+	vec3_t			bandAxis, bandAxisTransformed;
 } dlight_t;
 
 
@@ -1821,6 +1826,7 @@ void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *vert
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
+void RE_AddBandLightToScene( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
 void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
 void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );
 // VisionJK: bones placed by the cgame (G2_API.cpp, ext.G2_BoneNumber and ext.G2_SetBonesWorld)

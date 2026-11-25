@@ -6,7 +6,8 @@
 // is a soft puff of noise that is folded into itself and drifts, so it curls as it rises, lit about as brightly
 // as what is behind it. A source is left out where the level (or a player) is nearer than it, smoke fades out
 // softly against it. Then the colours part towards the edges. Under water the picture sways, fades into the colour
-// of the water with the distance and light plays over the level, after surfacing drops run down the view. A Force
+// of the water with the distance and light plays over the level, after surfacing drops run down the view. Snow,
+// blood and the dirt of an explosion close by stick on the view and run or trickle down. A Force
 // push sends waves through the air, clashing blades flash as a star. Then streaks from the middle (Force Speed),
 // Force Sight (the level cold and grey with its edges drawn, what is strongly coloured keeps it: the players in
 // their shells), a tint, grey, and a rim of colour, all around or on one side (where a hit came from).
@@ -42,6 +43,7 @@ BINDING( 0, 0 ) uniform Globals {
 #define DROP		8.0
 #define SNOW		9.0
 #define BLOOD		10.0
+#define DIRT		11.0
 
 VARYING( 0 ) in vec2 v_texCoord;
 layout( location = 0 ) out vec4 o_color;
@@ -186,6 +188,9 @@ void main() {
 	float blood = 0.0;		// blood on the view: how much of the pixel it covers,
 	float bloodThick = 0.0;	//	how thick it is there,
 	float bloodFresh = 0.0;	//	and how wet still
+	float dirt = 0.0;		// a grain of dirt on the view: how much of the pixel it covers,
+	vec3 dirtColor = vec3( 0.0 );	//	its colour,
+	float dust = 0.0;		//	and the fine dust around the grains
 
 	for ( int i = 0; i < SOURCES; i++ ) {
 		if ( i >= count ) {
@@ -291,6 +296,66 @@ void main() {
 					blood = cover;
 					bloodThick = thick;
 					bloodFresh = size.z;
+				}
+			}
+			continue;
+		}
+
+		// Dirt on the view (an explosion close by, cgame/weapons/cg_explosion.c and screenfx/cg_screenfx.c): a spray of
+		// grit, dense in the middle with a ragged edge, and a thin trail of grains above it where it trickled down. The
+		// grains are cells of two grids fixed on the view, each with one grain of its own size or none, the more the
+		// denser the spray is there; as its strength goes the thin parts fall off first. Fine dust lies between them.
+		// Brownish grey, each grain lit from above as much as the picture around it is bright.
+		if ( abs( kind - DIRT ) < 0.5 ) {
+			vec2 d = ( v_texCoord - ends.xy ) * aspect;
+			float rad = max( size.x, 0.0005 );
+			float r = length( d / rad );
+			float dense = 0.0;
+
+			if ( r < 1.8 ) {
+				vec2 q = d / rad + vec2( more.y * 47.0, more.y * 19.0 );
+				dense = clamp( 1.2 - r + ( Fbm( q * 1.3 ) - 0.5 ) * 0.9, 0.0, 1.0 );
+			}
+			if ( size.y > 0.0 && d.y < 0.0 && -d.y < size.y ) {
+				float up = -d.y;
+				float x = d.x - ( Noise( vec2( up / rad * 0.4, more.y * 37.0 ) ) - 0.5 ) * rad * 0.6;
+				float width = rad * ( 0.4 - 0.25 * up / size.y );
+				dense = max( dense, ( 1.0 - smoothstep( width * 0.5, width, abs( x ) ) ) * ( 1.0 - up / size.y ) * 0.6 );
+			}
+			dense = clamp( dense * 1.3 - ( 1.0 - size.z ) * 1.1, 0.0, 1.0 );
+			if ( dense <= 0.0 ) {
+				continue;
+			}
+			dust = max( dust, dense * 0.3 );
+			for ( int layer = 0; layer < 2; layer++ ) {
+				// (fine grains, and fewer coarse ones)
+				// (the grids turned against the view and each other, and every grain anywhere in its cell, longish and
+				// turned its own way: grains in rows and columns showed the grid)
+				float cells = layer == 0 ? 190.0 : 85.0;
+				float turn = layer == 0 ? 0.47 : -0.83;
+				vec2 p = mat2( cos( turn ), sin( turn ), -sin( turn ), cos( turn ) ) * ( v_texCoord * aspect ) * cells
+					+ vec2( more.y * 911.0, more.y * 577.0 );
+				uvec3 h = Pcg3( uvec3( ivec3( ivec2( floor( p ) ), 23 + layer ) ) );
+				vec3 hf = vec3( h & 0xffffu ) / 65535.0;
+				vec3 hg = vec3( h >> 16u ) / 65535.0;
+
+				if ( hf.x * ( layer == 0 ? 1.0 : 2.5 ) >= dense ) {
+					continue;
+				}
+				float gr = 0.12 + 0.2 * hf.y;
+				vec2 off = fract( p ) - ( 0.5 + ( hg.xy - 0.5 ) * ( 1.0 - 2.0 * gr ) );
+				float ga = hg.z * 6.2832;
+				off = mat2( cos( ga ), sin( ga ), -sin( ga ), cos( ga ) ) * off * vec2( 1.0, 1.0 + hf.z );
+				float grain = 1.0 - smoothstep( gr * 0.6, gr, length( off ) );
+
+				if ( grain > dirt ) {
+					float lit = 0.75 + 0.45 * clamp( -off.y / gr, -1.0, 1.0 );
+					vec3 around = ( Frame( ends.xy + vec2( 0.06, 0.0 ) ) + Frame( ends.xy - vec2( 0.06, 0.0 ) ) + Frame( ends.xy + vec2( 0.0, 0.08 ) )
+						+ Frame( ends.xy - vec2( 0.0, 0.08 ) ) ) * 0.25;
+					float level = clamp( dot( around, vec3( 0.3, 0.55, 0.15 ) ) * 1.6 + 0.25, 0.3, 1.1 );
+
+					dirt = grain;
+					dirtColor = mix( vec3( 0.3, 0.25, 0.19 ), vec3( 0.52, 0.47, 0.4 ), hf.z ) * lit * level;
 				}
 			}
 			continue;
@@ -485,6 +550,13 @@ void main() {
 	}
 	// the snow on the view over it
 	color = mix( color, snowColor, snow );
+	// dirt: the dust a grey brown veil, the grains over it
+	if ( dust > 0.0 ) {
+		float lum = dot( color, vec3( 0.299, 0.587, 0.114 ) );
+
+		color = mix( color, vec3( lum ) * vec3( 0.87, 0.8, 0.7 ), dust );
+	}
+	color = mix( color, dirtColor, dirt );
 	// and blood: the picture seen through a red film, dark where it is thick, a shine on it while it is wet
 	if ( blood > 0.0 ) {
 		// (a red of its own as well, or it only darkens a dark room)

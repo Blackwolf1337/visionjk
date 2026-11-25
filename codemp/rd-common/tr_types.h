@@ -159,6 +159,10 @@ typedef struct scopeEffect_s {
 #define SCREENFX_BLOOD		10		// a splat of blood on the view at a, radius its size, width the trail above it where it
 										// ran down, strength how wet it still is, seed its shape. Only with an engine that sets
 										// the cvar v_screenFxBlood to 1 (a cut close by, cgame/cg_slice.c).
+#define SCREENFX_DIRT		11		// a spray of dust and earth on the view at a, radius its size, width the trail of grains
+										// above it where it trickled down, strength how much of it still sticks, seed its
+										// shape. Only with an engine that sets the cvar v_screenFxDirt to 1 (an explosion
+										// close by, cgame/weapons/cg_explosion.c).
 #define SCREENFX_MAX_SOURCES	48
 
 typedef struct screenFxSource_s {
