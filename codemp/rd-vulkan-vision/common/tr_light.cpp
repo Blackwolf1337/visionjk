@@ -673,12 +673,14 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	// part alone a panel beside him hardly showed: one within 96 units also takes 60 % of its share of the ambient
 	// light, less and less out to 192 units (as the traced shadow makes a near panel clear, rtshadow.frag GridShadow).
 	// As light it falls off from the panel, as strong at his middle as what it took (generic.frag DynamicLight on a
-	// model: window^2 / (1 + 4 x^2), x from at least 24 units).
+	// model: window^2 / (1 + 4 x^2), x from at least 24 units), in the colour of the panel's texture: the grid has the
+	// colour of what lit the level when it was compiled, which a texture that only glows is not (vk_rt.cpp
+	// VK_RT_EmissionTint). The brightness stays the grid's.
 	ent->numLamps = 0;
 	if ( v_panelLight && v_panelLight->integer && !( refdef->rdflags & RDF_NOWORLDMODEL ) ) {
-		vec3_t	lamps[3], ambient;
+		vec3_t	lamps[3], tints[3], ambient;
 		float	shares[3], taken = 0.0f, takenAmbient = 0.0f;
-		const int n = VK_RT_PlayerLamps( lightOrigin, lamps, shares );
+		const int n = VK_RT_PlayerLamps( lightOrigin, lamps, tints, shares );
 
 		VectorCopy( ent->ambientLight, ambient );
 		for ( i = 0; i < n && ent->numLamps < 3; i++ ) {
@@ -699,7 +701,8 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 			VectorCopy( lamps[i], ent->lampOrigin[ent->numLamps] );
 			VectorScale( ent->directedLight, shares[i], *color );
 			VectorMA( *color, fromAmbient, ambient, *color );
-			VectorScale( *color, 1.0f / ( 255.0f * fall ), *color );
+			const float bright = ( *color )[0] * 0.3f + ( *color )[1] * 0.59f + ( *color )[2] * 0.11f;
+			VectorScale( tints[i], bright / ( 255.0f * fall ), *color );
 			ent->lampRange[ent->numLamps] = range;
 			ent->numLamps++;
 			taken += shares[i];

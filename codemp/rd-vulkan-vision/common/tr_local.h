@@ -179,6 +179,7 @@ typedef struct image_s {
 	short		iLastLevelUsedOn;
 
 	float		averageLuma;		// VisionJK: how bright its pixels are on average, 0 to 1 (the light of emissive textures, vk_rt.cpp)
+	vec3_t		averageColor;		// VisionJK: their colour on average, by their alpha as averageLuma (the colour of lamp panels)
 } image_t;
 
 //===============================================================================

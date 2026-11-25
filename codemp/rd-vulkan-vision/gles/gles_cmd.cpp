@@ -1228,7 +1228,7 @@ qboolean RE_GpuProfile( gpuProfile_t *out ) {
 	return qfalse;
 }
 
-int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], float share[3] ) {
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3] ) {
 	return 0;
 }
 

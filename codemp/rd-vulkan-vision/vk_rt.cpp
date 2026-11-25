@@ -801,6 +801,7 @@ typedef struct vkPatch_s {
 	vec3_t			mins, maxs;
 	float			area;
 	float			emission;		// brightness of its shader
+	vec3_t			tint;			// the colour of its light, as bright as white (VK_RT_EmissionTint)
 	int				surface;		// in the world model
 } vkPatch_t;
 
@@ -870,6 +871,49 @@ static float VK_RT_Emission( const shader_t *shader ) {
 		emission += shader->surfaceLight * 0.001f;
 	}
 	return emission;
+}
+
+/* The colour of the light of a shader that gives light (VK_RT_Emission), scaled to the brightness of white, so it only
+   tints: the colour a material of the material tool gives, else the colours of the textures that glow, as bright as
+   each glows; white when that is none. The lamp light on the players takes it (R_SetupEntityLighting): the grid has
+   the colour of whatever lit the level there when it was compiled, and a texture that glows without giving light to
+   the compiler is not in it (their picture 2026-11-24, a player on a blue pad lit white). */
+static void VK_RT_EmissionTint( const shader_t *shader, vec3_t tint ) {
+	vec3_t color = { 0.0f, 0.0f, 0.0f };
+
+	if ( shader->emissiveSet ) {
+		VectorCopy( shader->emissive, color );
+	} else {
+		for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
+			const shaderStage_t	*stage = &shader->stages[i];
+			const image_t		*image = stage->bundle[0].image;
+			const uint32_t		src = stage->stateBits & GLS_SRCBLEND_BITS, dst = stage->stateBits & GLS_DSTBLEND_BITS;
+			vec3_t				stageColor = { 1.0f, 1.0f, 1.0f };
+
+			if ( !stage->active || !image || stage->bundle[0].isLightmap || VK_RT_StageColor( stage ) <= 0.0f ) {
+				continue;
+			}
+			if ( stage->glow || ( dst == GLS_DSTBLEND_ONE && ( src == GLS_SRCBLEND_ONE || src == GLS_SRCBLEND_SRC_ALPHA ) )
+				|| ( shader->surfaceLight > 0.0f && i == 0 ) ) {
+				if ( stage->rgbGen == CGEN_CONST ) {
+					for ( int c = 0; c < 3; c++ ) {
+						stageColor[c] = stage->constantColor[c] / 255.0f;
+					}
+				}
+				for ( int c = 0; c < 3; c++ ) {
+					color[c] += image->averageColor[c] * stageColor[c];
+				}
+			}
+		}
+	}
+	const float luma = color[0] * 0.3f + color[1] * 0.59f + color[2] * 0.11f;
+	if ( luma < 0.001f ) {
+		VectorSet( tint, 1.0f, 1.0f, 1.0f );
+		return;
+	}
+	for ( int c = 0; c < 3; c++ ) {
+		tint[c] = Q_min( color[c] / luma, 4.0f );
+	}
 }
 
 /*
@@ -945,6 +989,7 @@ static void VK_RT_Patches( std::vector<vkPatch_t> &patches ) {
 				memset( &patch, 0, sizeof( patch ) );
 				ClearBounds( patch.mins, patch.maxs );
 				patch.emission = emission;
+				VK_RT_EmissionTint( surf->shader, patch.tint );
 				patch.surface = i;
 				patches.push_back( patch );
 			}
@@ -2820,8 +2865,12 @@ typedef struct {
 	vec3_t	origin;
 	int		count;
 	vec3_t	lamp[VK_RT_LAMP_SHOWN];
+	vec3_t	tint[VK_RT_LAMP_SHOWN];
 	float	share[VK_RT_LAMP_SHOWN];
 } vkPlayerLamps_t;
+
+// the colours of the panels in the rows of each player this frame (VK_RT_PickLamps), for vk_playerLamps
+static vec3_t	vk_lampTints[VK_RT_CASTERS][VK_RT_LAMP_SHOWN];
 
 static vkPlayerLamps_t	vk_playerLamps[VK_RT_CASTERS];
 static int				vk_numPlayerLamps;
@@ -3033,6 +3082,7 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 			VectorCopy( patch->origin, out[k] );
 			out[k][3] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
 			out[3][k] = me->share[order[k]] * scale;
+			VectorCopy( patch->tint, vk_lampTints[i][k] );
 		}
 		out[3][3] = Com_Clamp( 0.0f, 1.0f, 1.0f - all );
 	}
@@ -3053,6 +3103,7 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 				continue;
 			}
 			VectorCopy( out[k], p->lamp[p->count] );
+			VectorCopy( vk_lampTints[i][k], p->tint[p->count] );
 			p->share[p->count] = out[3][k];
 			p->count++;
 		}
@@ -3064,17 +3115,18 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 VK_RT_PlayerLamps
 
 The panels the shadow of the player standing at origin came from in the frame before (VK_RT_PickLamps), up to
-three, and the share of his light each has; how many, 0 when no player of that frame stood within 32 units (or
-v_rtLamps 0)
+three, the colour of each (as bright as white) and the share of his light each has; how many, 0 when no player of
+that frame stood within 32 units (or v_rtLamps 0)
 ===============
 */
-int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], float share[3] ) {
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3] ) {
 	for ( int i = 0; i < vk_numPlayerLamps; i++ ) {
 		const vkPlayerLamps_t *p = &vk_playerLamps[i];
 
 		if ( p->count && DistanceSquared( p->origin, origin ) < 32.0f * 32.0f ) {
 			for ( int k = 0; k < p->count; k++ ) {
 				VectorCopy( p->lamp[k], lamp[k] );
+				VectorCopy( p->tint[k], tint[k] );
 				share[k] = Com_Clamp( 0.0f, 1.0f, p->share[k] );
 			}
 			return p->count;

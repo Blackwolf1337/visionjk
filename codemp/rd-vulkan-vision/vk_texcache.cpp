@@ -47,7 +47,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "vk_local.h"
 #include <vector>
 
-#define TEXCACHE_MAGIC		0x32585456		// "VTX2": with the brightness of the image
+#define TEXCACHE_MAGIC		0x33585456		// "VTX3": with the colour of the image ("VTX2" had its brightness alone)
 #define TEXCACHE_VERSION	1				// of the file and of what the packer makes: another one, another name
 #define TEXCACHE_MAX_LEVELS	16
 #define TEXCACHE_KEY		256
@@ -58,7 +58,7 @@ typedef struct texCacheHeader_s {
 	int		format;					// VKF_BC1 or VKF_BC3
 	int		mipLevels;
 	int		keyLength;				// the key follows, then the levels one after the other
-	float	averageLuma;			// image_t::averageLuma, which needs the pixels the image is made without
+	float	averageColor[3];		// image_t::averageColor, which needs the pixels the image is made without
 } texCacheHeader_t;
 
 static struct {
@@ -246,16 +246,20 @@ qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height ) {
 	return qtrue;
 }
 
-// R_CreateImage(): how bright the pixels of the image are that is being kept
-void VK_TexCacheLuma( float luma ) {
+// R_CreateImage(): the colour of the pixels of the image that is being kept, on average
+void VK_TexCacheAverage( const vec3_t color ) {
 	if ( texCache.pending ) {
-		texCache.recorded.averageLuma = luma;
+		VectorCopy( color, texCache.recorded.averageColor );
 	}
 }
 
-// how bright the pixels were of the image VK_TexCacheFind() found, until VK_TexCacheEnd()
-float VK_TexCacheFoundLuma( void ) {
-	return texCache.file ? texCache.header.averageLuma : 0.0f;
+// the colour of the pixels of the image VK_TexCacheFind() found, until VK_TexCacheEnd()
+void VK_TexCacheFoundAverage( vec3_t color ) {
+	if ( texCache.file ) {
+		VectorCopy( texCache.header.averageColor, color );
+	} else {
+		VectorClear( color );
+	}
 }
 
 // the levels of the image that R_CreateImage() makes next are kept, if it is one VK_TexCacheFind() did not find
