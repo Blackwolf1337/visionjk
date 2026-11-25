@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_view.c -- setup all the parameters (position, angle, etc)
 // for a 3D rendering
 #include "cg_local.h"
+#include "cgame/duel/cg_duelannounce.h"
 #include "cgame/saber/cg_saberscar.h"
 #include "cgame/saber/cg_saberclash.h"
 #include "cgame/saber/cg_sabersound.h"
@@ -2747,6 +2748,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_ToysScene();
 		// the parts cut off bodies by a saber, and their blood (cg_slice.c)
 		CG_SliceScene();
+		// the announcer at the end of the own duel (duel/cg_duelannounce.c)
+		CG_DuelAnnounceFrame();
 	}
 	CG_AddViewWeapon( &cg.predictedPlayerState );
 

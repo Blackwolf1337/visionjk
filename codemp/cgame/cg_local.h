@@ -69,7 +69,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define	MAX_STEP_CHANGE		32
 
 #define	MAX_VERTS_ON_POLY	10
-#define	MAX_MARK_POLYS		256
+// VisionJK: was 256; a mark lives 10 seconds (cg_marks.c), and a repeater put that many in a few seconds, so the
+// oldest went before their time: footprints, holes of shots, scorches
+#define	MAX_MARK_POLYS		1024
 
 #define STAT_MINUS			10	// num frame for '-' stats digit
 

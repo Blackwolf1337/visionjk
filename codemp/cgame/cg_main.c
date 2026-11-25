@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_main.c -- initialization and primary entry point for cgame
 #include "cg_local.h"
+#include "cgame/duel/cg_duelannounce.h"
 
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
@@ -2783,6 +2784,7 @@ Ghoul2 Insert End
 	CG_InitMarkPolys();
 	CG_SaberScarsInit();
 	CG_SaberSoundInit();
+	CG_DuelAnnounceInit();
 	CG_SaberClashInit();
 	CG_SaberDrawnInit();
 	CG_SaberDropInit();

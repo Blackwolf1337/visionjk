@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // be a valid snapshot this frame
 
 #include "cg_local.h"
+#include "cgame/duel/cg_duelannounce.h"
 #include "cgame/saber/cg_saberscar.h"
 #include "cgame/saber/cg_sabersound.h"
 #include "cgame/saber/cg_saberclash.h"
@@ -960,6 +961,7 @@ static void CG_MapRestart( void ) {
 	CG_InitMarkPolys();
 	CG_SaberScarsInit();
 	CG_SaberSoundInit();
+	CG_DuelAnnounceInit();
 	CG_SaberClashInit();
 	CG_SaberDrawnInit();
 	CG_SaberDropInit();

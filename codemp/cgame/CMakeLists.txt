@@ -292,6 +292,8 @@ set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/saber/cg_saberignite.h"
 	"${MPDir}/cgame/saber/cg_sabersound.c"
 	"${MPDir}/cgame/saber/cg_sabersound.h"
+	"${MPDir}/cgame/duel/cg_duelannounce.c"
+	"${MPDir}/cgame/duel/cg_duelannounce.h"
 	"${MPDir}/cgame/boombox/cg_boombox_sync.c"
 	"${MPDir}/cgame/boombox/cg_tv.c"
 	"${MPDir}/cgame/boombox/cg_boombox_ui.c"
