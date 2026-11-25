@@ -3819,6 +3819,7 @@ void ClientEndFrame( gentity_t *ent ) {
 	else
 	{
 		JP_FloodExemptThink( ent );
+		JP_MercAmmoThink( ent );
 	}
 
 	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {

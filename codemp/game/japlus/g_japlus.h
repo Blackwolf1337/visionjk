@@ -235,6 +235,7 @@ void		JP_GodTalk( playerState_t *ps, qboolean talking );
 void		JP_ClientSpawnEnd( gentity_t *ent, int wDisable );
 void		JP_UpdateWeaponSwitchFlag( gclient_t *client );
 void		JP_MercLoadout( gentity_t *ent );
+void		JP_MercAmmoThink( gentity_t *ent );
 void		JP_DisplayLatestPluginVersion( gentity_t *ent );
 void		JP_KissSlap( gentity_t *ent, const usercmd_t *ucmd );
 void		JP_WelcomeSpawn( gentity_t *ent );
