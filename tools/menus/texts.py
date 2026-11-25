@@ -166,8 +166,8 @@ TR = {
     'The blade flickers as it comes out and goes in and when it deflects a shot, its light grows with it, and hilts differ between the ignition sounds of the game.': 'Die Klinge flackert beim Aus- und Einfahren und wenn sie einen Schuss abwehrt, ihr Licht wächst mit, und die Griffe unterscheiden sich in den Zündgeräuschen des Spiels.',
     'Hilts': 'Griffe',
     'A saber that is switched off hangs on the belt and swings with the walk (not the staff). When a player dies the hilt falls to the floor and rolls.': 'Ein ausgeschalteter Säbel hängt am Gürtel und pendelt beim Laufen (nicht der Doppelsäbel). Stirbt ein Spieler, fällt der Griff zu Boden und rollt.',
-    'Impacts by Material': 'Treffer nach Material',
-    'Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks.': 'Schüsse werfen Funken, Splitter oder Staub und klingen nach dem, was sie treffen, und ein Schuss, der von Metall abprallt, jault davon. Funken brauchen GPU Sparks.',
+    'Weapon Effects': 'Waffeneffekte',
+    'Shots throw sparks, splinters or dust and sound by what they hit, bolts glow and leave a short trail, and a bolt that bounces off metal whines away. Explosions throw debris, shake dust from the ceiling and leave small fires. Thermal detonators, mines and charges blink and beep, DEMP2 arcs crawl over walls, flechette shards stay in them, charged shots and the concussion beam push rings of air, and the rope of the hook sags. A bolt that passes close to your head is heard, and your shots sound higher as the ammunition runs out. Sparks need GPU Sparks.': 'Schüsse werfen Funken, Splitter oder Staub und klingen nach dem, was sie treffen, Geschosse leuchten und ziehen eine kurze Spur, und ein Schuss, der von Metall abprallt, jault davon. Explosionen werfen Trümmer, lassen Staub von der Decke rieseln und hinterlassen kleine Feuer. Thermaldetonatoren, Minen und Sprengladungen blinken und piepen, DEMP2-Blitze kriechen über Wände, Flechette-Splitter bleiben darin stecken, geladene Schüsse und der Concussion-Strahl schieben Luftringe vor sich her, und das Seil des Hakens hängt durch. Ein Schuss, der knapp an deinem Kopf vorbeifliegt, ist zu hören, und deine Schüsse klingen höher, wenn die Munition zur Neige geht. Funken brauchen GPU-Funken.',
     'Sound in the Background': 'Ton im Hintergrund',
     'The game goes on playing its sound while it is not in front or is minimized.':
         'Das Spiel spielt den Ton weiter, wenn es im Hintergrund läuft oder minimiert ist.',
@@ -343,8 +343,8 @@ TR = {
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
         'Wie viele der lautesten Geräusche von den Wänden widerhallen. Mehr kostet mehr Leistung pro Bild.',
     'Physically Based Sound': 'Physikalischer Klang',
-    'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.':
-        'Geräusche werden mit der Entfernung leiser wie in echt, verlieren in der Ferne ihre Höhen und erreichen dich mit Schallgeschwindigkeit.',
+    'Sounds fade with the distance as real ones do and carry further. Far away they always lose their highs and arrive at the speed of sound.':
+        'Geräusche werden mit der Entfernung leiser wie in echt und tragen weiter. In der Ferne verlieren sie immer ihre Höhen und erreichen dich mit Schallgeschwindigkeit.',
     'Talk to and hear other players with your microphone.': 'Mit dem Mikrofon andere Spieler hören und mit ihnen sprechen.',
     'Mode': 'Modus',
     'Push to talk: hold the talk key (Controls, Extras).': 'Push-to-Talk: Sprechtaste gedrückt halten (Steuerung, Extras).',

@@ -858,8 +858,8 @@ LANG_ENGLISH        "Physically Based Sound"
 LANG_GERMAN         "Physikalischer Klang"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
-LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
-LANG_GERMAN         "Geräusche werden mit der Entfernung leiser wie in echt, verlieren in der Ferne ihre Höhen und erreichen dich mit Schallgeschwindigkeit."
+LANG_ENGLISH        "Sounds fade with the distance as real ones do and carry further. Far away they always lose their highs and arrive at the speed of sound."
+LANG_GERMAN         "Geräusche werden mit der Entfernung leiser wie in echt und tragen weiter. In der Ferne verlieren sie immer ihre Höhen und erreichen dich mit Schallgeschwindigkeit."
 
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
@@ -1145,13 +1145,13 @@ REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_GERMAN         "Jeder Mitspieler wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes."
 
-REFERENCE           IMPACTS_BY_MATERIAL
-LANG_ENGLISH        "Impacts by Material"
-LANG_GERMAN         "Treffer nach Material"
+REFERENCE           WEAPON_EFFECTS
+LANG_ENGLISH        "Weapon Effects"
+LANG_GERMAN         "Waffeneffekte"
 
 REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
-LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
-LANG_GERMAN         "Schüsse werfen Funken, Splitter oder Staub und klingen nach dem, was sie treffen, und ein Schuss, der von Metall abprallt, jault davon. Funken brauchen GPU Sparks."
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, bolts glow and leave a short trail, and a bolt that bounces off metal whines away. Explosions throw debris, shake dust from the ceiling and leave small fires. Thermal detonators, mines and charges blink and beep, DEMP2 arcs crawl over walls, flechette shards stay in them, charged shots and the concussion beam push rings of air, and the rope of the hook sags. A bolt that passes close to your head is heard, and your shots sound higher as the ammunition runs out. Sparks need GPU Sparks."
+LANG_GERMAN         "Schüsse werfen Funken, Splitter oder Staub und klingen nach dem, was sie treffen, Geschosse leuchten und ziehen eine kurze Spur, und ein Schuss, der von Metall abprallt, jault davon. Explosionen werfen Trümmer, lassen Staub von der Decke rieseln und hinterlassen kleine Feuer. Thermaldetonatoren, Minen und Sprengladungen blinken und piepen, DEMP2-Blitze kriechen über Wände, Flechette-Splitter bleiben darin stecken, geladene Schüsse und der Concussion-Strahl schieben Luftringe vor sich her, und das Seil des Hakens hängt durch. Ein Schuss, der knapp an deinem Kopf vorbeifliegt, ist zu hören, und deine Schüsse klingen höher, wenn die Munition zur Neige geht. Funken brauchen GPU-Funken."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"

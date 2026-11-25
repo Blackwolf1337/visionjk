@@ -1816,6 +1816,7 @@ void		CG_ScreenFxInit( void );
 void		CG_ScreenFxScene( void );
 void		CG_ScreenFxBlast( const vec3_t origin, float radius );
 void		CG_ScreenFxWeaponBlast( int weapon, qboolean altFire, const vec3_t origin );
+void		CG_ScreenFxRing( const vec3_t origin, float radius, float width, float strength );
 void		CG_ScreenFxEmit( int id, const vec3_t origin, const vec3_t dir, float radius, float strength, float smoke );
 void		CG_ScreenFxFired( int weapon );
 qboolean	CG_ScreenFxHitDrawn( void );
@@ -1828,6 +1829,7 @@ void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float st
 void		CG_ScreenFxWet( const vec3_t velocity );
 qboolean	CG_ScreenFxSnow( const vec3_t velocity );	// a snowball in the face, qfalse: draw the picture instead
 void		CG_ScreenFxBlood( const vec3_t origin, float strength );	// blood of a cut close by on the view
+void		CG_ScreenFxDirt( const vec3_t origin, float strength );		// dirt of an explosion close by on the view
 qboolean	CG_ScreenFxSightDrawn( void );
 void		CG_ScreenFxGhostBody( refEntity_t *body );
 void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );

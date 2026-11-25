@@ -858,8 +858,8 @@ LANG_ENGLISH        "Physically Based Sound"
 LANG_SPANISH        "Sonido físico realista"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
-LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
-LANG_SPANISH        "Los sonidos se atenúan con la distancia como en la realidad, pierden agudos a lo lejos y llegan a la velocidad del sonido."
+LANG_ENGLISH        "Sounds fade with the distance as real ones do and carry further. Far away they always lose their highs and arrive at the speed of sound."
+LANG_SPANISH        "Los sonidos se atenúan con la distancia como en la realidad y se oyen más lejos. A lo lejos siempre pierden agudos y llegan a la velocidad del sonido."
 
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
@@ -1145,13 +1145,13 @@ REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_SPANISH        "Cada compañero se muestra con el modelo que elijas. Su elección: cada uno conserva el suyo."
 
-REFERENCE           IMPACTS_BY_MATERIAL
-LANG_ENGLISH        "Impacts by Material"
-LANG_SPANISH        "Impactos según material"
+REFERENCE           WEAPON_EFFECTS
+LANG_ENGLISH        "Weapon Effects"
+LANG_SPANISH        "Efectos de armas"
 
 REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
-LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
-LANG_SPANISH        "Los disparos lanzan chispas, astillas o polvo y suenan según lo que golpean, y un disparo que rebota en el metal se aleja silbando. Las chispas necesitan GPU Sparks."
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, bolts glow and leave a short trail, and a bolt that bounces off metal whines away. Explosions throw debris, shake dust from the ceiling and leave small fires. Thermal detonators, mines and charges blink and beep, DEMP2 arcs crawl over walls, flechette shards stay in them, charged shots and the concussion beam push rings of air, and the rope of the hook sags. A bolt that passes close to your head is heard, and your shots sound higher as the ammunition runs out. Sparks need GPU Sparks."
+LANG_SPANISH        "Los disparos lanzan chispas, astillas o polvo y suenan según lo que golpean, los disparos brillan y dejan una estela corta, y un disparo que rebota en el metal se aleja silbando. Las explosiones lanzan escombros, hacen caer polvo del techo y dejan pequeños fuegos. Los detonadores térmicos, las minas y las cargas parpadean y pitan, los arcos del DEMP2 recorren las paredes, las esquirlas del flechette se quedan clavadas, los disparos cargados y el rayo del concussion empujan anillos de aire, y la cuerda del gancho cuelga. Se oye un disparo que pasa cerca de tu cabeza, y tus disparos suenan más agudos cuando se acaba la munición. Las chispas necesitan Chispas por GPU."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"

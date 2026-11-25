@@ -858,8 +858,8 @@ LANG_ENGLISH        "Physically Based Sound"
 LANG_FRENCH         "Son physique réaliste"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
-LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
-LANG_FRENCH         "Les sons faiblissent avec la distance comme dans la réalité, perdent leurs aigus au loin et arrivent à la vitesse du son."
+LANG_ENGLISH        "Sounds fade with the distance as real ones do and carry further. Far away they always lose their highs and arrive at the speed of sound."
+LANG_FRENCH         "Les sons faiblissent avec la distance comme dans la réalité et portent plus loin. Au loin, ils perdent toujours leurs aigus et arrivent à la vitesse du son."
 
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
@@ -1145,13 +1145,13 @@ REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
 LANG_FRENCH         "Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien."
 
-REFERENCE           IMPACTS_BY_MATERIAL
-LANG_ENGLISH        "Impacts by Material"
-LANG_FRENCH         "Impacts selon le matériau"
+REFERENCE           WEAPON_EFFECTS
+LANG_ENGLISH        "Weapon Effects"
+LANG_FRENCH         "Effets des armes"
 
 REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
-LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, and a bolt that bounces off metal whines away. Sparks need GPU Sparks."
-LANG_FRENCH         "Les tirs projettent étincelles, éclats ou poussière et sonnent selon ce qu'ils touchent, et un tir qui rebondit sur le métal part en sifflant. Les étincelles exigent GPU Sparks."
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, bolts glow and leave a short trail, and a bolt that bounces off metal whines away. Explosions throw debris, shake dust from the ceiling and leave small fires. Thermal detonators, mines and charges blink and beep, DEMP2 arcs crawl over walls, flechette shards stay in them, charged shots and the concussion beam push rings of air, and the rope of the hook sags. A bolt that passes close to your head is heard, and your shots sound higher as the ammunition runs out. Sparks need GPU Sparks."
+LANG_FRENCH         "Les tirs projettent étincelles, éclats ou poussière et sonnent selon ce qu'ils touchent, les tirs brillent et laissent une courte traînée, et un tir qui rebondit sur le métal part en sifflant. Les explosions projettent des débris, font tomber de la poussière du plafond et laissent de petits feux. Les détonateurs thermiques, les mines et les charges clignotent et bipent, les arcs du DEMP2 rampent sur les murs, les éclats du flechette s'y plantent, les tirs chargés et le rayon du concussion poussent des anneaux d'air, et la corde du grappin pend. Un tir qui passe près de votre tête s'entend, et vos tirs sonnent plus aigus quand les munitions s'épuisent. Les étincelles exigent Étincelles GPU."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"

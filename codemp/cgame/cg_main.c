@@ -39,6 +39,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberbelt.h"
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_boltlight.h"
+#include "cgame/weapons/cg_explosion.h"
+#include "cgame/weapons/cg_viewweapon.h"
+#include "cgame/weapons/cg_boltsound.h"
+#include "cgame/weapons/cg_airring.h"
+#include "cgame/weapons/cg_boltlook.h"
+#include "cgame/weapons/cg_wallfx.h"
+#include "cgame/weapons/cg_mines.h"
+#include "cgame/weapons/cg_hookrope.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -2698,6 +2706,12 @@ Ghoul2 Insert End
 	CG_SaberIgniteRegister();
 	CG_SaberDropRegister();
 	CG_ImpactRegister();
+	CG_ExplosionRegister();
+	CG_BoltSoundRegister();
+	CG_AirRingsRegister();
+	CG_BoltLookRegister();
+	CG_WallFxRegister();
+	CG_MinesRegister();
 
 	CG_RegisterCvars();
 
@@ -2790,7 +2804,14 @@ Ghoul2 Insert End
 	CG_SaberDropInit();
 	CG_SaberBeltInit();
 	CG_ImpactInit();
+	CG_ExplosionInit();
+	CG_BoltSoundInit();
+	CG_ViewWeaponInit();
 	CG_BoltLightsInit();
+	CG_AirRingsInit();
+	CG_WallFxInit();
+	CG_MinesInit();
+	CG_HookRopesInit();
 
 	// remove the last loading update
 	cg.infoScreenText[0] = 0;

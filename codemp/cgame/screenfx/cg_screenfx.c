@@ -27,7 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // v_screenFx 0 switches all of it off, and each look has a cvar of its own:
 // - v_fxBlast: an explosion sends a ring through the air that bends the picture as it runs outwards. Close by the
-//   colours part for a moment.
+//   colours part for a moment, and dust and earth fly onto the view (SCREENFX_DIRT, weapons/cg_explosion.c), which
+//   trickle off.
 // - v_fxHeat: the air shimmers over the flames of a jetpack and of the flamethrower, and over the barrel of the own
 //   repeater or blaster after a long burst, which smokes too when it gets very hot. The hot air is left in the
 //   level as puffs that rise and fade, so it trails behind whatever moves. The smoke is no sprite but a puff the
@@ -61,6 +62,7 @@ qboolean CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle );		// cg_weapons.c
 #define DROP_DRY_MSEC		1500		// the last of its life it dries
 #define FX_SNOWS			8			// clumps of snow a snowball left on the view (SCREENFX_SNOW)
 #define FX_BLOODS			14			// splats of blood a cut close by left on the view (SCREENFX_BLOOD)
+#define FX_DIRTS			16			// sprays of dirt an explosion close by left on the view (SCREENFX_DIRT)
 #define FX_SMOKES			128
 #define PROTECT_HIT_MSEC	600
 #define ABSORB_PULSE_MSEC	500
@@ -151,14 +153,26 @@ typedef struct {
 	float		seed;
 } fxBlood_t;
 
+typedef struct {
+	qboolean	active;
+	int			born, life;		// cg.time it landed, msec until the last of it fell off
+	float		x, y, radius;	// as a drop
+	float		speed;			// it trickles down in fits,
+	int			stopUntil;		//	held now and then until this time
+	float		trail;			// how far above it its trail of grains reaches
+	float		seed;
+} fxDirt_t;
+
 static struct {
 	qboolean			has;			// the engine and the renderer have R_SetScreenEffect
 	qboolean			hasDrops;		//	and draw SCREENFX_DROP
 	qboolean			hasSnow;		//	and SCREENFX_SNOW
 	qboolean			hasBlood;		//	and SCREENFX_BLOOD
+	qboolean			hasDirt;		//	and SCREENFX_DIRT
 	fxDrop_t			drops[FX_DROPS];
 	fxSnow_t			snows[FX_SNOWS];
 	fxBlood_t			bloods[FX_BLOODS];
+	fxDirt_t			dirts[FX_DIRTS];
 	fxBlast_t			blasts[FX_BLASTS];
 	int					nextBlast;
 	float				split;			// the colours part, 0 to 1, from splitTime on
@@ -218,6 +232,8 @@ void CG_ScreenFxInit( void ) {
 		sfx.hasSnow = (qboolean)( sfx.hasDrops && atoi( value ) == 1 );
 		trap->Cvar_VariableStringBuffer( "v_screenFxBlood", value, sizeof( value ) );
 		sfx.hasBlood = (qboolean)( sfx.has && atoi( value ) == 1 );
+		trap->Cvar_VariableStringBuffer( "v_screenFxDirt", value, sizeof( value ) );
+		sfx.hasDirt = (qboolean)( sfx.has && atoi( value ) == 1 );
 	}
 	sfx.beatSound = trap->S_RegisterSound( "sound/vision/heartbeat.wav" );
 	sfx.rageSound = trap->S_RegisterSound( "sound/vision/rage_hum.wav" );
@@ -353,6 +369,27 @@ void CG_ScreenFxWeaponBlast( int weapon, qboolean altFire, const vec3_t origin )
 	if ( radius > 0.0f ) {
 		CG_ScreenFxBlast( origin, radius );
 	}
+}
+
+// A ring of bent air at origin for this frame, radius and width units, strength 0 to 1: the pressure of a charged shot
+// or of the beam of the concussion rifle (weapons/cg_airring.c). With the rings of the explosions (v_fxBlast).
+void CG_ScreenFxRing( const vec3_t origin, float radius, float width, float strength ) {
+	screenFxSource_t	*src;
+	float				frac[2], depth;
+
+	if ( !CG_ScreenFxOn() || !v_fxBlast.integer || strength <= 0.01f || !CG_ScreenFxProject( origin, frac, &depth ) ) {
+		return;
+	}
+	src = CG_ScreenFxSource();
+	if ( !src ) {
+		return;
+	}
+	src->kind = SCREENFX_RING;
+	VectorCopy2( frac, src->a );
+	src->radius = CG_ScreenFxSize( radius, depth );
+	src->width = Q_max( 0.004f, CG_ScreenFxSize( width, depth ) );
+	src->strength = Com_Clamp( 0.0f, 1.0f, strength * CG_ScreenFxNear( depth, HEAT_NEAR_FADE, HEAT_NEAR_FULL ) );
+	src->distance = depth - radius;
 }
 
 /*
@@ -685,6 +722,107 @@ static void CG_ScreenFxBloods( void ) {
 		src->strength = Com_Clamp( 0.0f, 1.0f, left * 1.3f );
 		src->distance = 0.0f;
 		src->seed = b->seed;
+	}
+}
+
+/*
+=================
+CG_ScreenFxDirt
+
+An explosion at origin, close by and in sight (weapons/cg_explosion.c), threw dust and earth onto the view, strength
+0 to 1: sprays of grit land on the side it came from, a large one or two and small ones around them, more and larger
+the stronger. They stick a moment, then trickle down in fits and leave a thin trail of grains, and fall off from the
+edge in as they go (CG_ScreenFxDirts).
+=================
+*/
+void CG_ScreenFxDirt( const vec3_t origin, float strength ) {
+	vec3_t	dir;
+	float	cx, cy;
+	int		i, count, large;
+
+	if ( !sfx.hasDirt || !v_screenFx.integer || !v_fxBlast.integer || strength <= 0.0f
+		|| ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+		return;
+	}
+	strength = Com_Clamp( 0.0f, 1.0f, strength );
+	VectorSubtract( origin, cg.refdef.vieworg, dir );
+	VectorNormalize( dir );
+	cx = Com_Clamp( 0.15f, 0.85f, 0.5f - 0.35f * DotProduct( dir, cg.refdef.viewaxis[1] ) + Q_flrand( -0.1f, 0.1f ) );
+	cy = Com_Clamp( 0.2f, 0.8f, 0.55f - 0.3f * DotProduct( dir, cg.refdef.viewaxis[2] ) + Q_flrand( -0.1f, 0.1f ) );
+	count = 3 + (int)( strength * 6.0f + Q_flrand( 0.0f, 1.0f ) );
+	large = 1 + (int)( strength * 1.5f );
+	for ( i = 0; i < count; i++ ) {
+		fxDirt_t	*d = &sfx.dirts[0];
+		const int	big = i < large;
+		int			k;
+
+		// a free one, else the oldest
+		for ( k = 0; k < FX_DIRTS; k++ ) {
+			if ( !sfx.dirts[k].active ) {
+				d = &sfx.dirts[k];
+				break;
+			}
+			if ( sfx.dirts[k].born < d->born ) {
+				d = &sfx.dirts[k];
+			}
+		}
+		memset( d, 0, sizeof( *d ) );
+		d->active = qtrue;
+		d->born = cg.time;
+		d->life = (int)Q_flrand( 3500.0f, 6000.0f );
+		d->x = cx + Q_flrand( -1.0f, 1.0f ) * ( big ? 0.08f : 0.25f );
+		d->y = cy + Q_flrand( -1.0f, 1.0f ) * ( big ? 0.07f : 0.2f );
+		d->radius = big ? Q_flrand( 0.06f, 0.12f ) * ( 0.6f + 0.6f * strength ) : Q_flrand( 0.015f, 0.04f );
+		d->stopUntil = cg.time + (int)Q_flrand( 250.0f, 900.0f );
+		d->seed = Q_flrand( 0.0f, 1.0f );
+	}
+}
+
+// The sprays of dirt on the view: they trickle down in fits, grow a trail of grains behind them and thin out from the
+// edge in. Each is a source of the frame.
+static void CG_ScreenFxDirts( void ) {
+	const float	dt = Com_Clamp( 0.0f, 0.1f, cg.frametime * 0.001f );
+	int			i;
+
+	for ( i = 0; i < FX_DIRTS; i++ ) {
+		fxDirt_t			*d = &sfx.dirts[i];
+		screenFxSource_t	*src;
+		const int			age = cg.time - d->born;
+		float				left;
+
+		if ( !d->active ) {
+			continue;
+		}
+		if ( age >= d->life || age < 0 || d->y - d->radius > 1.05f
+			|| ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+			d->active = qfalse;
+			continue;
+		}
+		left = 1.0f - (float)age / d->life;
+		if ( cg.time >= d->stopUntil ) {
+			const float top = 0.03f + d->radius * 0.4f;
+
+			d->speed = Q_min( top, d->speed + top * 2.5f * dt );
+			d->y += d->speed * dt;
+			d->trail = Q_min( 0.2f, d->trail + d->speed * dt * 0.6f );
+			// (grit catches on the glass and lets go again)
+			if ( Q_flrand( 0.0f, 1.0f ) < dt * 2.0f ) {
+				d->stopUntil = cg.time + (int)Q_flrand( 120.0f, 500.0f );
+				d->speed = 0.0f;
+			}
+		}
+		src = CG_ScreenFxSource();
+		if ( !src ) {
+			break;
+		}
+		src->kind = SCREENFX_DIRT;
+		src->a[0] = src->b[0] = d->x;
+		src->a[1] = src->b[1] = d->y;
+		src->radius = d->radius;
+		src->width = d->trail;
+		src->strength = Com_Clamp( 0.0f, 1.0f, left * 1.4f );
+		src->distance = 0.0f;
+		src->seed = d->seed;
 	}
 }
 
@@ -1295,6 +1433,9 @@ void CG_ScreenFxScene( void ) {
 		CG_ScreenFxDrops();
 	}
 	CG_ScreenFxBloods();
+	if ( v_fxBlast.integer ) {
+		CG_ScreenFxDirts();
+	}
 	split = sfx.split * ( 1.0f - ( cg.time - sfx.splitTime ) / (float)SPLIT_MSEC );
 
 	memset( &fx, 0, sizeof( fx ) );

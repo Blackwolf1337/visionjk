@@ -142,32 +142,59 @@ qboolean CG_BoltLight( const centity_t *cent ) {
 // The shots of vehicles fly with an effect of their own and the game gives them WP_BLASTER whatever they are, so the
 // colour goes by the weapon file (ext_data/vehicles/weapons/*.vwp): the lasers of the Empire (TIE, imp_laser) green,
 // those of the rebels, the YT-1300, the AT-ST and the swoops red, the ion blaster blue, concussion missiles blue-white,
-// torpedoes and rockets orange and larger. Bombs and mines that drift or lie about have none.
-qboolean CG_VehicleBoltLight( const centity_t *cent, const vehWeaponInfo_t *weapon ) {
+// torpedoes and rockets orange and larger. Bombs and mines that drift or lie about have none. laser: one of the first
+// two, a bolt like that of a blaster.
+static qboolean VehicleBolt_Look( const vehWeaponInfo_t *weapon, float *radius, vec3_t color, qboolean *laser ) {
 	const char	*name = weapon->name ? weapon->name : "";
-	float		radius = 120.0f;
-	vec3_t		color;
 
+	*radius = 120.0f;
+	*laser = qfalse;
 	if ( weapon->bHasGravity || Q_stristr( name, "mine" ) || Q_stristr( name, "bomb" ) ) {
 		return qfalse;
 	}
 	if ( weapon->bIonWeapon ) {
-		radius = 150.0f;
+		*radius = 150.0f;
 		VectorSet( color, 0.35f, 0.55f, 1.0f );
 	} else if ( Q_stristr( name, "conc" ) ) {
-		radius = 160.0f;
+		*radius = 160.0f;
 		VectorSet( color, 0.4f, 0.6f, 1.0f );
 	} else if ( weapon->fWidth > 0.0f || weapon->fHeight > 0.0f || Q_stristr( name, "torp" ) || Q_stristr( name, "rocket" )
 		|| Q_stristr( name, "missile" ) ) {
-		radius = 180.0f;
+		*radius = 180.0f;
 		VectorSet( color, 1.0f, 0.55f, 0.2f );
 	} else if ( Q_stristr( name, "imp" ) || Q_stristr( name, "tie" ) ) {
 		VectorSet( color, 0.25f, 1.0f, 0.25f );
+		*laser = qtrue;
 	} else {
 		VectorSet( color, 1.0f, 0.32f, 0.12f );
+		*laser = qtrue;
+	}
+	return qtrue;
+}
+
+qboolean CG_VehicleBoltLight( const centity_t *cent, const vehWeaponInfo_t *weapon ) {
+	float		radius;
+	vec3_t		color;
+	qboolean	laser;
+
+	if ( !VehicleBolt_Look( weapon, &radius, color, &laser ) ) {
+		return qfalse;
 	}
 	Bolt_Add( cent, radius, color );
 	return qtrue;
+}
+
+qboolean CG_BoltColor( int weapon, qboolean altFire, vec3_t color ) {
+	float radius;
+
+	return Bolt_Look( weapon, altFire, &radius, color );
+}
+
+qboolean CG_VehicleLaserColor( const vehWeaponInfo_t *weapon, vec3_t color ) {
+	float		radius;
+	qboolean	laser;
+
+	return (qboolean)( VehicleBolt_Look( weapon, &radius, color, &laser ) && laser );
 }
 
 void CG_ChargeLight( int weapon, const vec3_t at, float charge ) {
