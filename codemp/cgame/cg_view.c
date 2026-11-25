@@ -32,6 +32,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/weapons/cg_boltlight.h"
 #include "cgame/weapons/cg_explosion.h"
+#include "cgame/level/cg_doors.h"
+#include "cgame/level/cg_gust.h"
+#include "cgame/level/cg_motes.h"
 #include "cgame/weapons/cg_airring.h"
 #include "cgame/weapons/cg_wallfx.h"
 #include "game/bg/bg_saga.h"
@@ -2743,6 +2746,12 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_SaberClashAdd();
 		CG_BoltLightsAdd( qfalse );
 		CG_ExplosionsAdd();
+		// the pushes of this frame, leaves and grass (level/cg_gust.c); before CG_SliceScene, whose ragdolls ask for the pushes
+		CG_GustFrame();
+		// fireflies and the embers over lava (level/cg_motes.c)
+		CG_MotesFrame();
+		// heavy doors that open (level/cg_doors.c)
+		CG_DoorsFrame();
 		CG_AirRingsScene();
 		CG_WallFxScene();
 		CG_SaberSoundNearMiss();

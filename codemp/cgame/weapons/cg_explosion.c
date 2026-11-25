@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_explosion.h"
+#include "cgame/level/cg_gust.h"
 
 #define SURFACE_REACH		48.0f		// units around the blast it looks for what it went off on
 #define DEBRIS_NEAR			2500.0f		// further away: no bits, no dust cloud
@@ -340,6 +341,7 @@ static void Explosion_Go( int weapon, qboolean altFire, const vec3_t origin, con
 	if ( Explosion_Surface( origin, dir, at, normal ) && CG_ImpactMaterial( at, normal, qfalse, &material, &surfaceFlags ) ) {
 		kind = CG_ImpactKindOf( material );
 		Explosion_Debris( at, normal, kind, size );
+		CG_GustBlast( at, normal, material, size );
 		// (nothing burns on snow, ice or water)
 		if ( numFires && normal[2] >= FLOOR_NORMAL && kind != IMPACT_COLD && !( surfaceFlags & SURF_NOMARKS ) ) {
 			Explosion_Fires( at, size, numFires );

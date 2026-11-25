@@ -208,6 +208,10 @@ static qboolean Impact_Kind( const vec3_t at, const vec3_t normal, qboolean meta
 	return qtrue;
 }
 
+qhandle_t CG_ImpactDustShader( void ) {
+	return dustShader;
+}
+
 qboolean CG_ImpactDustColor( impactKind_t kind, vec3_t color ) {
 	const impactLook_t *look = &impactLooks[kind];
 
