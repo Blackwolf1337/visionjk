@@ -7944,7 +7944,7 @@ static void PM_Weapon( void )
 
 	if (pm->ps->weapon == WP_EMPLACED_GUN)
 	{
-		addTime = weaponData[pm->ps->weapon].fireTime / BG_FireRate();	// VisionJK: /amfirerate
+		addTime = weaponData[pm->ps->weapon].fireTime / BG_FireRate( pm->ps->clientNum );	// VisionJK: /amfirerate
 		pm->ps->weaponTime += addTime;
 		if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK) )
 		{
@@ -8244,8 +8244,8 @@ static void PM_Weapon( void )
 		addTime *= 1.5;
 	}
 
-	// VisionJK: /amfirerate (vs_fireRate)
-	addTime = Q_max( 1, (int)( addTime / BG_FireRate() + 0.5f ) );
+	// VisionJK: /amfirerate
+	addTime = Q_max( 1, (int)( addTime / BG_FireRate( pm->ps->clientNum ) + 0.5f ) );
 
 	pm->ps->weaponTime += addTime;
 }

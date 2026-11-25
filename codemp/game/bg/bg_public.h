@@ -1775,10 +1775,10 @@ void BG_G2WalkerHeadAngles( void *ghoul2, int time, const vec3_t angles );
 #define VS_CAPS_WALKER		1024
 #define V_CAPS_WALKER		16
 qboolean BG_WalkerSteps( int pilot );
-// VisionJK: how many times as fast every weapon fires (/amfirerate, the serverinfo cvar vs_fireRate; 0 there: as it
-// always did, 1 here). The game and the cgame each have their own. A legacy client predicts its own shots at the old
-// rate, the server fires them at this one.
-float BG_FireRate( void );
+// VisionJK: how many times as fast the weapons of this player fire (/amfirerate of an admin for himself; 1 as they always
+// did). The game and the cgame each have their own: the game keeps it in his jpClient_t, his cgame hears it from the
+// server command vs_fireRate. A legacy client predicts his shots at the old rate, the server fires them at this one.
+float BG_FireRate( int clientNum );
 
 //BG anim utility functions:
 

@@ -135,9 +135,14 @@ qboolean BG_WalkerSteps( int pilot ) {
 		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & VS_CAPS_WALKER ) != 0 );
 }
 
-// how many times as fast every weapon fires (bg_public.h): the vs_fireRate of the server, 0 or none the old rate
-float BG_FireRate( void ) {
-	return cgs.fireRate > 0.0f ? Com_Clamp( 0.1f, 10.0f, cgs.fireRate ) : 1.0f;
+// how many times as fast the weapons of this player fire (bg_public.h): the server tells the own player alone what
+// /amfirerate set for him (vs_fireRate); everyone else, and he before it or after a new start of the cgame, the old rate
+float BG_FireRate( int clientNum ) {
+	return ( clientNum == cg.clientNum && cg.fireRate > 0.0f ) ? Com_Clamp( 0.1f, 10.0f, cg.fireRate ) : 1.0f;
+}
+
+static void CG_FireRateServerCommand( void ) {
+	cg.fireRate = atof( CG_Argv( 1 ) );
 }
 
 void CG_ParseServerinfo( void ) {
@@ -146,8 +151,6 @@ void CG_ParseServerinfo( void ) {
 	int i, value;
 
 	info = CG_ConfigString( CS_SERVERINFO );
-
-	cgs.fireRate = atof( Info_ValueForKey( info, "vs_fireRate" ) );
 
 	cgs.debugMelee = atoi( Info_ValueForKey( info, "g_debugMelee" ) ); //trap->Cvar_GetHiddenVarValue("g_iknowkungfu");
 	cgs.stepSlideFix = atoi( Info_ValueForKey( info, "g_stepSlideFix" ) );
@@ -957,6 +960,7 @@ require a reload of all the media
 ===============
 */
 static void CG_MapRestart( void ) {
+	cg.fireRate = 0.0f;		// (the server sends it again when he begins, JP_ClientBeginInit)
 	if ( cg_showMiss.integer ) {
 		trap->Print( "CG_MapRestart\n" );
 	}
@@ -1505,6 +1509,7 @@ static serverCommand_t	commands[] = {
 	{ "ircg",				CG_RestoreClientGhoul_f },
 	{ "vs_auth",				CG_AuthServerCommand },
 	{ "vs_box",				CG_BoomboxServerCommand },
+	{ "vs_fireRate",			CG_FireRateServerCommand },
 	{ "jpclient",			CG_PeerServerCommand },
 	{ "vs_status",			CG_StatusServerCommand },
 	{ "vs_tool",			CG_ToolServerCommand },

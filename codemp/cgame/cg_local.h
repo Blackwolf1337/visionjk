@@ -763,6 +763,7 @@ typedef struct cg_s {
 	int			clientFrame;		// incremented each frame
 
 	int			clientNum;
+	float		fireRate;			// VisionJK: what /amfirerate set for the own player (vs_fireRate, BG_FireRate), 0 none
 
 	qboolean	demoPlayback;
 	qboolean	levelShot;			// taking a level menu screenshot
@@ -1580,7 +1581,6 @@ typedef struct cgs_s {
 	int				siegeTeamSwitch;
 	int				showDuelHealths;
 	gametype_t		gametype;
-	float			fireRate;		// VisionJK: vs_fireRate of the server (BG_FireRate)
 	int				debugMelee;
 	int				stepSlideFix;
 	int				noSpecMove;

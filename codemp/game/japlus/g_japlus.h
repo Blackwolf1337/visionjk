@@ -96,6 +96,7 @@ typedef struct jpClient_s {
 	qboolean	protectedByAdmin;
 	qboolean	empowered;
 	qboolean	merc;
+	float		fireRate;				// VisionJK /amfirerate: his weapons fire that many times as fast, 0 as always
 	int			userinfoCount;			// jp_userInfoAntiSpam: userinfo changes, lowered every 4 seconds
 	int			userinfoDecayTime;
 	int			inactProtectTime;		// jp_inactivityProtectTimer: idle players are protected after this
@@ -311,6 +312,7 @@ void		Cmd_amkillvote_f( gentity_t *ent, qboolean rcon );
 void		Cmd_ampoll_f( gentity_t *ent, qboolean rcon );
 void		Cmd_amweather_f( gentity_t *ent, qboolean rcon );
 void		Cmd_amfirerate_f( gentity_t *ent, qboolean rcon );
+void		JP_SendFireRate( gentity_t *ent );
 void		Cmd_amplayefx_f( gentity_t *ent, qboolean rcon );
 void		Cmd_amtest_f( gentity_t *ent, qboolean rcon );
 qboolean	JP_TeamLockRefused( gentity_t *ent, team_t *team, qboolean autoPick );
