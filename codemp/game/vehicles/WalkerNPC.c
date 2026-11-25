@@ -506,6 +506,8 @@ static void AnimateVehicle( Vehicle_t *pVeh )
 void AttachRidersGeneric( Vehicle_t *pVeh );
 #endif
 
+#define WALKER_AMMO_RECHARGE_MS	3000	// a rocket of the AT-ST every 3 seconds, all 20 in a minute
+
 //on the client this function will only set up the process command funcs
 void G_SetWalkerVehicleFunctions( vehicleInfo_t *pVehInfo )
 {
@@ -526,6 +528,21 @@ void G_SetWalkerVehicleFunctions( vehicleInfo_t *pVehInfo )
 //	pVehInfo->Initialize				=		Initialize;
 //	pVehInfo->Update					=		Update;
 //	pVehInfo->UpdateRider				=		UpdateRider;
+	// VisionJK: the rockets of the AT-ST (weap2 of atst_vehicle.veh: 20, and none coming back) fill up again as its
+	// lasers do (one in 500 ms), only slowly. A weapon of a walker whose file gives it ammunition and no time to
+	// recharge takes this one; a file that names one keeps it. Counted by the game alone (g_vehicles.c Update), the
+	// clients are sent what is left.
+	{
+		int i;
+
+		for ( i = 0; i < MAX_VEHICLE_WEAPONS; i++ )
+		{
+			if ( pVehInfo->weapon[i].ammoMax > 0 && !pVehInfo->weapon[i].ammoRechargeMS )
+			{
+				pVehInfo->weapon[i].ammoRechargeMS = WALKER_AMMO_RECHARGE_MS;
+			}
+		}
+	}
 #endif //_GAME
 	pVehInfo->ProcessMoveCommands		=		ProcessMoveCommands;
 	pVehInfo->ProcessOrientCommands		=		ProcessOrientCommands;
