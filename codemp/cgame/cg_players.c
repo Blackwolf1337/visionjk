@@ -2659,6 +2659,23 @@ float CG_WalkerDrop( const centity_t *cent )
 	return legs->drop + CG_WalkerBodyLag( cent->currentState.number, cent->lerpOrigin[2] );
 }
 
+// The yaw the model of this walker is drawn at: the one of its legs, with its head turned to where it looks by a
+// bone (CG_WalkerAngles), and not the yaw the game has for it, which is where it looks. Whoever works out a bolt of
+// the model takes this one, or the turn of the head counts twice: its muzzles (cg_event.c CG_CalcVehMuzzle) and
+// every effect bolted to it (cg_main.c C_GetLerpData) were off to its side by as far as it looked aside. For
+// anything else the yaw it has.
+float CG_WalkerYaw( const centity_t *cent )
+{
+	const walkerLegs_t *legs = &cg_walkerLegs[cent->currentState.number];
+
+	if ( !cent->m_pVehicle || !cent->m_pVehicle->m_pVehicleInfo || cent->m_pVehicle->m_pVehicleInfo->type != VH_WALKER
+		|| !legs->time || cg.time - legs->time > 100 || cg.time < legs->time )
+	{
+		return cent->lerpAngles[YAW];
+	}
+	return legs->yaw;
+}
+
 static void CG_WalkerAngles( centity_t *cent, vec3_t legsAngles )
 {
 	const float		view = cent->lerpAngles[YAW];

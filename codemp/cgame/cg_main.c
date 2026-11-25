@@ -124,6 +124,9 @@ static void C_GetLerpOrigin( void ) {
 	VectorCopy( cg_entities[data->mEntityNum].lerpOrigin, data->mPoint );
 }
 
+float CG_WalkerDrop( const centity_t *cent );
+float CG_WalkerYaw( const centity_t *cent );
+
 // only used by FX system to pass to getboltmat
 static void C_GetLerpData( void ) {
 	TCGGetBoltData *data = &cg.sharedBuffer.getBoltData;
@@ -153,6 +156,10 @@ static void C_GetLerpData( void ) {
 			data->mAngles[PITCH] = 0.0f;
 			data->mAngles[ROLL] = 0.0f;
 		}
+		// VisionJK: an AT-ST is drawn as its legs stand and below its box (cg_players.c), and what is bolted to it
+		// goes with that: the flash of its guns stood beside it when it looked aside
+		data->mAngles[YAW] = CG_WalkerYaw( &cg_entities[data->mEntityNum] );
+		data->mOrigin[2] -= CG_WalkerDrop( &cg_entities[data->mEntityNum] );
 	}
 }
 

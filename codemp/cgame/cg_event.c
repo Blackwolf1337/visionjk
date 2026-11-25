@@ -1199,6 +1199,7 @@ void CG_G2MarkEvent(entityState_t *es)
 }
 
 float CG_WalkerDrop( const centity_t *cent );
+float CG_WalkerYaw( const centity_t *cent );
 void CG_CalcVehMuzzle(Vehicle_t *pVeh, centity_t *ent, int muzzleNum)
 {
 	mdxaBone_t boltMatrix;
@@ -1226,6 +1227,8 @@ void CG_CalcVehMuzzle(Vehicle_t *pVeh, centity_t *ent, int muzzleNum)
 			vehAngles[PITCH] = 0.0f;
 		}
 	}
+	// VisionJK: the model of an AT-ST stands as its legs do, its head is turned by a bone (cg_players.c)
+	vehAngles[YAW] = CG_WalkerYaw( ent );
 	trap->G2API_GetBoltMatrix_NoRecNoRot(ent->ghoul2, 0, pVeh->m_iMuzzleTag[muzzleNum], &boltMatrix, vehAngles,
 		ent->lerpOrigin, cg.time, NULL, ent->modelScale);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, pVeh->m_vMuzzlePos[muzzleNum]);
