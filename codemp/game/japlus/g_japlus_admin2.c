@@ -410,33 +410,39 @@ void Cmd_amweather_f( gentity_t *ent, qboolean rcon ) {
 
 /*
 =================
-amfirerate [factor]: VisionJK, every weapon fires factor times as fast (vs_fireRate, BG_FireRate), 0 as it always
-did. For rcon level admins and the server console: the masks of the ranks have no bit left for a new command.
+amfirerate [factor]: VisionJK, the weapons of the admin who sends it fire factor times as fast (pers.jp.fireRate,
+BG_FireRate), 0 as they always did; nobody else's. For rcon level admins: the masks of the ranks have no bit left for
+a new command. His cgame hears it from vs_fireRate (JP_SendFireRate) and predicts his shots at that rate.
 =================
 */
+void JP_SendFireRate( gentity_t *ent ) {
+	trap->SendServerCommand( ent-g_entities, va( "vs_fireRate %g", ent->client->pers.jp.fireRate ) );
+}
+
 void Cmd_amfirerate_f( gentity_t *ent, qboolean rcon ) {
 	char	arg[MAX_TOKEN_CHARS];
 	float	rate;
 
-	if ( !rcon && ent->client->sess.jpAdminLevel != JPADM_RCON ) {
+	if ( rcon ) {
+		trap->Print( "amfirerate is for an admin in the game: it changes his own weapons\n" );
+		return;
+	}
+	if ( ent->client->sess.jpAdminLevel != JPADM_RCON ) {
 		trap->Argv( 0, arg, sizeof( arg ) );
 		trap->SendServerCommand( ent-g_entities, va( "print \"unknown cmd %s\n\"", arg ) );
 		return;
 	}
 	if ( trap->Argc() < 2 ) {
-		JP_Reply( ent, rcon, va( "Fire rate: ^2%s^7. Usage: ^2amfirerate ^7<factor>, 2 twice as fast, 0.5 half as fast, 0 off\n",
-			vs_fireRate.value > 0.0f ? va( "%gx", BG_FireRate() ) : "normal" ) );
+		JP_Reply( ent, rcon, va( "Your fire rate: ^2%s^7. Usage: ^2amfirerate ^7<factor>, 2 twice as fast, 0.5 half as fast, 0 off\n",
+			ent->client->pers.jp.fireRate > 0.0f ? va( "%gx", ent->client->pers.jp.fireRate ) : "normal" ) );
 		return;
 	}
 	trap->Argv( 1, arg, sizeof( arg ) );
 	rate = atof( arg );
-	rate = rate > 0.0f ? Com_Clamp( 0.1f, 10.0f, rate ) : 0.0f;
-	trap->Cvar_Set( "vs_fireRate", va( "%g", rate ) );
-	trap->Cvar_Update( &vs_fireRate );
-	if ( rate > 0.0f )
-		trap->SendServerCommand( -1, va( "print \"^7Fire rate of all weapons: ^2%gx\n\"", rate ) );
-	else
-		trap->SendServerCommand( -1, "print \"^7Fire rate of all weapons: ^2normal\n\"" );
+	ent->client->pers.jp.fireRate = rate > 0.0f ? Com_Clamp( 0.1f, 10.0f, rate ) : 0.0f;
+	JP_SendFireRate( ent );
+	JP_Reply( ent, rcon, ent->client->pers.jp.fireRate > 0.0f
+		? va( "^7Your fire rate: ^2%gx\n", ent->client->pers.jp.fireRate ) : "^7Your fire rate: ^2normal\n" );
 }
 
 /*

@@ -192,7 +192,6 @@ XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									q
 // bits 4 to 6 were Focus and the Vision Temple and stay unused, bit 7 hats and capes (status/g_status.c), bit 8
 // the key login with the host key of the server (auth/bg_auth.h), bit 10 the AT-ST steps sideways, turns on the spot
 // and turns its head for a pilot whose cgame predicts it (BG_WalkerSteps).
-XCVAR_DEF( vs_fireRate,			"0",			NULL,						CVAR_SERVERINFO,								qfalse )
 XCVAR_DEF( vs_caps,				"1935",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 // The boombox (boombox/g_boombox.c), on the relay of the voice chat. vs_boombox is in the server info: the cgame of this
 // tree asks for boxes only where it reads it there. The programs that fetch the songs can only be named while the

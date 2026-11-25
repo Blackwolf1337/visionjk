@@ -216,9 +216,11 @@ qboolean BG_WalkerSteps( int pilot ) {
 		&& ( ent->client->pers.jp.statusCaps & V_CAPS_WALKER ) );
 }
 
-// how many times as fast every weapon fires (bg_public.h): vs_fireRate, which /amfirerate sets, 0 the old rate
-float BG_FireRate( void ) {
-	return vs_fireRate.value > 0.0f ? Com_Clamp( 0.1f, 10.0f, vs_fireRate.value ) : 1.0f;
+// how many times as fast the weapons of this player fire (bg_public.h): what /amfirerate set for him, 0 the old rate
+float BG_FireRate( int clientNum ) {
+	const gentity_t *ent = ( clientNum >= 0 && clientNum < MAX_CLIENTS ) ? &g_entities[clientNum] : NULL;
+
+	return ( ent && ent->client && ent->client->pers.jp.fireRate > 0.0f ) ? ent->client->pers.jp.fireRate : 1.0f;
 }
 
 /*

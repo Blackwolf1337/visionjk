@@ -759,6 +759,10 @@ void JP_ClientBeginInit( gentity_t *ent ) {
 	jpClient_t *jp = &client->pers.jp;
 	const int clientNum = ent-g_entities;
 
+	// VisionJK: /amfirerate of an admin stays over a map_restart, his cgame starts over (BG_FireRate)
+	if ( jp->fireRate > 0.0f )
+		JP_SendFireRate( ent );
+
 	// the plugin can log in the admin and the clan pass by itself
 	{
 		char userinfo[MAX_INFO_STRING];
