@@ -864,7 +864,7 @@ REFERENCE           WEAPON_EFFECTS
 LANG_ENGLISH        "Weapon Effects"
 
 REFERENCE           SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
-LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, bolts glow and leave a short trail, and a bolt that bounces off metal whines away. Explosions throw debris, shake dust from the ceiling and leave small fires. Thermal detonators, mines and charges blink and beep, DEMP2 arcs crawl over walls, flechette shards stay in them, charged shots and the concussion beam push rings of air, and the rope of the hook sags. A bolt that passes close to your head is heard, and your shots sound higher as the ammunition runs out. Sparks need GPU Sparks."
+LANG_ENGLISH        "Shots throw sparks, splinters or dust and sound by what they hit, bolts glow and leave a short trail, and a bolt that bounces off metal whines away. Explosions throw debris, shake dust from the ceiling and leave small fires. Thermal detonators, mines and charges blink and beep, DEMP2 arcs crawl over walls, flechette shards stay in them, charged shots and the concussion beam push rings of air, and the rope of the hook sags. A bolt that passes close to your head is heard, a rocket howls past, and your shots sound higher as the ammunition runs out. Sparks need GPU Sparks."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
