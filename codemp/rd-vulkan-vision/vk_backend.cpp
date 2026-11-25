@@ -1023,9 +1023,13 @@ static void RB_DrawWet( int depthRange ) {
 
 		backEnd.currentEntity = &tr.worldEntity;
 		backEnd.ori = backEnd.viewParms.world;
+		// (the matrices kept are those of the entity drawn last: in third person with a moving light, the own body of
+		// the light passes above, and the sparks went where its model space put them)
+		VK_InvalidateTransform();
 		VK_SparksDraw( VK_CurrentTransform() );
 		backEnd.currentEntity = entity;
 		backEnd.ori = ori;
+		VK_InvalidateTransform();
 		rb_entityReset = qtrue;
 	}
 	VK_GpuMark( "sparks" );
