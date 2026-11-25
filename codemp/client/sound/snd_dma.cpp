@@ -995,15 +995,16 @@ S_StartSound
 Validates the parms and ques the sound up
 if pos is NULL, the sound will be dynamically sourced from the entity
 entchannel 0 will never override a playing sound
+VisionJK: returns the channel it plays on, NULL: none
 ====================
 */
-void S_StartSound(const vec3_t origin, int entityNum, int entchannel, sfxHandle_t sfxHandle )
+static channel_t *S_StartSoundChannel( const vec3_t origin, int entityNum, int entchannel, sfxHandle_t sfxHandle )
 {
 	channel_t	*ch;
 	/*const*/ sfx_t *sfx;
 
 	if ( !s_soundStarted || s_soundMuted ) {
-		return;
+		return NULL;
 	}
 
 	if ( !origin && ( entityNum < 0 || entityNum >= MAX_GENTITIES ) ) {
@@ -1028,7 +1029,7 @@ void S_StartSound(const vec3_t origin, int entityNum, int entchannel, sfxHandle_
 
 	ch = S_PickChannel( entityNum, entchannel );
 	if (!ch) {
-		return;
+		return NULL;
 	}
 
 	if (origin) {
@@ -1064,6 +1065,31 @@ void S_StartSound(const vec3_t origin, int entityNum, int entchannel, sfxHandle_
 	else
 	{
 		memset(&ch->MP3StreamHeader,0,						sizeof(ch->MP3StreamHeader));
+	}
+	return ch;
+}
+
+void S_StartSound( const vec3_t origin, int entityNum, int entchannel, sfxHandle_t sfxHandle )
+{
+	S_StartSoundChannel( origin, entityNum, entchannel, sfxHandle );
+}
+
+/*
+====================
+S_StartSoundPitch
+
+VisionJK: S_StartSound with its samples played pitch times as fast, so it is that much higher and shorter, for
+the cgame (ext.S_StartSoundPitch: the shot of a weapon running empty). From 1 to 2, below 1 it plays as it was
+made, and so does an MP3 that stays packed (sound/chars), which the mixer can only read on sample by sample.
+====================
+*/
+void S_StartSoundPitch( const vec3_t origin, int entityNum, int entchannel, sfxHandle_t sfxHandle, float pitch )
+{
+	channel_t *ch = S_StartSoundChannel( origin, entityNum, entchannel, sfxHandle );
+
+	if ( ch && pitch > 1.0f && ch->thesfx->eSoundCompressionMethod == ct_16 ) {
+		ch->doppler = qtrue;
+		ch->dopplerScale = Q_min( pitch, 2.0f );
 	}
 }
 
@@ -2045,7 +2071,7 @@ qboolean S_ScanChannelStarts( void ) {
 		}
 
 		// if it is completely finished by now, clear it. snd_spatial.cpp may still read it a while longer.
-		if ( (int)(ch->startSample + ch->thesfx->iSoundLengthInSamples) + ( ch->spatial ? ch->spatialTail : 0 ) <= s_paintedtime ) {
+		if ( (int)(ch->startSample + S_ChannelLength( ch )) + ( ch->spatial ? ch->spatialTail : 0 ) <= s_paintedtime ) {
 			ch->thesfx = NULL;
 			continue;
 		}

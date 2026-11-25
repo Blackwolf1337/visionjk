@@ -3279,7 +3279,7 @@
 		{
 			name					vision_yesno_v_weaponimpacts
 			type					ITEM_TYPE_YESNO
-			text					@VISION_IMPACTS_BY_MATERIAL
+			text					@VISION_WEAPON_EFFECTS
 			descText				@VISION_SHOTS_THROW_SPARKS_SPLINTERS_OR_DUST
 			cvar					"v_weaponImpacts"
 			action { play "sound/interface/button1.wav" ; }

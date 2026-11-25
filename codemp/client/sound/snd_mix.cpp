@@ -593,6 +593,10 @@ void S_PaintChannels( int endtime ) {
 					sampleOffset = ltime % sc->iSoundLengthInSamples;
 				} else {
 					sampleOffset = ltime - ch->startSample;
+					// VisionJK: a sound started higher (S_StartSoundPitch) is that much further on in its samples
+					if ( S_ChannelPitch( ch ) > 1.0f ) {
+						sampleOffset = (int)( sampleOffset * ch->dopplerScale );
+					}
 				}
 
 				count = end - ltime;

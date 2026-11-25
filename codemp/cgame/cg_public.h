@@ -860,6 +860,14 @@ typedef struct cgameImport_s {
 		// the ray from start to end meets is made of by steamaudio/materials.txt (MATERIAL_*), MATERIAL_NONE: not known.
 		// Walks the surfaces of the level, so not many a frame.
 		int				(*R_SurfaceMaterial)					( const vec3_t start, const vec3_t end );
+		// Only where the ROM cvar v_cgameSoundPitch is 1, an older engine ends this table before. S_StartSound with the
+		// samples played pitch times as fast, so that much higher and shorter: 1 to 2, below 1 as it was made.
+		void			(*S_StartSoundPitch)					( const vec3_t origin, int entityNum, int entchannel, sfxHandle_t sfx, float pitch );
+		// Only where the ROM cvar v_cgameBandLight is 1, an older engine ends this table before; NULL: the renderer has
+		// none. Between R_ClearScene and R_RenderScene, in place of R_AddLightToScene: a point light at origin reaching
+		// radius that leaves only round the plane across axis, width the sine of the angle out of it where most of it
+		// is gone. The glowing ring of a thermal detonator throws a stripe of light (cgame/weapons/cg_thermal.c).
+		void			(*R_AddBandLight)						( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
 	} ext;
 } cgameImport_t;
 

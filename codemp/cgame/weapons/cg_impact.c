@@ -171,11 +171,9 @@ static int Impact_TableMaterial( const vec3_t start, const vec3_t end ) {
 	return trap->ext.R_SurfaceMaterial( start, end );
 }
 
-// qfalse: no wall there, or one that takes no marks
-static qboolean Impact_Kind( const vec3_t at, const vec3_t normal, qboolean metal, impactKind_t *kind ) {
+qboolean CG_ImpactMaterial( const vec3_t at, const vec3_t normal, qboolean metal, int *material, int *surfaceFlags ) {
 	trace_t	tr;
 	vec3_t	start, end;
-	int		material = MATERIAL_NONE;
 
 	VectorMA( at, 3.0f, normal, start );
 	VectorMA( at, -8.0f, normal, end );
@@ -183,24 +181,48 @@ static qboolean Impact_Kind( const vec3_t at, const vec3_t normal, qboolean meta
 	if ( tr.fraction >= 1.0f || ( tr.surfaceFlags & ( SURF_SKY | SURF_NOIMPACT ) ) ) {
 		return qfalse;
 	}
+	*material = MATERIAL_NONE;
 	if ( tr.entityNum == ENTITYNUM_WORLD ) {
-		material = Impact_TableMaterial( start, end );
+		*material = Impact_TableMaterial( start, end );
 	}
-	if ( material == MATERIAL_NONE ) {
-		material = tr.surfaceFlags & MATERIAL_MASK;
+	if ( *material == MATERIAL_NONE ) {
+		*material = tr.surfaceFlags & MATERIAL_MASK;
 	}
-	if ( material == MATERIAL_NONE && ( metal || ( tr.surfaceFlags & SURF_METALSTEPS ) ) ) {
-		material = MATERIAL_SOLIDMETAL;
+	if ( *material == MATERIAL_NONE && ( metal || ( tr.surfaceFlags & SURF_METALSTEPS ) ) ) {
+		*material = MATERIAL_SOLIDMETAL;
+	}
+	if ( surfaceFlags ) {
+		*surfaceFlags = tr.surfaceFlags;
+	}
+	return qtrue;
+}
+
+// qfalse: no wall there, or one that takes no marks
+static qboolean Impact_Kind( const vec3_t at, const vec3_t normal, qboolean metal, impactKind_t *kind ) {
+	int material;
+
+	if ( !CG_ImpactMaterial( at, normal, metal, &material, NULL ) ) {
+		return qfalse;
 	}
 	*kind = CG_ImpactKindOf( material );
 	return qtrue;
 }
 
-static void Impact_Chips( const vec3_t at, const vec3_t normal, int count ) {
+qboolean CG_ImpactDustColor( impactKind_t kind, vec3_t color ) {
+	const impactLook_t *look = &impactLooks[kind];
+
+	if ( look->puff <= 0.0f ) {
+		return qfalse;
+	}
+	VectorSet( color, look->r, look->g, look->b );
+	return qtrue;
+}
+
+void CG_ImpactChips( const vec3_t at, const vec3_t normal, const impactChips_t *how, int count ) {
 	int i, k;
 
 	for ( i = 0; i < count; i++ ) {
-		const qhandle_t	model = cgs.media.chunkModels[Q_irand( CHUNK_CRATE1, CHUNK_CRATE2 )][Q_irand( 0, 3 )];
+		const qhandle_t	model = cgs.media.chunkModels[Q_irand( how->firstChunk, how->lastChunk )][Q_irand( 0, NUM_CHUNK_MODELS - 1 )];
 		localEntity_t	*le;
 		refEntity_t		*re;
 		vec3_t			dir;
@@ -213,21 +235,21 @@ static void Impact_Chips( const vec3_t at, const vec3_t normal, int count ) {
 		re->hModel = model;
 		re->renderfx |= RF_MINLIGHT;	// (a splinter is no black speck in a dark room)
 		le->leType = LE_FRAGMENT;
-		le->endTime = cg.time + Q_irand( 700, 1200 );
+		le->endTime = cg.time + Q_irand( how->lifeMin, how->lifeMax );
 		VectorMA( at, 1.5f, normal, re->origin );
 		VectorCopy( re->origin, le->pos.trBase );
 		VectorSet( dir, normal[0] + flrand( -0.6f, 0.6f ), normal[1] + flrand( -0.6f, 0.6f ), normal[2] + flrand( -0.2f, 0.8f ) );
 		VectorNormalize( dir );
-		VectorScale( dir, flrand( 90.0f, 210.0f ), le->pos.trDelta );
+		VectorScale( dir, flrand( how->speedMin, how->speedMax ), le->pos.trDelta );
 		VectorSet( le->angles.trBase, flrand( 0.0f, 360.0f ), flrand( 0.0f, 360.0f ), flrand( 0.0f, 360.0f ) );
 		VectorSet( le->angles.trDelta, flrand( -700.0f, 700.0f ), flrand( -700.0f, 700.0f ), 0.0f );
 		le->pos.trType = TR_GRAVITY;
 		le->angles.trType = TR_LINEAR;
 		le->pos.trTime = le->angles.trTime = cg.time;
-		le->bounceFactor = 0.25f;
+		le->bounceFactor = how->bounce;
 		le->leFlags |= LEF_TUMBLE;
-		le->leBounceSoundType = LEBS_NONE;
-		le->radius = flrand( 0.07f, 0.14f );
+		le->leBounceSoundType = how->bounceSound;
+		le->radius = flrand( how->sizeMin, how->sizeMax );
 		re->nonNormalizedAxes = qtrue;
 		AxisCopy( axisDefault, re->axis );
 		for ( k = 0; k < 3; k++ ) {
@@ -265,7 +287,9 @@ static void Impact_Show( impactKind_t kind, const vec3_t at, const vec3_t normal
 		nextPuff = cg.time + IMPACT_PUFF_GAP;
 	}
 	if ( look->chips ) {
-		Impact_Chips( at, normal, scale >= 1.0f ? look->chips : 1 );
+		static const impactChips_t splinters = { CHUNK_CRATE1, CHUNK_CRATE2, 0.07f, 0.14f, 90.0f, 210.0f, 700, 1200, 0.25f, LEBS_NONE };
+
+		CG_ImpactChips( at, normal, &splinters, scale >= 1.0f ? look->chips : 1 );
 	}
 }
 

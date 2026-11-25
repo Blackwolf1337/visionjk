@@ -36,7 +36,7 @@ snd_restart
 | `v_spatialRays` | 2048 | rays of a pass of the reflections, 256 to 8192. Taken at the next `snd_restart` |
 | `v_spatialSources` | 8 | how many of the loudest sounds have reflections of their own, 0 to 16. 0: all ring with the room of the listener, as before 2026-10-17 |
 | `v_spatialThreads` | 0 | threads for a pass and for a bake. 0: a pass gets a quarter of the cores (1 to 4), a bake half of them. Above 0: that many for both, at most the cores of the machine. Taken at the next `snd_restart`. Not in a browser page |
-| `v_spatialPhysical` | 0 | 1: a sound fades with the distance as a real one does (1/r) and not as the game fades it, loses its highs in the air, and arrives at the speed of sound |
+| `v_spatialPhysical` | 0 | 1: a sound fades with the distance as a real one does (1/r) and not as the game fades it. Losing its highs in the air and arriving at the speed of sound is always on (since issue #22) |
 | `v_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
 | `s_doppler` | 1 | the doppler. With `v_spatial` it is the one of this file, see "Doppler" |
 | `v_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
@@ -169,7 +169,7 @@ player stay as they are, in both ears, and the room rings from them like from an
 a thump. The menus, the announcer and the music are not touched.
 
 What does not, unless `v_spatialPhysical` is 1: how loud a sound is at its distance is still what the game makes
-of it, and it is heard at once.
+of it. A far sound is heard late and duller all the same (issue #22, see "Sound travel").
 
 ## The library
 
@@ -332,17 +332,26 @@ jump faster than sound (a teleporter, the view going to another player) is no sp
 song of the boombox and the own player have none. `s_doppler 0` switches it off. With `v_spatial 0` the doppler is
 the game's.
 
+**A sound started higher.** The cgame can start a sound pitch times as fast (`ext.S_StartSoundPitch`, 1 to 2,
+ROM cvar `v_cgameSoundPitch`): the shot of the own player as his weapon runs empty (issue #22,
+`cgame/weapons/cg_boltsound.c`). It goes in the fields of the doppler of a loop (`dopplerScale` of `channel_t`).
+Before, the mixer only stepped through a loop that fast: a sound that plays once started every block of the
+paint buffer at its time since its start, so it was read faster within a block and jumped back at the next.
+Now its place in its sound is that time times the pitch, and it ends that much earlier (`S_ChannelLength`).
+A voice reads it at the pitch times its doppler. An MP3 that stays packed (`sound/chars`) is not pitched.
+
 A channel of the mixer is freed when the mixer's time is past the end of its sound. A voice that reads slower,
 or later (below), reads on after that: the channel stays for it (`spatialTail` of `channel_t`), which an MP3 needs,
 as it is decoded through its channel.
 
-**Sound travel** (`v_spatialPhysical 1`). The game fades a sound from where it is at full volume (6.5 m for most,
+**Sound travel.** The game fades a sound from where it is at full volume (6.5 m for most,
 19.5 m for a voice, 52 m for `CHAN_LESS_ATTEN`) in a straight line down to nothing 32 m further. With
 `v_spatialPhysical` it is at full volume as far, then falls with 1/r, 6 dB for each doubling, and is not heard
 below -50 dB (`S_SpatialFade`, which also gives the length of a way round a corner its fade). So it is as loud as
-before near by, and louder further away: a sound at 38 m is -15 dB and not gone. A far sound loses its highs in the
-air (Valve's default model for that). A sound the game starts is heard when it got here, at 343 m/s: 87 ms from
-30 m. Its own reflections get it without that delay, as their response has the time from it to the walls and
+before near by, and louder further away: a sound at 38 m is -15 dB and not gone. The rest is on also without
+`v_spatialPhysical` since issue #22 (a far fight is heard late, a far explosion is dull): a far sound loses its
+highs in the air (Valve's default model for that), but a voice of the voice chat only with `v_spatialPhysical`. A
+sound the game starts is heard when it got here, at 343 m/s: 87 ms from 30 m. Its own reflections get it without that delay, as their response has the time from it to the walls and
 from them in it. That is read a second time from the sound and is not possible for an MP3, whose reflections are
 late by the way here. Loops are not late, they have no start.
 

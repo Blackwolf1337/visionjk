@@ -362,6 +362,9 @@ typedef struct refexport_s {
 		// A burst of sparks simulated on the device (sparkBurst_t, v_gpuSparks) for the next frame. qfalse: not taken,
 		// the caller plays its effect as before; NULL: the renderer has none.
 		qboolean			(*EmitSparks)							( const sparkBurst_t *burst );
+		// A point light at origin reaching radius that leaves only round the plane across axis, width the sine of
+		// the angle out of it where most of it is gone (the ring of a thermal detonator); NULL: the renderer has none.
+		void				(*AddBandLightToScene)					( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
 	} ext;
 
 } refexport_t;

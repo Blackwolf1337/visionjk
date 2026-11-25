@@ -412,7 +412,8 @@ vec3 NearestToRay( vec3 a, vec3 b, vec3 p, vec3 r ) {
 
 /* One dynamic light on what is already drawn there, added by a pass of its own (vk_shade.cpp, the loop over
    tess.dlightBits): a point (parm: where in the space of the model, w how far it reaches) or a tube from grid0.xyz to
-   grid1.xyz reaching grid0.w from it (a saber blade, ext.AddLineLightToScene). Until 2026-11-08 this was rd-vanilla's
+   grid1.xyz reaching grid0.w from it (a saber blade, ext.AddLineLightToScene); a point that lights only round the plane
+   across the axis grid0.xyz, grid0.w negative (a band, ext.AddBandLightToScene). Until 2026-11-08 this was rd-vanilla's
    round light image projected along the normal of the triangle (ProjectDlightTexture2): flat, no bumps, no shine.
    Now the light falls off smoothly to nothing at its reach and is brighter close by; the surface takes it by the
    angle it meets it, with the normal map and the shine of its material where the stage has one (VKD_PBR, the
@@ -468,6 +469,13 @@ vec4 DynamicLight( Draw d ) {
 	// (their picture 2026-11-24, the bowcaster); it is taken as at least a hand away.
 	float xa = model ? max( dist, 24.0 ) / range : x;
 	float fall = window * window / ( 1.0 + 4.0 * xa * xa ) * ( model ? 1.0 : 1.6 );
+	// A band of light (grid0.w negative, ext.AddBandLightToScene): it leaves only round the plane through it across
+	// its axis grid0.xyz, as the glowing ring of a thermal detonator lets it out past the body, and softly less out of
+	// that plane; -grid0.w is how far out of it it still has most of it (the sine of the angle).
+	if ( d.grid0.w < 0.0 ) {
+		float off = dot( toLight, d.grid0.xyz ) / ( max( dist, 0.001 ) * -d.grid0.w );
+		fall *= exp( -off * off );
+	}
 	vec3 radiance = pow( d.baseColor.rgb * fall, vec3( 2.2 ) );
 #ifndef VK_GLES
 	// The shadows of the players from this light, made a frame ago into a mask (vk_rt.cpp, smlights.frag): grid1.w

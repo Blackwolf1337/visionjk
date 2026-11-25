@@ -235,6 +235,12 @@ static void S_SpatialChooseReflects( void ) {
 	}
 }
 
+// Which sounds lose their highs in the air on a long way (issue #22: a far explosion is dull): all of them but a
+// voice of the chat, which stays as clear as the cgame hands it over unless v_spatialPhysical asks for real air.
+static qboolean S_SpatialAirAbsorbs( const spatialVoice_t *v ) {
+	return ( v_spatialPhysical->integer || !v->stream || S_SpatialBoxVoice( v ) ) ? qtrue : qfalse;
+}
+
 void S_SpatialSimulate( void ) {
 	IPLSimulationSharedInputs shared;
 
@@ -252,9 +258,9 @@ void S_SpatialSimulate( void ) {
 		memset( &inputs, 0, sizeof( inputs ) );
 		if ( v->active && v->frame == spatial.frame && !v->sendOnly ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_DIRECT;
-			// with v_spatialPhysical a far sound loses its highs in the air too (Valve's default model), a box always
+			// a far sound loses its highs in the air too (Valve's default model)
 			inputs.directFlags = (IPLDirectSimulationFlags)( IPL_DIRECTSIMULATIONFLAGS_OCCLUSION | IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION
-				| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
+				| ( S_SpatialAirAbsorbs( v ) ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
 			IPLVector3 origin;
 
 			S_SpatialPoint( v->simOrigin, &origin );
@@ -296,7 +302,7 @@ void S_SpatialSimulate( void ) {
 		}
 		// how loud a sound is at its distance stays what the game makes of it (v->gain)
 		v->directParams.flags = (IPLDirectEffectFlags)( IPL_DIRECTEFFECTFLAGS_APPLYOCCLUSION | IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION
-			| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTEFFECTFLAGS_APPLYAIRABSORPTION : 0 ) );
+			| ( S_SpatialAirAbsorbs( v ) ? IPL_DIRECTEFFECTFLAGS_APPLYAIRABSORPTION : 0 ) );
 		v->directParams.transmissionType = IPL_TRANSMISSIONTYPE_FREQDEPENDENT;
 	}
 }

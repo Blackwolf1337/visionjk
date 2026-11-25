@@ -25,6 +25,10 @@ void CG_BoltLightsInit( void );
 qboolean CG_BoltLight( const centity_t *cent );
 // the same for the shot of a vehicle weapon (its own effect, the weapon of the entity says nothing)
 qboolean CG_VehicleBoltLight( const centity_t *cent, const vehWeaponInfo_t *weapon );
+// the colour of the light of a shot of this weapon (cg_boltlook.c draws its bolt in it); qfalse: it has none
+qboolean CG_BoltColor( int weapon, qboolean altFire, vec3_t color );
+// the same for a vehicle weapon, qtrue only for its lasers (no torpedo, ion blast or bomb)
+qboolean CG_VehicleLaserColor( const vehWeaponInfo_t *weapon, vec3_t color );
 // a blade deflected a bolt here
 void CG_BoltLightFlash( const vec3_t at );
 // a weapon charging a shot: a light at the end of its barrel that grows with the charge, 0 to 1

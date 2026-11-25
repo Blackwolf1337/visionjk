@@ -138,6 +138,19 @@ typedef struct channel_s {
 	int			spatialTail;	//	and it stays this many samples after its end for it (S_ScanChannelStarts)
 } channel_t;
 
+// VisionJK: samples of its sound a channel the game started steps per sample of the mixer, so many times higher it
+// is (S_StartSoundPitch), 1: as it was made. A loop channel has the doppler of S_AddLoopingSound in the same fields.
+static inline float S_ChannelPitch( const channel_t *ch )
+{
+	return ( ch->doppler && !ch->loopSound && ch->dopplerScale > 1.0f ) ? ch->dopplerScale : 1.0f;
+}
+
+// how many samples of the mixer a channel the game started plays for
+static inline int S_ChannelLength( const channel_t *ch )
+{
+	return (int)( ch->thesfx->iSoundLengthInSamples / S_ChannelPitch( ch ) );
+}
+
 
 #define	WAV_FORMAT_PCM		1
 #define WAV_FORMAT_ADPCM	2	// not actually implemented, but is the value that you get in a header

@@ -28,6 +28,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberignite.h"
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_boltlight.h"
+#include "cgame/weapons/cg_explosion.h"
+#include "cgame/weapons/cg_viewweapon.h"
+#include "cgame/weapons/cg_boltsound.h"
+#include "cgame/weapons/cg_airring.h"
+#include "cgame/weapons/cg_wallfx.h"
+#include "cgame/weapons/cg_hookrope.h"
 
 /*
 Ghoul2 Insert Start
@@ -272,6 +278,9 @@ static void CG_CalculateWeaponPosition( vec3_t origin, vec3_t angles ) {
 		angles[YAW] += scale * fracsin * 0.01;
 		angles[PITCH] += scale * fracsin * 0.01;
 	}
+
+	// VisionJK: the kick of a shot, the sway and the wall, also by cg_weaponBob (weapons/cg_viewweapon.c)
+	CG_ViewWeaponMove( origin, angles );
 }
 
 
@@ -1939,7 +1948,10 @@ void CG_FireWeapon( centity_t *cent, qboolean altFire ) {
 	cent->muzzleFlashTime = cg.time;
 	if ( cent->currentState.number == cg.predictedPlayerState.clientNum ) {
 		CG_ScreenFxFired( ent->weapon );
+		CG_ViewWeaponFired( ent->weapon, altFire );
 	}
+	CG_Backblast( cent );
+	CG_ChargeRingFired( cent, altFire );
 
 	if (cg.predictedPlayerState.clientNum == cent->currentState.number)
 	{
@@ -2023,7 +2035,7 @@ void CG_FireWeapon( centity_t *cent, qboolean altFire ) {
 			c = rand() % c;
 			if ( weap->altFlashSound[c] )
 			{
-				trap->S_StartSound( NULL, ent->number, CHAN_WEAPON, weap->altFlashSound[c] );
+				CG_FireSound( ent->number, ent->weapon, qtrue, weap->altFlashSound[c] );
 			}
 		}
 //		if ( weap->altFlashSnd )
@@ -2043,7 +2055,7 @@ void CG_FireWeapon( centity_t *cent, qboolean altFire ) {
 			c = rand() % c;
 			if ( weap->flashSound[c] )
 			{
-				trap->S_StartSound( NULL, ent->number, CHAN_WEAPON, weap->flashSound[c] );
+				CG_FireSound( ent->number, ent->weapon, qfalse, weap->flashSound[c] );
 			}
 		}
 	}
@@ -2095,7 +2107,7 @@ void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon )
 		return;
 	BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, hand );
 	BG_EvaluateTrajectory( &cent->currentState.pos, cg.time, pos );
-	CG_TestLine( hand, pos, 1, 0x30000, 1 );
+	CG_HookRope( cent, hand, pos );
 }
 
 /*
@@ -2137,6 +2149,8 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
 		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
 	CG_BoltImpact( weapon, altFire, origin, dir, (qboolean)( soundType == IMPACTSOUND_METAL ) );
+	CG_Explosion( weapon, altFire, origin, dir );
+	CG_WallFxHit( weapon, altFire, origin, dir );
 
 	switch( weapon )
 	{
@@ -2256,6 +2270,7 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
 		CG_SliceExplosion( origin );
 	}
+	CG_Explosion( weapon, altFire, origin, dir );
 
 	/*
 	// NOTENOTE Non-portable code from single player

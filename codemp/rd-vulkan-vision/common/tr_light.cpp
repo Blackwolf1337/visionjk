@@ -60,6 +60,11 @@ void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori) {
 			dl->lineEndTransformed[1] = DotProduct( temp, ori->axis[1] );
 			dl->lineEndTransformed[2] = DotProduct( temp, ori->axis[2] );
 		}
+		if ( dl->bandWidth > 0.0f ) {
+			dl->bandAxisTransformed[0] = DotProduct( dl->bandAxis, ori->axis[0] );
+			dl->bandAxisTransformed[1] = DotProduct( dl->bandAxis, ori->axis[1] );
+			dl->bandAxisTransformed[2] = DotProduct( dl->bandAxis, ori->axis[2] );
+		}
 	}
 }
 

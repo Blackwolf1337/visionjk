@@ -35,6 +35,10 @@ Ghoul2 Insert Start
 #include "ghoul2/G2.h"
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_boltlight.h"
+#include "cgame/weapons/cg_explosion.h"
+#include "cgame/weapons/cg_boltsound.h"
+#include "cgame/weapons/cg_boltlook.h"
+#include "cgame/weapons/cg_mines.h"
 /*
 Ghoul2 Insert end
 */
@@ -1830,6 +1834,8 @@ Ghoul2 Insert End
 		}
 	}
 
+	CG_MineLooks( cent, &ent );
+
 	// JA+ client plugin: no trip mine lasers while in a separated private duel
 	if ( cent->currentState.time == -1 && cent->currentState.weapon == WP_TRIP_MINE && (cent->currentState.eFlags & EF_FIRING)
 		&& !CG_JPInSeparatedDuel() )
@@ -2498,6 +2504,9 @@ static void CG_Missile( centity_t *cent ) {
 		CG_AddRadarEnt(cent);
 	}
 	CG_BoltTrack( cent );
+	CG_ThermalFuse( cent );
+	CG_BoltWhiz( cent );
+	CG_MissileLooks( cent );
 
 	if (s1->weapon == WP_SABER)
 	{
@@ -2735,6 +2744,8 @@ Ghoul2 Insert End
 		AnglesToAxis( cent->lerpAngles, ent.axis );
 	}
 
+	CG_ThermalPose( cent, &ent );	// VisionJK: a thermal detonator rolls and bounces smoothly (weapons/cg_thermal.c)
+
 	if (s1->weapon == WP_SABER)
 	{
 		ent.radius = s1->g2radius;
@@ -2742,6 +2753,7 @@ Ghoul2 Insert End
 
 	// add to refresh list, possibly with quad glow
 	CG_AddRefEntityWithPowerups( &ent, s1, TEAM_FREE );
+	CG_ThermalRing( cent, &ent );	// VisionJK: the stripe of light of its ring (weapons/cg_thermal.c)
 
 	if (s1->weapon == WP_SABER && cgs.gametype == GT_JEDIMASTER)
 	{ //in jedimaster always make the saber glow when on the ground

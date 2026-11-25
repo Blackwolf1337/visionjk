@@ -38,6 +38,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberignite.h"
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_boltlight.h"
+#include "cgame/weapons/cg_explosion.h"
+#include "cgame/weapons/cg_airring.h"
+#include "cgame/weapons/cg_wallfx.h"
 #include "cgame/saber/cg_saberclash.h"
 //==========================================================================
 
@@ -2546,6 +2549,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		}
 		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qtrue ) )
 			FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
+		CG_ChargeRingDisruptor( cent->currentState.origin2, cent->lerpOrigin, (qboolean)!!cent->currentState.shouldtarget );
 		CG_WaterImpact( cent->lerpOrigin, 0.9f );
 		break;
 
@@ -2952,6 +2956,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			CG_MissileHitWall(WP_CONCUSSION, es->owner, position, dir, IMPACTSOUND_DEFAULT, qtrue, 0);
 
 			FX_ConcAltShot(es->origin2, spot);
+			CG_AirRingBeam( es->origin2, es->angles, shotDist );
 
 			//steal the bezier effect from the disruptor
 			FX_DisruptorAltMiss(position, dir);
@@ -3072,6 +3077,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		case EFFECT_EXPLOSION_DEMP2ALT:
 			FX_DEMP2_AltDetonate( cent->lerpOrigin, es->weapon );
+			CG_WallFxHit( WP_DEMP2, qtrue, cent->lerpOrigin, es->angles );	// (angles: the normal of the wall)
 			eID = cgs.effects.mAltDetonate;
 			break;
 		case EFFECT_EXPLOSION_TURRET:
@@ -3123,6 +3129,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 			trap->FX_PlayEffectID(eID, es->origin, fxDir, -1, -1, qfalse);
 		}
+		CG_ExplosionEffect( es->eventParm, es->origin, es->angles );
 		break;
 
 	case EV_PLAY_EFFECT_ID:
