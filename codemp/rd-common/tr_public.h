@@ -320,11 +320,19 @@ typedef struct refexport_s {
 		// That text into shaders/zz_mat_<file>.oshader of the profile, read after the shader files from the next
 		// level on; path is the file. qfalse and err when the text would not give the materials shown now.
 		qboolean			(*MaterialSave)							( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
+		// Whether the shader is a lamp of the level, a face the renderer takes for a light (the shadows of the players
+		// indoors, their lamp light, the dust in its light): mode 0 as the renderer finds it (glow stages,
+		// q3map_surfacelight), 1 it gives light, as much as light says (units of q3map_surfacelight), 2 it gives none.
+		// The shader keyword emissive; MaterialText and MaterialSave write it. The lamps of the level are made anew.
+		qboolean			(*MaterialLight)						( qhandle_t shader, int mode, float light );
 		// Light to judge materials by (lightOverride_t of tr_types.h), until it is called again; NULL: the light of
 		// the level as it is. Kept over a change of level.
 		void				(*SetLightOverride)						( const lightOverride_t *light );
 		// Where the last view of the level was seen from and where it looked. qfalse before the first one.
 		qboolean			(*LevelView)							( vec3_t origin, vec3_t forward );
+		// The ray of that view through a point of the window, x and y from 0 (left, top) to 1: where it starts and its
+		// direction, for a pick with the mouse (MaterialPick). qfalse before the first view.
+		qboolean			(*LevelViewRay)							( float x, float y, vec3_t origin, vec3_t dir );
 		// A picture of the debug menu of the client (its font atlas): slot 0 to UI_TEXTURES - 1, width x height
 		// RGBA, sides powers of two; the same slot again takes the new pixels. Answers a shader for DrawTriangles2D
 		// (colours of the vertices, alpha blended), 0 when it could not be made.
@@ -365,6 +373,16 @@ typedef struct refexport_s {
 		// A point light at origin reaching radius that leaves only round the plane across axis, width the sine of
 		// the angle out of it where most of it is gone (the ring of a thermal detonator); NULL: the renderer has none.
 		void				(*AddBandLightToScene)					( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
+		// A point light for the scene of this frame with a say in whose shadows it has where the renderer traces the
+		// shadows of the moving lights: shadows 0 the players and the level, 1 none, 2 the players alone, 3 the level
+		// alone. The lights of effects of the level (client/cl_fxlight.cpp). NULL: the renderer has none.
+		void				(*AddShadowLightToScene)				( const vec3_t origin, float radius, float r, float g, float b, int shadows );
+		// Somebody stands in the grass of the level at origin, or a push of air goes over it: the surface sprites within
+		// radius lean away from the spot and lie down, by force (0 to 1). Eight a scene; NULL: the renderer has none.
+		void				(*AddGrassPushToScene)					( const vec3_t origin, float radius, float force );
+		// The lamps of the level within radius of origin, the strongest for that place first, at most max. Returns how
+		// many. NULL: the renderer has none.
+		int					(*LampsNear)							( const vec3_t origin, float radius, levelLamp_t *out, int max );
 	} ext;
 
 } refexport_t;

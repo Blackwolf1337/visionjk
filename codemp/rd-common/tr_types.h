@@ -297,7 +297,8 @@ typedef struct paintPicture_s {
 #define MATP_GLASS				(1 << 10)	// transmission, ior, thickness, absorption
 #define MATP_SURFACE			(1 << 11)	// clearcoat, sheen, anisotropy, emission, specGlossMap, specularReflectance, normalScale
 #define MATP_TESS				(1 << 12)	// tessHeight, tessPlane, tessDensity
-#define MATP_ALL				0x1fff
+#define MATP_LIGHT				(1 << 13)	// light: the lamps of the level are made anew
+#define MATP_ALL				0x3fff
 
 // the maps the renderer makes from the texture of a stage when it loads (shader keywords albedoGen, normalGen,
 // rmoGen of .oshader files, tr_matgen.cpp), so a material needs no picture files
@@ -361,6 +362,11 @@ typedef struct materialParms_s {
 	char		specGlossMap[MAX_QPATH];	// rend2's specular map (F0 in rgb, gloss in alpha), "" none
 	float		specularReflectance;	// F0 of what is not metal, 0 for 0.04
 	float		normalScale;		// strength of the bumps, 1 as the map has them
+	// Whether the stage makes its surfaces lamps of the level (the dots of v_rtDebug 4): below 0 as the renderer finds
+	// it (a glow stage or one that adds its colour), 0 it gives none, else as much light, in the units of
+	// q3map_surfacelight (1000: about a white texture that glows), in the colour of its texture. The stage keyword
+	// emissive <light>. The keyword emissive of the whole shader stands before it (ext.MaterialLight).
+	float		light;
 } materialParms_t;
 
 // what a stage is (materialStage_t flags)
@@ -377,6 +383,7 @@ typedef struct materialStage_s {
 	int			flags;				// MATS_*
 	char		image[MAX_QPATH];	// its texture
 	float		luma;				// how bright the texture is on average, of its sRGB values, 0 to 1
+	float		light;				// the light the renderer takes the stage to give now, units of q3map_surfacelight
 } materialStage_t;
 
 // what a shader is (materialInfo_t flags)
@@ -393,6 +400,10 @@ typedef struct materialInfo_s {
 	float		area;				// square units of the surfaces of the level with it
 	float		emissive[4];		// emissive light: r, g, b and the light, all 0 when it gives none
 	float		surfaceLight;		// q3map_surfacelight
+	int			lightMode;			// whether it is a lamp of the level: 0 as the renderer finds it, 1 set to give light
+									// (emissive[3] says how much), 2 set to give none (ext.MaterialLight)
+	float		lightFound;			// the light the renderer takes it to give now, in the units of q3map_surfacelight
+									// (1000: about a white texture that glows), 0: none
 	int			numStages;
 	materialStage_t	stages[MATERIAL_MAX_STAGES];
 } materialInfo_t;
@@ -402,7 +413,18 @@ typedef struct materialPick_s {
 	vec3_t		point;
 	vec3_t		normal;				// of the surface, towards the start of the ray
 	float		distance;			// from the start of the ray, units
+	int			contents;			// CONTENTS_* of its shader
 } materialPick_t;
+
+// VisionJK: a lamp of the level, a panel that glows (refexport_t ext.LampsNear)
+typedef struct levelLamp_s {
+	vec3_t		origin;
+	vec3_t		normal;				// the side it lights, zero: all round
+	vec3_t		color;				// of its light, as bright as white
+	float		strength;			// its area times how bright its shader glows
+	vec3_t		right, up;			// the face that glows as a rectangle: two half edges from origin, zero for one
+									// that lights all round
+} levelLamp_t;
 
 // VisionJK: light to judge materials by (refexport_t ext.SetLightOverride): lamps lit per pixel on every surface
 // with a material, the light of the lightmap swapped for an even one, another sun, another exposure
@@ -545,9 +567,17 @@ typedef struct sparkBurst_s {
 	float		gravity;			// units a second a second down (800: the game's)
 	float		drag;				// how fast the air slows them, a second (1: to a third in a second)
 	float		bounce;				// the speed kept off a surface, 0 to 1
-	float		cooling;			// 1: they cool over their life, above 1 sooner, below later
+	float		cooling;			// 1: they cool over their life, above 1 sooner, below later; 0 for those that float: they
+									// do not glow of their own (dust in light): their colour as it is, coming and going softly
 	vec3_t		color;				// hot, may be above 1 for the bloom of HDR
 	float		rest;				// seconds those that land on a floor lie there glowing, each 50 to 100% of it, 0: none
+	float		swirl;				// above 0 they float (rest must be 0): the air carries them, which turns in whorls that
+									// drift, this many units a second at its fastest. drag pulls them to its speed, a
+									// negative gravity lifts them while they are hot. Drawn as glowing specks that flicker.
+	float		streak;				// one that floats is drawn out along its way by what it flies in this many seconds, as
+									// a camera with its shutter open that long sees it (0: a speck)
+	float		age;				// 0 to 1: this much of their life is over when they are made, so they come as cool as
+									// that (embers that are put into the air as if they had been rising for a while)
 } sparkBurst_t;
 
 typedef struct refEntity_s {

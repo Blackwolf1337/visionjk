@@ -53,7 +53,11 @@ void VK_NoteDrawSurfs( int numDrawSurfs );
 qboolean RE_GpuProfile( gpuProfile_t *out );
 // vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the shadow of the player at origin came from, their colours and
 // their shares of his light (v_panelLight)
-int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3] );
+int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], float share[3], vec3_t right[3], vec3_t up[3] );
+int VK_RT_LampsNear( const vec3_t origin, float radius, levelLamp_t *out, int max );
+float VK_RT_ShaderLight( const struct shader_s *shader );
+float VK_RT_StageLight( const struct shaderStage_s *stage );
+void VK_RT_LampsChanged( void );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );
 

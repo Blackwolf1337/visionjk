@@ -8,8 +8,10 @@
 // to its tail; its colour cools from its hot one through orange and deep red to nothing as its life runs out. Where it
 // is dead its triangles have no area. An ember (one that lies on a floor, the fifth row) is a round dot that cools
 // from the heat it landed with to a dark red glow, flickering, and goes out; the second draw (probeCount 1) lays the
-// glow it throws round itself flat onto that floor, and has no area for the rest. The address of the ring in tex5 and
-// tex6 of the draw (low and high bits).
+// glow it throws round itself flat onto that floor, and has no area for the rest. One that floats (fifth row y above 0,
+// the embers over lava) is a thin glowing speck drawn out along its way, that comes up softly, flickers its own way
+// and cools to a dark red; never thinner than about a pixel, and that much fainter, so that far ones do not twinkle as
+// single hard pixels. The address of the ring in tex5 and tex6 of the draw (low and high bits).
 
 #include "stage.glsl"
 
@@ -92,6 +94,44 @@ void main() {
 	float left = clamp( a.w / max( v.w, 0.001 ), 0.0, 1.0 );		// 1 new, 0 dead
 	// cooling: m.w how much sooner than its life
 	float heat = pow( left, max( m.w, 0.1 ) );
+
+	if ( lie.w == 0.0 && lie.y > 0.0 ) {
+		if ( floorGlow ) {
+			Nothing();
+			return;
+		}
+		float born = v.w - a.w;			// seconds since it was made
+		float own = lie.z;
+		// (two rates that are no multiples of each other, so no ember repeats itself soon, and none blinks with its
+		// neighbour; a hot one is steadier)
+		float flicker = 1.0 - ( 0.28 * ( 0.5 + 0.5 * sin( born * ( 7.0 + 9.0 * own ) + own * 40.0 ) )
+			+ 0.22 * ( 0.5 + 0.5 * sin( born * ( 19.0 + 11.0 * own ) + own * 91.0 ) ) ) * ( 1.0 - 0.5 * heat );
+		// A thin bright speck, as an ember is: millimetres wide. Never thinner than about three quarters of a pixel, and
+		// that much fainter. Drawn out along its way across the view by what it flies while a shutter is open (lie.x
+		// seconds), which is what makes the thin bright lines of embers on film; the longer the line the fainter.
+		float width = c.w * ( 0.6 + 0.4 * left );
+		float shown = max( width, distance( eye, a.xyz ) * 0.0007 );
+		vec3 way = v.xyz - toEye * dot( v.xyz, toEye );
+		float speed = length( way );
+		vec3 along = speed > 0.01 ? way / speed : normalize( cross( toEye, abs( toEye.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+		vec3 across = cross( along, toEye );
+		// (the round picture of the lights is bright only in its middle: the quad is that much wider than the line that
+		// shows, its skirt is the faint glow beside it)
+		float side = shown * 2.2;
+		float reach = side + speed * lie.x * 0.5;
+		vec3 color = HeatColor( heat, c.rgb ) * flicker * smoothstep( 0.0, 0.3, born ) * ( width / shown ) * pow( side / reach, 0.25 );
+		if ( m.w == 0.0 ) {
+			// dust in light: it does not glow of its own. The colour it was given, coming and going slowly, and glinting
+			// as it turns.
+			color = c.rgb * smoothstep( 0.0, 1.2, born ) * smoothstep( 0.0, 0.3, left ) * ( width / shown )
+				* ( 0.55 + 0.45 * sin( born * ( 1.3 + 2.2 * own ) + own * 40.0 ) );
+		}
+		vec3 position = a.xyz + across * ( corner2.x * side ) + along * ( corner2.y * reach );
+		vec2 texCoord = corner2 * 0.5 + 0.5;
+
+		StageVertex( StageInput( position, toEye, texCoord, texCoord, vec2( 0.0 ), vec2( 0.0 ), vec2( 0.0 ), vec4( color, 1.0 ) ) );
+		return;
+	}
 	// the streak: the way it went in a moment, longer while it is hot, at least as long as it is wide
 	vec3 trail = v.xyz * mix( 0.012, 0.03, heat );
 	float len = length( trail );

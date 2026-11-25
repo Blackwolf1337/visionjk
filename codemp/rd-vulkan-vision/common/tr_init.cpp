@@ -1214,12 +1214,17 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.MaterialSet						= RE_MaterialSet;
 	re.ext.MaterialText						= RE_MaterialText;
 	re.ext.MaterialSave						= RE_MaterialSave;
+	re.ext.MaterialLight					= RE_MaterialLight;
 	re.ext.SetLightOverride					= RE_SetLightOverride;
 	re.ext.LevelView						= RE_LevelView;
+	re.ext.LevelViewRay						= RE_LevelViewRay;
 	re.ext.UiTexture						= RE_UiTexture;
 	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;
 	re.ext.AddLineLightToScene				= RE_AddLineLightToScene;
 	re.ext.AddBandLightToScene				= RE_AddBandLightToScene;
+	re.ext.AddShadowLightToScene			= RE_AddShadowLightToScene;
+	re.ext.AddGrassPushToScene				= RE_AddGrassPushToScene;
+	re.ext.LampsNear						= VK_RT_LampsNear;
 	re.ext.AddSaberBladeToScene				= RE_AddSaberBladeToScene;
 #ifndef RD_VISION_GLES
 	re.ext.EmitSparks						= RE_EmitSparks;

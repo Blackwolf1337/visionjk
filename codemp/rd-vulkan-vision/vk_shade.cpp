@@ -911,7 +911,14 @@ static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkD
 	draw->pbr2[0] = mat->transmission;
 	draw->pbr2[1] = mat->thickness;
 	draw->pbr2[2] = mat->absorptionDistance;
-	draw->pbr2[3] = 0.0f;
+	// A stage that adds its colour (the shine of textures/common/env_glass and most glass of the levels): black in its
+	// texture means nothing added, not black glass. Its texture does not colour what shows through then, it is added
+	// as far as the pane is not glass (their picture 2026-11-25: such glass turned black as transmission went up).
+	{
+		const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
+
+		draw->pbr2[3] = ( dst == GLS_DSTBLEND_ONE || dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) ? 1.0f : 0.0f;
+	}
 	VectorCopy( mat->absorption, draw->material );
 	draw->material[3] = 0.0f;
 	VK_PbrProbes( draw );
@@ -1105,6 +1112,20 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 
 		if ( rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY || rgbGen == CGEN_ENTITY ) {
 			VK_ByteColor( ent->e.shaderRGBA, tint );
+			// The players of the game with a colour to pick (107 of the 122 such shaders of the game): the texture in
+			// the colour first, then the same texture once more by its alpha in no colour, so only what its alpha
+			// leaves open is coloured: a stripe, a sash. The light takes the colour there alone (tint[3] 2, generic.frag
+			// DynamicLight); with it on all of the texture a body in a moving light was blue all over (their picture
+			// 2026-11-25).
+			for ( int i = 0; i < shader->numUnfoggedPasses && !forced; i++ ) {
+				const shaderStage_t *over = &shader->stages[i];
+
+				if ( over > textured && over->active && over->bundle[0].image == textured->bundle[0].image
+					&& ( over->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) == ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA )
+					&& over->rgbGen != CGEN_LIGHTING_DIFFUSE_ENTITY && over->rgbGen != CGEN_ENTITY ) {
+					tint[3] = 2.0f;
+				}
+			}
 		}
 	}
 
@@ -1118,7 +1139,8 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 
 	// one light pass: a point at in the space of the model reaching radius, or the tube or band of dl; channel: the
 	// shadow mask
-	auto pass = [&]( const vec3_t color, const vec3_t at, float radius, const dlight_t *tube, int channel, uint32_t slot ) {
+	auto pass = [&]( const vec3_t color, const vec3_t at, float radius, const dlight_t *tube, int channel, uint32_t slot,
+		const float *rectRight = NULL, const float *rectUp = NULL ) {
 		vkDraw_t draw;
 
 		VK_InitDraw( &draw, transform, bones );
@@ -1138,7 +1160,7 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			}
 		}
 		VectorCopy( color, draw.baseColor );
-		VectorCopy( tint, draw.vertColor );		// (generic.frag DynamicLight: what the texture is coloured with)
+		VectorCopy4( tint, draw.vertColor );	// (generic.frag DynamicLight: what the texture is coloured with, and where)
 		VectorCopy( at, draw.parm );
 		draw.parm[3] = radius;
 		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
@@ -1151,6 +1173,11 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			// a band: its axis in grid0, how wide negative in grid0.w
 			VectorCopy( tube->bandAxisTransformed, draw.grid0 );
 			draw.grid0[3] = -tube->bandWidth;
+		} else if ( rectRight ) {
+			// a rectangle that glows, a lamp panel: its half edges from at in grid0 and grid1, grid0.w -2
+			VectorCopy( rectRight, draw.grid0 );
+			draw.grid0[3] = -2.0f;
+			VectorCopy( rectUp, draw.grid1 );
 		}
 		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
 		// and tex1. A model has it negative, -1 - the channel (generic.frag DynamicLight): the mask is made at the
@@ -1182,11 +1209,16 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 	for ( int k = 0; k < lamps; k++ ) {
 		vec3_t to, at;
 
+		vec3_t right, up;
+		const qboolean rect = (qboolean)( DotProduct( ent->lampRight[k], ent->lampRight[k] ) > 1.0f );
+
 		VectorSubtract( ent->lampOrigin[k], backEnd.ori.origin, to );
 		for ( int i = 0; i < 3; i++ ) {
 			at[i] = DotProduct( to, backEnd.ori.axis[i] );
+			right[i] = DotProduct( ent->lampRight[k], backEnd.ori.axis[i] );
+			up[i] = DotProduct( ent->lampUp[k], backEnd.ori.axis[i] );
 		}
-		pass( ent->lampColor[k], at, ent->lampRange[k], NULL, 0, 0 );
+		pass( ent->lampColor[k], at, ent->lampRange[k], NULL, 0, 0, rect ? right : NULL, rect ? up : NULL );
 	}
 }
 

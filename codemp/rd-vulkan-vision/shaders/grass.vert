@@ -4,13 +4,16 @@
 // RB_VerticalSurfaceSpriteWindPoint() and RB_OrientedSurfaceSprite() of tr_surfacesprites.cpp build on the CPU every
 // frame. Where each one stands, how big it is and the random numbers of its fade were worked out once when the
 // level was loaded (VK_PlaceGrass() in vk_world.cpp), four vertices a sprite, one for each corner. The view and the
-// wind come as twelve rows in the bone buffer (VK_BindGrass()):
+// wind come as thirty rows in the bone buffer (VK_BindGrass()):
 //
 //   0  the eye, tr.refdef.time in msec            6, 7  the other two right vectors
 //   1  ssfwdvector, curWindSpeed                  8  fade distance squared, 1 / (cut - fade squared), faderange, fadeScale
 //   2  curWindGrassDir, force of the wind point   9  wind, windIdle of the stage
 //   3  curWindPoint, the flags                    10  ssViewRight
 //   4, 5  two of the four ssrightvectors          11  ssViewUp
+//
+// Rows 12 to 27, two each: what stands or blows in the grass (ext.AddGrassPushToScene), its spot and how far it
+// reaches, then its force; row 9 z says how many. Rows 28 and 29 are not used.
 
 #include "stage.glsl"
 
@@ -152,6 +155,27 @@ void main() {
 				top.z += sin( angle * 2.5 ) * sway;
 			}
 			lean = 0.2;
+		}
+
+		// A player who stands in it, a Force Push, a blast: grass that moves in the wind leans away from the spot and lies
+		// down, most at the spot. Not what hangs from a ceiling.
+		if ( ( flags & GRASS_HANGDOWN ) == 0u && ( wind > 0.0 || windIdle > 0.0 ) ) {
+			int pushes = int( stageWind.z + 0.5 );
+
+			for ( int i = 0; i < pushes; i++ ) {
+				vec4 spot = bones[base + 12u + uint( i ) * 2u];
+				vec3 d = loc - spot.xyz;
+				float dist = length( d );
+
+				if ( dist < spot.w ) {
+					float f = bones[base + 13u + uint( i ) * 2u].x * ( 1.0 - dist / spot.w );
+					float flatDist = length( d.xy );
+
+					f *= 2.0 - f;
+					top.xy += ( flatDist > 0.01 ? d.xy / flatDist : vec2( 1.0, 0.0 ) ) * ( height * 0.7 * f );
+					top.z -= ( top.z - loc.z ) * 0.65 * f;
+				}
+			}
 		}
 
 		if ( ( flags & GRASS_FLATTENED ) != 0u ) {

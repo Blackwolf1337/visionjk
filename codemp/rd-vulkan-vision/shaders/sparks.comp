@@ -14,7 +14,11 @@
 //   frame rows 0-10: the view of that depth as VK_ViewRows has it; 11: seconds since the last frame, 1 when the depth
 //   is there, the number of bursts, a seed; 12-43: the bodies of the frame (VK_SparksView: the middle of a character
 //   and how far round, 0 for none), nothing lies on them; then five rows a burst: origin and first slot, direction and count, colour
-//   and life, speed spread size gravity, drag bounce cooling rest (seconds an ember lies, v_gpuSparksEmbers applied)
+//   and life, speed spread size gravity, drag bounce cooling rest (seconds an ember lies, v_gpuSparksEmbers applied),
+//   swirl, streak and age (the part of its life that is over when it is made)
+// One that floats (sparkBurst_t swirl, the embers over lava): the fifth row has x its streak, y its swirl and z a
+// number of its own while it flies. The air carries it: whorls a few hundred units wide that drift (Air()), and what lifts it (its
+// negative gravity) pulls only while it is hot, so it rises in a sweep, slows and drifts as it cools.
 
 layout( local_size_x = 256 ) in;
 
@@ -29,6 +33,7 @@ layout( push_constant ) uniform Push {
 	Sparks	sparks;
 	Frame	frame;
 	uint	count;			// slots in the ring, a power of two
+	float	time;			// seconds
 } u;
 
 layout( set = 0, binding = 0 ) uniform sampler2D u_distance;
@@ -72,6 +77,18 @@ vec3 ScenePoint( vec2 pixel, out float dist ) {
 	return W( 4 ).xyz + ray * dist;
 }
 
+// The air of the level, about 1 at its fastest: two Arnold-Beltrami-Childress flows, one of whorls some 420 units wide
+// and one of 150, drifting. Such a flow has no sources, so what it carries neither piles up nor thins out (the
+// property curl noise is used for, Bridson 2007, without a noise texture). It moves less up and down than sideways.
+vec3 Air( vec3 p, float t ) {
+	vec3 q = p * ( 6.2831853 / 420.0 ) + vec3( 0.13, 0.07, -0.21 ) * t;
+	vec3 r = p.yzx * ( 6.2831853 / 150.0 ) + vec3( -0.31, 0.23, 0.17 ) * t;
+	vec3 wide = vec3( sin( q.z ) + cos( q.y ), sin( q.x ) + cos( q.z ), sin( q.y ) + cos( q.x ) );
+	vec3 fine = vec3( sin( r.z ) + cos( r.y ), sin( r.x ) + cos( r.z ), sin( r.y ) + cos( r.x ) );
+	vec3 air = wide * 0.4 + fine * 0.18;
+	return vec3( air.xy, air.z * 0.6 );
+}
+
 #define BODIES		12u
 #define NUM_BODIES	32u
 #define BURSTS		( BODIES + NUM_BODIES )
@@ -98,8 +115,10 @@ void main() {
 
 	// made by a burst of this frame
 	for ( uint b = 0u; b < bursts; b++ ) {
-		uint e = BURSTS + b * 5u;
+		uint e = BURSTS + b * 6u;
 		vec4 e0 = W( e ), e1 = W( e + 1u ), e2 = W( e + 2u ), e3 = W( e + 3u ), e4 = W( e + 4u );
+		vec4 e5 = W( e + 5u );
+		float swirl = e5.x;
 		uint first = uint( e0.w + 0.5 ), made = uint( e1.w + 0.5 );
 
 		if ( ( ( i + u.count - first ) & ( u.count - 1u ) ) >= made ) {
@@ -118,11 +137,11 @@ void main() {
 		// (a few units off the surface it came from: on a tessellated floor the bumps stand above the point of the hit)
 		vec3 at = e0.xyz + axis * 3.0 + ( vec3( Random( state ), Random( state ), Random( state ) ) - 0.5 ) * 2.0;
 
-		u.sparks.rows[row] = vec4( at, life );
+		u.sparks.rows[row] = vec4( at, life * ( 1.0 - e5.z ) );
 		u.sparks.rows[row + 1u] = vec4( dir * e3.x * ( 0.35 + 0.65 * Random( state ) ), life );
 		u.sparks.rows[row + 2u] = vec4( e2.rgb, e3.z * ( 0.6 + 0.8 * Random( state ) ) );
 		u.sparks.rows[row + 3u] = vec4( e3.w, e4.x, e4.y, e4.z );
-		u.sparks.rows[row + 4u] = vec4( 0.0, 0.0, 0.0, -e4.w * ( 0.5 + 0.5 * Random( state ) ) );
+		u.sparks.rows[row + 4u] = vec4( swirl > 0.0 ? e5.y : 0.0, swirl, swirl > 0.0 ? Random( state ) : 0.0, -e4.w * ( 0.5 + 0.5 * Random( state ) ) );
 		return;
 	}
 
@@ -162,8 +181,32 @@ void main() {
 	}
 
 	a.w -= dt;
-	v.z -= m.x * dt;
-	v.xyz *= exp( -m.y * dt );
+	if ( lie.w == 0.0 && lie.y > 0.0 ) {
+		// it floats: lifted while it is hot, and the air takes it along
+		float left = clamp( a.w / max( v.w, 0.001 ), 0.0, 1.0 );
+		vec3 air = Air( a.xyz + vec3( lie.z * 13.0 ), u.time ) * lie.y;
+
+		v.z -= m.x * left * dt;
+		v.xyz += ( air - v.xyz ) * ( 1.0 - exp( -m.y * dt ) );
+		if ( m.w == 0.0 ) {
+			// dust: somebody who walks through it parts it and leaves it turning (the characters of the frame)
+			for ( uint k = 0u; k < NUM_BODIES; k++ ) {
+				vec4 b = W( BODIES + k );
+				vec3 off = a.xyz - vec3( b.xy, clamp( a.z, b.z - 24.0, b.z + 40.0 ) );
+				float d = length( off );
+
+				if ( b.w > 0.0 && d < 56.0 ) {
+					float near = 1.0 - d / 56.0;
+					vec3 away = d > 0.01 ? off / d : vec3( 0.0, 0.0, 1.0 );
+
+					v.xyz += ( away * 55.0 + cross( away, vec3( 0.0, 0.0, 1.0 ) ) * 35.0 ) * near * dt * 4.0;
+				}
+			}
+		}
+	} else {
+		v.z -= m.x * dt;
+		v.xyz *= exp( -m.y * dt );
+	}
 	vec3 next = a.xyz + v.xyz * dt;
 
 	// off the scene: where the step goes behind the surface the depth shows, and not far behind it (else it is only
