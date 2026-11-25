@@ -638,6 +638,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_imgui.cpp"
 		"${MPDir}/client/cl_imgui.h"
 		"${MPDir}/client/cl_matdebug.cpp"
+		"${MPDir}/client/cl_fxlight.cpp"
 		"${MPDir}/client/cl_matlight.cpp"
 		"${MPDir}/client/cl_profiler.cpp"
 		"${MPDir}/client/cl_cache.cpp"

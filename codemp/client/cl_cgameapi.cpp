@@ -2071,6 +2071,9 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_SurfaceMaterial				= CL_SurfaceMaterial;
 		cgi.ext.S_StartSoundPitch				= S_StartSoundPitch;
 		cgi.ext.R_AddBandLight					= re->ext.AddBandLightToScene;
+		cgi.ext.R_AddGrassPush					= re->ext.AddGrassPushToScene;
+		cgi.ext.R_SurfacePick					= CL_SurfacePick;
+		cgi.ext.R_LampsNear						= re->ext.LampsNear;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

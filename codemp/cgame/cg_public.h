@@ -868,6 +868,20 @@ typedef struct cgameImport_s {
 		// radius that leaves only round the plane across axis, width the sine of the angle out of it where most of it
 		// is gone. The glowing ring of a thermal detonator throws a stripe of light (cgame/weapons/cg_thermal.c).
 		void			(*R_AddBandLight)						( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
+		// Only where the ROM cvar v_cgameGrassPush is 1, an older engine ends this table before; NULL: the renderer has
+		// none. Between R_ClearScene and R_RenderScene: the grass of the level (its surface sprites) within radius of
+		// origin leans away from the spot and lies down, by force (0 to 1): a player who stands in it, a Force Push, a
+		// blast (cgame/level/cg_gust.c). Eight a scene.
+		void			(*R_AddGrassPush)						( const vec3_t origin, float radius, float force );
+		// Only where the ROM cvar v_cgameSurfacePick is 1, an older engine ends this table before. The first surface of
+		// the level that is drawn along the ray from start to end: where the ray meets it and the CONTENTS_* of its
+		// shader. qfalse: none. For what the collision does not tell: the lava of the Taspir levels lies under a floor
+		// nobody sees (cgame/level/cg_motes.c). Walks the surfaces of the level, so not many a frame.
+		qboolean		(*R_SurfacePick)						( const vec3_t start, const vec3_t end, vec3_t point, int *contents );
+		// Only where the ROM cvar v_cgameLamps is 1, an older engine ends this table before; NULL: the renderer has none.
+		// The lamps of the level (its panels that glow) within radius of origin, the strongest for that place first, at
+		// most max; returns how many (cgame/level/cg_motes.c: the dust in their light).
+		int				(*R_LampsNear)							( const vec3_t origin, float radius, levelLamp_t *out, int max );
 	} ext;
 } cgameImport_t;
 

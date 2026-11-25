@@ -2960,6 +2960,7 @@ void CL_Init( void ) {
 	CL_ModelsInit();
 	CL_ClipboardInit();
 	CL_MatDebug_Init();
+	CL_FxLight_Init();
 	CL_Profiler_Init();
 	CL_DiscordInit();
 
@@ -3001,6 +3002,7 @@ void CL_Shutdown( void ) {
 	CL_MemWatchShutdown();
 	CL_MasterShutdown();
 	CL_MatDebug_Shutdown();
+	CL_FxLight_Shutdown();
 	CL_ImGui_Shutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
