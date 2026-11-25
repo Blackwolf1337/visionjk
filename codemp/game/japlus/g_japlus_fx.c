@@ -119,6 +119,18 @@ void JP_MercLoadout( gentity_t *ent ) {
 	ps->fd.forcePowersKnown |= (1 << FP_LIGHTNING);
 }
 
+// VisionJK: a merc's ammo never runs out (/ammerc), every frame as full as JP_MercLoadout made it
+void JP_MercAmmoThink( gentity_t *ent ) {
+	int i;
+
+	if ( !ent->client->pers.jp.merc ) {
+		return;
+	}
+	for ( i = 0; i < MAX_AMMO; i++ ) {
+		ent->client->ps.ammo[i] = 999;
+	}
+}
+
 // merc: no force but force jump and the flamethrower, all weapons and a lot of ammo
 void G_GoInMerc( gentity_t *ent, qboolean on ) {
 	playerState_t *ps = &ent->client->ps;

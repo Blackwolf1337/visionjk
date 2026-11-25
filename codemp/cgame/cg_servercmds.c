@@ -135,12 +135,19 @@ qboolean BG_WalkerSteps( int pilot ) {
 		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & VS_CAPS_WALKER ) != 0 );
 }
 
+// how many times as fast every weapon fires (bg_public.h): the vs_fireRate of the server, 0 or none the old rate
+float BG_FireRate( void ) {
+	return cgs.fireRate > 0.0f ? Com_Clamp( 0.1f, 10.0f, cgs.fireRate ) : 1.0f;
+}
+
 void CG_ParseServerinfo( void ) {
 	const char *info = NULL;
 	char *mapname;
 	int i, value;
 
 	info = CG_ConfigString( CS_SERVERINFO );
+
+	cgs.fireRate = atof( Info_ValueForKey( info, "vs_fireRate" ) );
 
 	cgs.debugMelee = atoi( Info_ValueForKey( info, "g_debugMelee" ) ); //trap->Cvar_GetHiddenVarValue("g_iknowkungfu");
 	cgs.stepSlideFix = atoi( Info_ValueForKey( info, "g_stepSlideFix" ) );

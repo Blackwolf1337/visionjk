@@ -1580,6 +1580,7 @@ typedef struct cgs_s {
 	int				siegeTeamSwitch;
 	int				showDuelHealths;
 	gametype_t		gametype;
+	float			fireRate;		// VisionJK: vs_fireRate of the server (BG_FireRate)
 	int				debugMelee;
 	int				stepSlideFix;
 	int				noSpecMove;

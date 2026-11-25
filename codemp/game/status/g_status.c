@@ -216,6 +216,11 @@ qboolean BG_WalkerSteps( int pilot ) {
 		&& ( ent->client->pers.jp.statusCaps & V_CAPS_WALKER ) );
 }
 
+// how many times as fast every weapon fires (bg_public.h): vs_fireRate, which /amfirerate sets, 0 the old rate
+float BG_FireRate( void ) {
+	return vs_fireRate.value > 0.0f ? Com_Clamp( 0.1f, 10.0f, vs_fireRate.value ) : 1.0f;
+}
+
 /*
 =================
 G_StatusInput
