@@ -410,6 +410,37 @@ void Cmd_amweather_f( gentity_t *ent, qboolean rcon ) {
 
 /*
 =================
+amfirerate [factor]: VisionJK, every weapon fires factor times as fast (vs_fireRate, BG_FireRate), 0 as it always
+did. For rcon level admins and the server console: the masks of the ranks have no bit left for a new command.
+=================
+*/
+void Cmd_amfirerate_f( gentity_t *ent, qboolean rcon ) {
+	char	arg[MAX_TOKEN_CHARS];
+	float	rate;
+
+	if ( !rcon && ent->client->sess.jpAdminLevel != JPADM_RCON ) {
+		trap->Argv( 0, arg, sizeof( arg ) );
+		trap->SendServerCommand( ent-g_entities, va( "print \"unknown cmd %s\n\"", arg ) );
+		return;
+	}
+	if ( trap->Argc() < 2 ) {
+		JP_Reply( ent, rcon, va( "Fire rate: ^2%s^7. Usage: ^2amfirerate ^7<factor>, 2 twice as fast, 0.5 half as fast, 0 off\n",
+			vs_fireRate.value > 0.0f ? va( "%gx", BG_FireRate() ) : "normal" ) );
+		return;
+	}
+	trap->Argv( 1, arg, sizeof( arg ) );
+	rate = atof( arg );
+	rate = rate > 0.0f ? Com_Clamp( 0.1f, 10.0f, rate ) : 0.0f;
+	trap->Cvar_Set( "vs_fireRate", va( "%g", rate ) );
+	trap->Cvar_Update( &vs_fireRate );
+	if ( rate > 0.0f )
+		trap->SendServerCommand( -1, va( "print \"^7Fire rate of all weapons: ^2%gx\n\"", rate ) );
+	else
+		trap->SendServerCommand( -1, "print \"^7Fire rate of all weapons: ^2normal\n\"" );
+}
+
+/*
+=================
 amplayefx <effect> and amtest [anim]: rcon level admins only, for testing
 =================
 */

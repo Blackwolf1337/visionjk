@@ -309,6 +309,7 @@ void		JP_ForceTeam( gentity_t *ent, char *team );
 void		Cmd_amkillvote_f( gentity_t *ent, qboolean rcon );
 void		Cmd_ampoll_f( gentity_t *ent, qboolean rcon );
 void		Cmd_amweather_f( gentity_t *ent, qboolean rcon );
+void		Cmd_amfirerate_f( gentity_t *ent, qboolean rcon );
 void		Cmd_amplayefx_f( gentity_t *ent, qboolean rcon );
 void		Cmd_amtest_f( gentity_t *ent, qboolean rcon );
 qboolean	JP_TeamLockRefused( gentity_t *ent, team_t *team, qboolean autoPick );
