@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_event.c -- handle entity events at snapshot or playerstate transitions
 
 #include "cg_local.h"
+#include "cgame/duel/cg_duelannounce.h"
 #include "fx_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_public.h"
@@ -1596,11 +1597,13 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			{
 				trap->S_StartBackgroundTrack( "music/mp/duel.mp3", "music/mp/duel.mp3", qfalse );
 			}
+			CG_DuelAnnouncePrivate( es->eventParm );	// VisionJK: won or lost at its end (duel/cg_duelannounce.c)
 		}
 		else
 		{ //ending the duel
 			CG_JPReplyDuelEvent( qfalse );
 			CG_StartMusic(qtrue);
+			CG_DuelAnnouncePrivate( 0 );
 			CG_JPDuelEnded();
 		}
 		break;
