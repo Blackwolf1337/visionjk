@@ -1,0 +1,19 @@
+// materials of the material debug menu (v_matdebug) for wedge.shader, read after the shader files
+
+models/map_objects/wedge/clamp
+{
+	emissive 0
+	{
+		map $lightmap
+	}
+	{
+		map models/map_objects/wedge/clamp
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+	{
+		map models/map_objects/wedge/clamp_glw
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}

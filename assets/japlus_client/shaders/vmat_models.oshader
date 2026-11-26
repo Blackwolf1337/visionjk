@@ -1,0 +1,152 @@
+// materials of the material debug menu (v_matdebug) for models.shader, read after the shader files
+
+models/map_objects/hoth/turret_top
+{
+	emissive 0
+	{
+		map models/map_objects/hoth/turret_top
+	}
+	{
+		map models/map_objects/hoth/turret_top_spec
+		blendFunc GL_SRC_ALPHA GL_ONE
+		detail
+		alphaGen lightingSpecular
+	}
+}
+
+models/map_objects/yavin/fern3
+{
+	emissive 0
+	q3map_nolightmap
+	q3map_alphashadow
+	q3map_onlyvertexlighting
+	cull twosided
+	{
+		map models/map_objects/yavin/fern3
+		alphaFunc GE128
+		rgbGen vertex
+	}
+	{
+		map models/map_objects/yavin/fern3_spec
+		blendFunc GL_SRC_ALPHA GL_ONE
+		detail
+		alphaGen lightingSpecular
+	}
+}
+
+models/map_objects/hoth/turret_bottom
+{
+	emissive 0
+	{
+		map models/map_objects/hoth/turret_bottom
+		rgbGen lightingDiffuse
+	}
+	{
+		map models/map_objects/hoth/turret_bottom_spec
+		blendFunc GL_SRC_ALPHA GL_ONE
+		detail
+		alphaGen lightingSpecular
+	}
+}
+
+models/map_objects/ships/academy_engine
+{
+	emissive 0
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_engine
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_engine_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+models/map_objects/ships/academy_door
+{
+	emissive 0
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_door
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_door_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+models/map_objects/ships/academy_frame
+{
+	emissive 0
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_frame
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_frame_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+models/map_objects/ships/academy_body
+{
+	emissive 0
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_body
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_body_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+models/map_objects/ships/academy_cockpit
+{
+	emissive 0
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map models/map_objects/ships/academy_cockpit
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+		emissive 0
+	}
+	{
+		map models/map_objects/ships/academy_cockpit_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+		emissive 0
+	}
+}

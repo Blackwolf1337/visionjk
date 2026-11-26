@@ -1,22 +1,5 @@
 // materials of the material debug menu (v_matdebug) for zz_mat_mp2.oshader, read after the shader files
 
-textures/mp/kor_outside
-{
-	qer_editorimage textures/quicktrip/rock_sandstone.tga
-	{
-		map $lightmap
-		rgbGen identity
-	}
-	{
-		map textures/quicktrip/rock_sandstone
-		blendFunc GL_DST_COLOR GL_ZERO
-		rgbGen identity
-		normalGen 0.5 2 0.3
-		roughness 0.85
-		metalness 0
-	}
-}
-
 textures/mp/s_wall2_nophong
 {
 	qer_editorimage textures/quicktrip/qt_wall2
@@ -55,5 +38,24 @@ textures/mp/s_rift_newcolumn
 	{
 		map textures/rift/newcolumn_glow
 		blendFunc GL_ONE GL_ONE
+	}
+}
+
+textures/mp/kor_outside
+{
+	qer_editorimage textures/quicktrip/rock_sandstone.tga
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map textures/quicktrip/rock_sandstone
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+		normalGen 0.5 2 0.3 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.016
+		parallaxPlane 0.5
 	}
 }

@@ -1,0 +1,45 @@
+// materials of the material debug menu (v_matdebug) for yavin.shader, read after the shader files
+
+textures/yavin/ground_plants
+{
+	emissive 0
+	qer_editorimage textures/yavin/groundplants
+	surfaceparm noimpact
+	surfaceparm nomarks
+	surfaceparm trans
+	polygonOffset
+	q3map_nolightmap
+	q3map_alphashadow
+	q3map_onlyvertexlighting
+	{
+		map textures/yavin/groundplants
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+	}
+	{
+		map textures/yavin/groundplants
+		blendFunc GL_SRC_ALPHA GL_ONE
+		detail
+		alphaGen lightingSpecular
+	}
+}
+
+models/map_objects/yavin/plant
+{
+	emissive 0
+	qer_editorimage models/map_objects/yavin/plant
+	q3map_alphashadow
+	cull twosided
+	{
+		map models/map_objects/yavin/plant
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		depthWrite
+		rgbGen vertex
+	}
+	{
+		map models/map_objects/yavin/plant_spec
+		blendFunc GL_SRC_ALPHA GL_ONE
+		detail
+		alphaGen lightingSpecular
+	}
+}

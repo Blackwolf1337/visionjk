@@ -63,3 +63,21 @@ textures/vjun/door1_onoff
 		alphaGen identity
 	}
 }
+
+models/map_objects/vjun/prong
+{
+	emissive 0
+	{
+		map $lightmap
+	}
+	{
+		map models/map_objects/vjun/prong
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+	{
+		map models/map_objects/vjun/prong_glw
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}

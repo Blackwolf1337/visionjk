@@ -1,0 +1,16 @@
+// materials of the material debug menu (v_matdebug) for bounty.shader, read after the shader files
+
+models/map_objects/bounty/light
+{
+	emissive 0
+	q3map_nolightmap
+	{
+		map models/map_objects/bounty/light
+		blendFunc GL_ONE GL_ZERO
+		rgbGen lightingDiffuse
+	}
+	{
+		map models/map_objects/bounty/light_glw
+		blendFunc GL_ONE GL_ONE
+	}
+}

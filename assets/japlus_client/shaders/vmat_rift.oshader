@@ -1,4 +1,4 @@
-// materials of the material debug menu (v_matdebug) for zz_mat_rift.oshader, read after the shader files
+// materials of the material debug menu (v_matdebug) for rift.shader, read after the shader files
 
 textures/rift/stone_rim
 {
@@ -60,5 +60,18 @@ textures/rift/newcolumn
 		blendFunc GL_ONE GL_ONE
 		glow
 		rgbGen identity
+	}
+}
+
+textures/rift/env_crystal
+{
+	emissive 1000 1 1 1
+	surfaceparm nonopaque
+	surfaceparm forcefield
+	q3map_nolightmap
+	{
+		map textures/rift/env_crystal_2
+		blendFunc GL_ONE GL_ONE
+		tcGen environment
 	}
 }

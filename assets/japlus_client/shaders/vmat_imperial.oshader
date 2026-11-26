@@ -1,0 +1,24 @@
+// materials of the material debug menu (v_matdebug) for imperial.shader, read after the shader files
+
+textures/imperial/square
+{
+	q3map_material SolidMetal
+	{
+		map textures/factory/enviro
+		tcGen environment
+	}
+	{
+		map textures/imperial/square
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		normalGen 0.4 2 0.1
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+		parallaxDepth 0.01
+		parallaxPlane 0.5
+	}
+	{
+		map $lightmap
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}

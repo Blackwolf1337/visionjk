@@ -20,7 +20,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cl_fxlight.cpp -- effects of the level that give a moving light (the fire bowls of mp/ffa2 are the effect
 // env/small_fire, no surface a material could make a lamp). Which effects do, and how, is set in the material tool
-// (v_matdebug, tab Effects) and kept in FXLIGHT_FILE. Every play of an effect in the world goes through
+// (v_matdebug, tab Effects): FXLIGHT_BASE has what VisionJK ships, FXLIGHT_FILE of the profile what the player set
+// himself, effect by effect, and only what differs from the shipped is written there. Every play of an effect in the world goes through
 // CL_FxLight_Played (fx/FxScheduler.cpp): a place where one plays again and again keeps a light that flickers as the
 // small fires an explosion leaves do (cgame/weapons/cg_explosion.c), and goes out a moment after the last play.
 
@@ -32,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <string>
 
 #define FXLIGHT_FILE		"vision/fxlights.txt"
+#define FXLIGHT_BASE		"vision/fxlights_base.txt"	// in the assets: the lights as shipped
 #define FXLIGHT_EFFECTS		256
 #define FXLIGHT_SPOTS		128
 #define FXLIGHT_SAME		24.0f		// units: a play this near a spot of the effect is that spot again
@@ -57,7 +59,10 @@ typedef struct fxLightEffect_s {
 	float		offset;				// units along the direction of the effect (a flame stands above where it starts)
 	int			hold;				// msec the light stays after the last play
 	int			shadows;			// dlight shadowMode: 0 players and level, 1 none, 2 players, 3 level
-	qboolean	kept;				// in the file, or changed in the menu: written by a save
+	qboolean	kept;				// in the file of the player, or changed in the menu: written by a save, unless it is
+									// as shipped again
+	qboolean	shipped;			// FXLIGHT_BASE has it: base is what it says
+	struct fxLightEffect_s *base;	// (a copy of the values as shipped)
 	int			plays;				// in this level
 	int			lastPlayed;			// cls.realtime, 0: not in this level
 } fxLightEffect_t;
@@ -73,6 +78,7 @@ typedef struct fxLightSpot_s {
 } fxLightSpot_t;
 
 static fxLightEffect_t	effects[FXLIGHT_EFFECTS];
+static fxLightEffect_t	shippedValues[FXLIGHT_EFFECTS];	// effects[i].base points here
 static int				numEffects;
 static fxLightSpot_t	spots[FXLIGHT_SPOTS];
 static short			effectOfId[FX_MAX_EFFECTS];	// the entry of an effect id of the scheduler, -1 not looked up
@@ -108,12 +114,19 @@ static fxLightEffect_t *FxLight_Find( const char *name, qboolean create ) {
 	return e;
 }
 
-// a line of the file: <effect> <on> <r> <g> <b> <radius> <flicker> <offset> <hold> <shadows>
-static void FxLight_Read( void ) {
-	void *buffer = NULL;
-	const long length = FS_ReadFile( FXLIGHT_FILE, &buffer );
+// the same light as shipped
+static qboolean FxLight_AsShipped( const fxLightEffect_t *e ) {
+	const fxLightEffect_t *b = e->base;
 
-	fileRead = qtrue;
+	return (qboolean)( e->shipped && b && e->on == b->on && VectorCompare( e->color, b->color ) && e->radius == b->radius
+		&& e->flicker == b->flicker && e->offset == b->offset && e->hold == b->hold && e->shadows == b->shadows );
+}
+
+// a line of a file: <effect> <on> <r> <g> <b> <radius> <flicker> <offset> <hold> <shadows>
+static void FxLight_ReadFile( const char *name, qboolean shipped ) {
+	void *buffer = NULL;
+	const long length = FS_ReadFile( name, &buffer );
+
 	if ( length > 0 && buffer ) {
 		const char *p = (const char *)buffer;
 
@@ -142,7 +155,13 @@ static void FxLight_Read( void ) {
 			e->offset = Com_Clamp( -256.0f, 256.0f, v[6] );
 			e->hold = Com_Clampi( 50, 20000, (int)v[7] );
 			e->shadows = Com_Clampi( 0, 3, (int)v[8] );
-			e->kept = qtrue;
+			if ( shipped ) {
+				e->shipped = qtrue;
+				e->base = &shippedValues[e - effects];
+				*e->base = *e;
+			} else {
+				e->kept = qtrue;
+			}
 		}
 	}
 	if ( buffer ) {
@@ -150,14 +169,22 @@ static void FxLight_Read( void ) {
 	}
 }
 
+// what is shipped, then what the player set himself on top of it
+static void FxLight_Read( void ) {
+	fileRead = qtrue;
+	FxLight_ReadFile( FXLIGHT_BASE, qtrue );
+	FxLight_ReadFile( FXLIGHT_FILE, qfalse );
+}
+
 static void FxLight_Write( void ) {
-	std::string text = "// effects that give a moving light (v_matdebug, tab Effects):\n"
+	std::string text = "// effects that give a moving light (v_matdebug, tab Effects), where they differ from what is shipped:\n"
 		"// <effect> <on> <r> <g> <b> <radius> <flicker> <offset> <msec it stays> <shadows: 0 players and level, 1 none, 2 players, 3 level>\n";
 
 	for ( int i = 0; i < numEffects; i++ ) {
 		const fxLightEffect_t *e = &effects[i];
 
-		if ( e->kept ) {
+		// (not what is as shipped: a later version of the shipped light reaches the player then)
+		if ( e->kept && !FxLight_AsShipped( e ) ) {
 			text += va( "%s %d %g %g %g %g %g %g %d %d\n", e->name, e->on ? 1 : 0, e->color[0], e->color[1], e->color[2], e->radius,
 				e->flicker, e->offset, e->hold, e->shadows );
 		}
@@ -505,6 +532,24 @@ void CL_FxLight_DrawMenu( void ) {
 			}
 			ImGui::SetItemTooltip( "The light of the small fires an explosion leaves" );
 			ImGui::EndDisabled();
+			if ( e->shipped ) {
+				ImGui::SameLine();
+				ImGui::BeginDisabled( FxLight_AsShipped( e ) );
+				if ( ImGui::Button( "As shipped" ) ) {
+					const fxLightEffect_t b = *e->base;
+
+					e->on = b.on;
+					VectorCopy( b.color, e->color );
+					e->radius = b.radius;
+					e->flicker = b.flicker;
+					e->offset = b.offset;
+					e->hold = b.hold;
+					e->shadows = b.shadows;
+					changed = true;
+				}
+				ImGui::EndDisabled();
+				ImGui::SetItemTooltip( "Back to the light VisionJK ships for this effect" );
+			}
 			if ( changed ) {
 				e->kept = qtrue;
 				unsavedChanges = qtrue;
