@@ -1,4 +1,4 @@
-// materials of the material debug menu (v_matdebug) for zz_mat_rail_roof.oshader, read after the shader files
+// materials of the material debug menu (v_matdebug) for rail_roof.shader, read after the shader files
 
 textures/rail/rail_pipe
 {
@@ -13,5 +13,59 @@ textures/rail/rail_pipe
 		rmoGen 0.2 0.4
 		roughness 0.5
 		metalness 0.3
+	}
+}
+
+textures/rail/brasspanel
+{
+	emissive 0
+	qer_editorimage textures/rail/brasspanel
+	{
+		map $lightmap
+	}
+	{
+		map textures/rail/brasspanel
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+	{
+		map textures/rail/brasspanel_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/rail/gripper
+{
+	emissive 0
+	q3map_nolightmap
+	{
+		map textures/rail/gripper
+		rgbGen vertex
+	}
+	{
+		map textures/rail/gripper_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen wave noise 0.5 0.3 0.3 44
+	}
+	{
+		map textures/rail/gripper_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/rail/tanksymbol3
+{
+	emissive 0
+	qer_editorimage textures/rail/tanksymbol1
+	surfaceparm nonsolid
+	q3map_nolightmap
+	{
+		map textures/rail/tanksymbol3
+		blendFunc GL_ONE GL_ONE
+		rgbGen identity
 	}
 }

@@ -1,0 +1,5 @@
+// Effects that give a moving light where they play (client/cl_fxlight.cpp), as VisionJK ships them. A player's own
+// settings of the material tool (v_matdebug, tab Effects) are kept in vision/fxlights.txt of the profile and stand
+// before these, effect by effect.
+// <effect> <on> <r> <g> <b> <radius> <flicker> <offset> <msec it stays> <shadows: 0 players and level, 1 none, 2 players, 3 level>
+env/small_fire 1 1 0.5 0.16 241 0.12 12 1002 0

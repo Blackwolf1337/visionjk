@@ -1,27 +1,5 @@
 // materials of the material debug menu (v_matdebug) for zz_mat_byss.oshader, read after the shader files
 
-textures/byss/byss_basicwall
-{
-	qer_editorimage textures/byss/byss_basicwall
-	{
-		map $lightmap
-	}
-	{
-		map textures/byss/byss_basicwall
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 2 0.3
-		rmoGen 0.2 0.4
-		roughness 0.6
-		metalness 0.1
-	}
-	{
-		map textures/byss/byss_basicwall_glow
-		blendFunc GL_ONE GL_ONE
-		glow
-		rgbGen identity
-	}
-}
-
 textures/byss/basicred
 {
 	q3map_material SolidMetal
@@ -120,5 +98,28 @@ textures/byss/floor_byss
 		tcGen environment
 		roughness 0.8
 		metalness 0
+	}
+}
+
+textures/byss/byss_basicwall
+{
+	emissive 0
+	qer_editorimage textures/byss/byss_basicwall
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/byss_basicwall
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/byss/byss_basicwall_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
 	}
 }

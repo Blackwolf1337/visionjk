@@ -1,12 +1,4 @@
-// materials of the material debug menu (v_matdebug) for zz_mat_textures.oshader, read after the shader files
-
-textures/desert/stucco_ceiling_512_seamless
-{
-	implicitMap -
-	normalGen 0.4 1 0.3
-	roughness 0.85
-	metalness 0
-}
+// materials of the material debug menu (v_matdebug) for textures without a shader, read after the shader files
 
 textures/desert/mos_eisley_door_jamb
 {
@@ -37,14 +29,6 @@ textures/desert/concrete_wall_tall_vent
 	implicitMap -
 	normalGen 0.5 1 0.3
 	roughness 0.85
-	metalness 0
-}
-
-textures/desert/concrete_floor_dark
-{
-	implicitMap -
-	normalGen 0.4 1 0.3
-	roughness 0.8
 	metalness 0
 }
 
@@ -81,15 +65,6 @@ textures/imperial/caution2
 	normalGen 0.6 1 0.3
 	rmoGen 0.2 0.4
 	roughness 0.6
-	metalness 0.1
-}
-
-textures/imperial/grid_3
-{
-	implicitMap -
-	normalGen 0.6 1 0.3
-	rmoGen 0.2 0.4
-	roughness 0.65
 	metalness 0.1
 }
 
@@ -260,14 +235,6 @@ textures/bespin/botton
 	implicitMap -
 	normalGen 0.4 1 0.3
 	roughness 0.45
-	metalness 0
-}
-
-textures/mp/s_qt_underside
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
 	metalness 0
 }
 
@@ -567,15 +534,6 @@ textures/taspir/t_pillar
 	metalness 0.1
 }
 
-textures/taspir/trim_walk
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.2 0.4
-	roughness 0.6
-	metalness 0.1
-}
-
 textures/taspir/panelling1
 {
 	implicitMap -
@@ -711,15 +669,6 @@ textures/vjun/basemetal1
 	metalness 0.1
 }
 
-textures/taspir/siding2
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.3 0.4
-	roughness 0.7
-	metalness 0.1
-}
-
 textures/taspir/rustmetal1
 {
 	implicitMap -
@@ -800,14 +749,6 @@ textures/korriban/os_outsidebasee
 	metalness 0
 }
 
-textures/korriban/os_outsidebase
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
 textures/korriban/k_trim3
 {
 	implicitMap -
@@ -817,14 +758,6 @@ textures/korriban/k_trim3
 }
 
 textures/korriban/k_wall10
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/k_trim2
 {
 	implicitMap -
 	normalGen 0.5 2 0.3
@@ -976,14 +909,6 @@ textures/rift/blackrock2
 	metalness 0
 }
 
-textures/korriban/marble_pass
-{
-	implicitMap -
-	normalGen 0.2 2 0.3
-	roughness 0.35
-	metalness 0
-}
-
 textures/rift/marbly
 {
 	implicitMap -
@@ -1035,14 +960,6 @@ models/map_objects/factory/window_brace
 	rmoGen 0.2 0.4
 	roughness 0.6
 	metalness 0.1
-}
-
-models/map_objects/korriban/coffin_slab
-{
-	implicitMap -
-	normalGen 0.3 2 0.3
-	roughness 0.8
-	metalness 0
 }
 
 models/map_objects/korriban/torch_hang
@@ -1217,14 +1134,6 @@ textures/quicktrip/qt_trim1
 	parallaxPlane 0.5
 }
 
-textures/desert/concrete_floor_light
-{
-	implicitMap -
-	normalGen 0.4 1 0.3
-	roughness 0.8
-	metalness 0
-}
-
 textures/desert/door_1024
 {
 	implicitMap -
@@ -1346,16 +1255,6 @@ textures/desert/stucco_trim1
 	rmoGen 0.2 0.4
 	roughness 0.5
 	metalness 0.6
-}
-
-textures/danger/sand
-{
-	implicitMap -
-	normalGen 0.6 1 0
-	rmoGen 0.3 0.3
-	roughness 0.9
-	metalness 0
-	tessellation 5 0.5 32
 }
 
 models/map_objects/desert/evaporator2
@@ -1832,4 +1731,136 @@ textures/cairn/c_crate2
 	parallaxDepth 0.025
 	parallaxPlane 0.5
 	specularReflectance 0.034
+}
+
+textures/korriban/marble_pass
+{
+	implicitMap -
+	normalGen 0.2 2 0.3 invert
+	roughness 0.35
+	metalness 0
+	parallaxDepth 0.03
+	parallaxPlane 0.5
+}
+
+textures/korriban/k_trim2
+{
+	implicitMap -
+	normalGen 0.5 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.05
+	parallaxPlane 0.5
+}
+
+models/map_objects/korriban/coffin_slab
+{
+	implicitMap -
+	normalGen 0.3 2 0.3 invert
+	roughness 0.8
+	metalness 0
+	parallaxDepth 0.01
+	parallaxPlane 0.5
+}
+
+textures/korriban/os_outsidebase
+{
+	implicitMap -
+	normalGen 0.5 2 0.03 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.035
+	parallaxPlane 0.5
+}
+
+textures/mp/s_qt_underside
+{
+	implicitMap -
+	normalGen 0.5 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.02
+	parallaxPlane 0.5
+}
+
+textures/danger/sand
+{
+	implicitMap -
+	normalGen 0.6 1 0
+	rmoGen 0.3 0.3
+	roughness 0.9
+	metalness 0
+	tessellation 10 0.5 32
+}
+
+textures/desert/concrete_floor_dark
+{
+	implicitMap -
+	normalGen 0.4 1 0.3 invert
+	roughness 0.8
+	metalness 0
+	parallaxDepth 0.01
+	parallaxPlane 0.5
+}
+
+textures/imperial/grid_3
+{
+	implicitMap -
+	normalGen 0.6 1 0.3 invert
+	rmoGen 0.2 0.4
+	roughness 0.65
+	metalness 0.1
+	parallaxDepth 0.008
+	parallaxPlane 0.5
+}
+
+textures/desert/stucco_ceiling_512_seamless
+{
+	implicitMap -
+	normalGen 0.4 1 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.022
+	parallaxPlane 0.5
+}
+
+textures/desert/concrete_floor_light
+{
+	implicitMap -
+	normalGen 0.4 1 0.3
+	roughness 0.8
+	metalness 0
+	parallaxDepth 0.01
+	parallaxPlane 0.5
+}
+
+textures/rail/trim3
+{
+	implicitMap -
+	normalGen 0.4 2 0.3
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+}
+
+textures/taspir/trim_walk
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+	parallaxDepth 0.025
+	parallaxPlane 0.5
+}
+
+textures/taspir/siding2
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.3 0.4
+	roughness 0.7
+	metalness 0.1
+	parallaxDepth 0.007
+	parallaxPlane 0.5
 }

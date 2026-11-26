@@ -87,24 +87,6 @@ textures/taspir/256_128rustv
 	}
 }
 
-textures/taspir/floor
-{
-	q3map_material SolidMetal
-	{
-		map $lightmap
-	}
-	{
-		map textures/taspir/floor
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 2 1 invert
-		rmoGen 0.2 0.4
-		roughness 0.9
-		metalness 0.1
-		parallaxDepth 0.014
-		parallaxPlane 0.5
-	}
-}
-
 textures/taspir/taspir_phongrock
 {
 	q3map_shadeangle 150
@@ -124,5 +106,89 @@ textures/taspir/taspir_phongrock
 		map $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
 		rgbGen identity
+	}
+}
+
+textures/taspir/ore_lightemitting_lavapool
+{
+	q3map_lightimage textures/taspir/lava00
+	qer_editorimage textures/taspir/lava00
+	q3map_surfacelight 1200
+	q3map_lightsubdivide 512
+	surfaceparm nomarks
+	surfaceparm nonsolid
+	surfaceparm nonopaque
+	surfaceparm lava
+	surfaceparm trans
+	q3map_nolightmap
+	q3map_onlyvertexlighting
+	q3map_novertexshadows
+	cull twosided
+	{
+		map textures/imp_mine/lava2
+		glow
+		rgbGen wave sin 1.2 0.4 0 0.3
+		tcMod scroll 0.04 0.04
+		normalGen 1 1 0.3
+		roughness 0.85
+		metalness 0.7
+		parallaxDepth 0.017
+		parallaxPlane 0.5
+	}
+}
+
+textures/taspir/landing_pad
+{
+	emissive 0
+	q3map_nolightmap
+	{
+		map textures/taspir/landing_pad
+		rgbGen vertex
+	}
+	{
+		map textures/taspir/landingplat_glw
+		blendFunc GL_ONE GL_ONE
+		rgbGen identity
+		roughness 0.8
+		metalness 0
+	}
+	{
+		map textures/taspir/landing_wipeh
+		blendFunc GL_ONE GL_ONE
+		rgbGen identity
+		tcMod scroll 0.25 0
+		roughness 0.8
+		metalness 0
+	}
+	{
+		map textures/taspir/landing_wipev
+		blendFunc GL_ONE GL_ONE
+		rgbGen identity
+		tcMod scroll 0 -0.25
+	}
+	{
+		map textures/taspir/landing_pad
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		normalGen 1 1 0.13
+		roughness 0.8
+		metalness 0.1
+	}
+}
+
+textures/taspir/floor
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/floor
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 1 invert
+		rmoGen 0.2 0.4
+		roughness 0.9
+		metalness 0.1
+		parallaxDepth 0.014
+		parallaxPlane 0.5
 	}
 }

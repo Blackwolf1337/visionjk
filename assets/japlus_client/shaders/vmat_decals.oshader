@@ -1,0 +1,14 @@
+// materials of the material debug menu (v_matdebug) for decals.shader, read after the shader files
+
+textures/decals/arrow_decal
+{
+	emissive 0
+	qer_editorimage textures/decals/arrow_decal
+	polygonOffset
+	q3map_nolightmap
+	q3map_onlyvertexlighting
+	{
+		map textures/decals/arrow_decal
+		blendFunc GL_ONE GL_ONE
+	}
+}

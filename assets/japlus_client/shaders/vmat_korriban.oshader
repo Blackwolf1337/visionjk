@@ -102,3 +102,26 @@ textures/korriban/os_outsidebased
 		blendFunc GL_DST_COLOR GL_ZERO
 	}
 }
+
+textures/korriban/door
+{
+	qer_editorimage textures/korriban/door
+	{
+		map textures/common/etest4
+		tcGen environment
+	}
+	{
+		map textures/korriban/door
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		normalGen 0.4 2 0.3 invert
+		rmoGen 0.2 0.4
+		roughness 0.9
+		metalness 0.1
+		parallaxDepth 0.03
+		parallaxPlane 0.5
+	}
+	{
+		map $lightmap
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}

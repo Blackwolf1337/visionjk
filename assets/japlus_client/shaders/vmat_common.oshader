@@ -1,0 +1,110 @@
+// materials of the material debug menu (v_matdebug) for common.shader, read after the shader files
+
+textures/common/env_glass
+{
+	qer_editorimage textures/common/etest4
+	qer_trans 0.6
+	surfaceparm nonopaque
+	surfaceparm forcefield
+	surfaceparm trans
+	q3map_material Glass
+	q3map_nolightmap
+	{
+		map textures/common/etest4
+		blendFunc GL_ONE GL_ONE
+		tcGen environment
+		roughness 0.2
+		metalness 0
+		transmission 0.95
+		ior 1.5
+	}
+}
+
+textures/common/neon_red
+{
+	qer_editorimage textures/common/gradient3
+	surfaceparm noimpact
+	surfaceparm nomarks
+	surfaceparm nonsolid
+	surfaceparm trans
+	q3map_nolightmap
+	{
+		map textures/common/gradient3
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen const ( 0.874510 0.000000 0.000000 )
+		tcMod scroll 8 0
+		roughness 0.02
+		metalness 0
+		transmission 0.3
+		ior 1.5
+	}
+}
+
+textures/common/neon_green
+{
+	qer_editorimage textures/common/gradient3
+	surfaceparm noimpact
+	surfaceparm nomarks
+	surfaceparm nonsolid
+	surfaceparm trans
+	q3map_nolightmap
+	{
+		map textures/common/gradient3
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen const ( 0.000000 1.000000 0.000000 )
+		tcMod scroll 8 0
+	}
+}
+
+textures/common/frosted_glass
+{
+	qer_editorimage textures/rail/frosted_glass
+	q3map_tesssize 48
+	qer_trans 0.5
+	surfaceparm nonopaque
+	surfaceparm trans
+	q3map_material Glass
+	q3map_nolightmap
+	{
+		map textures/rail/frosted_glass
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		roughness 0.04
+		metalness 0
+		transmission 1
+		ior 1.52
+		thickness 8
+		absorption 0.45 0.8 0.6 8
+	}
+	{
+		map textures/common/glass2
+		blendFunc GL_ONE GL_ONE
+		tcGen environment
+	}
+}
+
+textures/common/glass
+{
+	qer_editorimage textures/common/glass2.tga
+	q3map_tesssize 48
+	qer_trans 0.5
+	surfaceparm nonopaque
+	surfaceparm trans
+	q3map_material Glass
+	q3map_nolightmap
+	{
+		map textures/common/glass2
+		blendFunc GL_ZERO GL_ONE_MINUS_SRC_COLOR
+		roughness 0.02
+		metalness 0
+		transmission 1
+		ior 1.5
+		thickness 5
+	}
+	{
+		map textures/common/glass2
+		blendFunc GL_ONE GL_ONE
+		tcGen environment
+	}
+}

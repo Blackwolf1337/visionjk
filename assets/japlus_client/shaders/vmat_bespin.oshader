@@ -1,19 +1,4 @@
-// materials of the material debug menu (v_matdebug) for bespin.shader, read after the shader files
-
-textures/bespin/basic2
-{
-	q3map_material Concrete
-	{
-		map $lightmap
-	}
-	{
-		map textures/bespin/basic2
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 1 0.3
-		roughness 0.85
-		metalness 0
-	}
-}
+// materials of the material debug menu (v_matdebug) for zz_mat_bespin.oshader, read after the shader files
 
 textures/bespin/basic
 {
@@ -43,5 +28,22 @@ textures/bespin/u_metalorange
 		rmoGen 0.3 0.5
 		roughness 0.8
 		metalness 0
+	}
+}
+
+textures/bespin/basic2
+{
+	q3map_material Concrete
+	{
+		map $lightmap
+	}
+	{
+		map textures/bespin/basic2
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 1 0.3 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.005
+		parallaxPlane 0.5
 	}
 }
