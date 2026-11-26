@@ -534,15 +534,6 @@ textures/taspir/t_pillar
 	metalness 0.1
 }
 
-textures/taspir/trim_walk
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.2 0.4
-	roughness 0.6
-	metalness 0.1
-}
-
 textures/taspir/panelling1
 {
 	implicitMap -
@@ -670,15 +661,6 @@ textures/vjun/basemetal4
 }
 
 textures/vjun/basemetal1
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.3 0.4
-	roughness 0.7
-	metalness 0.1
-}
-
-textures/taspir/siding2
 {
 	implicitMap -
 	normalGen 0.4 2 0.3
@@ -1859,4 +1841,26 @@ textures/rail/trim3
 	rmoGen 0.2 0.4
 	roughness 0.6
 	metalness 0.1
+}
+
+textures/taspir/trim_walk
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+	parallaxDepth 0.025
+	parallaxPlane 0.5
+}
+
+textures/taspir/siding2
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.3 0.4
+	roughness 0.7
+	metalness 0.1
+	parallaxDepth 0.007
+	parallaxPlane 0.5
 }

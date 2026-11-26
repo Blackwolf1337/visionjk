@@ -23,3 +23,22 @@ textures/siege/siege2sand
 		parallaxPlane 0.5
 	}
 }
+
+textures/siege/desert_grime_tb
+{
+	qer_editorimage textures/desert/stucco_grime_top_bottom.tga
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map textures/desert/stucco_grime_top_bottom
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+		normalGen 0.4 2 0.3 invert
+		roughness 0.8
+		metalness 0
+		parallaxDepth 0.034
+		parallaxPlane 0.5
+	}
+}

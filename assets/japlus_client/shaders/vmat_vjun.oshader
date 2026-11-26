@@ -42,28 +42,6 @@ textures/vjun/hangardoor
 	}
 }
 
-textures/vjun/door1_onoff
-{
-	{
-		map $lightmap
-	}
-	{
-		map textures/vjun/door1_onoff
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 2 0.3
-		rmoGen 0.2 0.4
-		roughness 0.6
-		metalness 0.1
-	}
-	{
-		oneshotanimMap 1 textures/vjun/door1_onoffr textures/vjun/door1_onoffg
-		blendFunc GL_ONE GL_ONE
-		glow
-		rgbGen identity
-		alphaGen identity
-	}
-}
-
 models/map_objects/vjun/prong
 {
 	emissive 0
@@ -79,5 +57,29 @@ models/map_objects/vjun/prong
 		blendFunc GL_ONE GL_ONE
 		glow
 		rgbGen identity
+	}
+}
+
+textures/vjun/door1_onoff
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjun/door1_onoff
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+		emissive 386
+	}
+	{
+		oneshotanimMap 1 textures/vjun/door1_onoffr textures/vjun/door1_onoffg
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+		alphaGen identity
+		emissive 354
 	}
 }
