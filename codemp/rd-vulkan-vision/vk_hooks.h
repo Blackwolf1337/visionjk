@@ -57,6 +57,8 @@ int VK_RT_PlayerLamps( const vec3_t origin, vec3_t lamp[3], vec3_t tint[3], floa
 int VK_RT_LampsNear( const vec3_t origin, float radius, levelLamp_t *out, int max );
 float VK_RT_ShaderLight( const struct shader_s *shader );
 float VK_RT_StageLight( const struct shaderStage_s *stage );
+// vk_smoke.cpp: ext.SetSmoke
+void RE_SetSmoke( const smokeVolume_t *smoke );
 void VK_RT_LampsChanged( void );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );

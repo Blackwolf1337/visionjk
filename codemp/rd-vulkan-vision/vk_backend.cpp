@@ -857,6 +857,7 @@ static qboolean	rb_softLater;
 // over a surface lies under its light then: a limit.)
 qboolean			rb_deferDlights;
 qboolean			rb_dlightsOnly;
+int					rb_viewSerial;		// counts the views that are drawn: what is made once a view knows by it that a new one began
 int					rb_surfaceDlights;
 static drawSurf_t	*rb_sweepSurfs;
 static int			rb_sweepCount;
@@ -1007,6 +1008,11 @@ static void RB_DrawWet( int depthRange ) {
 		rb_entityReset = qtrue;
 		VK_GpuMark( "moving lights" );
 	}
+#ifndef RD_VISION_GLES
+	// the smoke of the level as a volume, over the solid level and under the blades (vk_smoke.cpp)
+	VK_SmokeDraw();
+	VK_GpuMark( "smoke" );
+#endif
 	// the saber blades over the solid level, under the sparks and flashes of their clashes (shaders/saber.glsl)
 	VK_SaberBlades( qfalse );
 	VK_GpuMark( "saber blades" );
@@ -1391,6 +1397,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// water over what was drawn.
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+	rb_viewSerial++;
 #ifdef RD_VISION_GLES
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
@@ -1463,6 +1470,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// tay_bloom, v_tonemap and v_smaa: the view of the level itself, as the focus below. The bloom takes the light
 	// above white before the tone map, SMAA finds its edges in the colours of the screen after it.
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_BeginPostSteps();
 		VK_SsrPrep();
 		VK_GpuMark( "ssr picture" );
 		VK_Bloom();
@@ -1471,6 +1479,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 		VK_GpuMark( "tonemap" );
 		VK_Smaa();
 		VK_GpuMark( "smaa" );
+		VK_EndPostSteps();
 	}
 	// RE_SetScreenEffect(): the view of the level itself, before the scope, which lays its lens over it
 	if ( r_screenFxSet && !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )

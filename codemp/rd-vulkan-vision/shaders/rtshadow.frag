@@ -337,6 +337,31 @@ float Shadow( vec3 p, vec3 normal ) {
 	return mix( gridDark, sunDark, sunReach );
 }
 
+// Whether the place of a pixel can lie in a shadow at all: Shadow() gives nothing where no player is near (FeetFade)
+// and none stands on the way to the sun (NearCaster). Asked for the place as it is drawn, with room for how far
+// LevelPlane() and Shadow() move it from there (12 units along its normal and 1.5 more). Until 2026-11-26 every pixel
+// of the picture took four more depths and three rays against the level first, to learn which way it faces, and
+// then heard that no player is near: 0.3 ms of a frame at 2560x1440 for one player.
+bool CanShade( vec3 p ) {
+	const float SLACK = 14.0;
+	int count = int( W[21].x );
+	bool sun = W[11].w > 0.0 && W[15].w > 0.0;
+
+	for ( int i = 0; i < count; i++ ) {
+		float end = mix( 256.0, 160.0, W[LAMPS + i * LAMP_ROWS + 3].w );
+
+		if ( distance( p, W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 ) ) < end + SLACK ) {
+			return true;
+		}
+		// (the way to the sun starts up to SLACK from p, so it passes the player by up to that much more, and where
+		// it is nearest to him lies up to that much further along it)
+		if ( sun && NearSphere( p, W[11].xyz, W[12].w, W[14].w, vec4( W[22 + i].xyz, W[22 + i].w + SLACK * ( 1.0 + W[14].w ) ) ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 #include "rtmask.glsl"
 
 void main() {
@@ -349,7 +374,7 @@ void main() {
 		o_color = vec4( 0.0, PackDistance( 8192.0 ) );
 		return;
 	}
-	if ( d < VIEW_WEAPON_RANGE ) {
+	if ( d < VIEW_WEAPON_RANGE || !CanShade( p ) ) {
 		o_color = vec4( 0.0, PackDistance( d ) );
 		return;
 	}

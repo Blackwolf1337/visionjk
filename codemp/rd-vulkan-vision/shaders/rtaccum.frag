@@ -48,7 +48,9 @@ void main() {
 	}
 
 	// onto what the frame before had for this point, where it saw it
-	if ( W[20].w > 0.0 ) {
+	// (no shadow here now nor beside it: what was is held between the least and the most of those, both nothing, so
+	// the place before it need not be looked up)
+	if ( W[20].w > 0.0 && hi > 0.0 ) {
 		vec3 p = here;
 		vec4 clip = mat4( W[16], W[17], W[18], W[19] ) * vec4( p, 1.0 );
 

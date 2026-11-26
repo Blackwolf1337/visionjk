@@ -416,6 +416,36 @@ typedef struct materialPick_s {
 	int			contents;			// CONTENTS_* of its shader
 } materialPick_t;
 
+// VisionJK: smoke as a volume (refexport_t ext.SetSmoke, cgame/level/cg_smoke.c): the renderer marches the rays of the
+// view through blobs of it, so it has depth, hides what is behind it by how much of it lies in between, and is cut
+// where a wall stands in it. A hole takes the smoke out round a line: what a Force Push, a blast, a blade or a shot
+// tore open, until it closes again.
+#define SMOKE_MAX_BLOBS		96
+#define SMOKE_MAX_HOLES		24
+
+typedef struct smokeBlob_s {
+	vec3_t		origin;
+	float		radius;				// where it ends
+	vec3_t		color;				// the smoke in the light of its place, 0 to 1
+	float		density;			// how thick in its middle, about 1: a cloud of them dims what is behind it, it does not hide it
+	float		flat;				// its height as a part of its radius: 1 a ball, less a cushion (smoke that settled)
+	vec3_t		drift;				// how far it moved since it came: its billows travel with it, or a blob that is
+									// pushed slides along under a pattern that stands still, a ball
+} smokeBlob_t;
+
+typedef struct smokeHole_s {
+	vec3_t		start, end;			// the line it lies round (both the same: a ball)
+	float		radius;
+	float		strength;			// 0 to 1: how much of the smoke it takes out in its middle
+} smokeHole_t;
+
+typedef struct smokeVolume_s {
+	int			numBlobs, numHoles;
+	smokeBlob_t	blobs[SMOKE_MAX_BLOBS];
+	smokeHole_t	holes[SMOKE_MAX_HOLES];
+	float		time;				// seconds: the smoke curls with it
+} smokeVolume_t;
+
 // VisionJK: a lamp of the level, a panel that glows (refexport_t ext.LampsNear)
 typedef struct levelLamp_s {
 	vec3_t		origin;

@@ -148,7 +148,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							swapStallTime;		// ri.Milliseconds() when a frame waited for an image in vain, 0: the last wait got one
 
 	VkSampleCountFlagBits		samples;			// r_ext_multisample. More than one: the scene is drawn into the three targets below
-	vkTarget_t					colorMS, depthMS, glowMS;	// and each pass ends by resolving them into color, depth and glow
+	vkTarget_t					colorMS, depthMS, glowMS;	// and color, depth and glow are made of them when they are read
 
 	VkDescriptorPool			descriptorPool;
 	VkDescriptorSetLayout		frameSetLayout;
@@ -189,12 +189,17 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipelineLayout			scopePipelineLayout;	// four sets of that kind and sixteen numbers (VK_ScopePass)
 	VkDescriptorSet				screenSet;			// vk.screen for it
 	VkPipelineLayout			screenFxPipelineLayout;	// the sets of the frame and four of the kind of postSet (VK_ScreenFxPass)
+	// color, glow and depth do not hold what their samples do: made of them when they are read (vk_cmd.cpp VK_FrameRead)
+	qboolean					colorStale, glowStale, depthStale;
+														//	(VK_BackdropPass began it): VK_EndTarget() makes the frame of them
+	int							passArea[4];			// the part of the frame the passes of the screen effects are cut to
+														//	(VK_ScreenFx): left, top, width, height in pixels, width 0: all
 	VkPipelineLayout			fogPipelineLayout;		// the sets of the frame and the depth (VK_ScreenFxFogPass)
 	VkPipelineLayout			paintPipelineLayout;	// the frame, the copy of it, the depth, the textures (VK_PaintPass)
 	VkPipelineLayout			smaaPipelineLayout;	// three sets of the kind of postSet and eight numbers (VK_SmaaPass)
 	// v_smaa: its targets in the size of the frame, made when it is first drawn, and its two lookup textures
 	vkTarget_t					smaaEdges, smaaWeights;
-	vkTarget_t					smaaColor;			// a copy of the frame, which its last pass reads while it writes the frame
+	vkTarget_t					smaaColor;			// a copy of the frame, which its last pass reads while it writes the frame (not with several samples a pixel)
 	vkTarget_t					smaaArea, smaaSearch;	// (filled from lib/smaa, never drawn into)
 	VkDescriptorSet				smaaEdgesSet, smaaWeightsSet, smaaColorSet, smaaAreaSet, smaaSearchSet;
 
@@ -308,6 +313,8 @@ void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat forma
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
+// target is about to be read: the frame, its depth or its glow is made of its samples if it is stale (vk_cmd.cpp)
+void		VK_FrameRead( VkCommandBuffer cmd, vkTarget_t *target );
 void		VK_ShowImage( int slot, VkImageView view, qboolean mipmapped );
 void		VK_DestroyPostTargets( void );
 // the targets and lookup textures of v_smaa, once until VK_DestroyPostTargets()

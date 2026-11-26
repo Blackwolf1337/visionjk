@@ -76,6 +76,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_BLADE_ROWS		7		// shaders/saber.glsl: seven rows a blade
 #define VK_BLADE_PORTAL		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * VK_BLADE_ROWS )	// where the view of a mirror or portal is
 #define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal
+#define VK_SMOKE_LIGHTS		4		// moving lights that light the smoke
+#define VK_SMOKE_BLOB_ROWS	3
+#define VK_SMOKE_VEC4S		( VK_WET_HEADER + 1 + SMOKE_MAX_BLOBS * VK_SMOKE_BLOB_ROWS + SMOKE_MAX_HOLES * 2 + VK_SMOKE_LIGHTS * 2 + 1 )	// shaders/smoke.frag: the view, the counts, three rows a blob, two a hole and a light, how many pixels of the frame one of its picture stands for
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame
@@ -89,6 +92,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		lights[VK_LIGHT_VEC4S][4];	// light to judge materials by, see VK_LightRows()
 	float		ssr[7][4];					// v_ssr: the picture of the level of the frame before, see VK_SsrPrep()
 	float		blades[VK_BLADE_VEC4S][4];	// the saber blades drawn in 3D, see VK_SaberBlades()
+	float		smoke[VK_SMOKE_VEC4S][4];	// the smoke as a volume, see VK_SmokeDraw()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -305,6 +309,8 @@ typedef struct vkState_s : vkDeviceState_t {
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	vkTarget_t					soft[2];			// the frame out of focus at half its size, v_menuBlur (VK_BlurFrame)
 	vkTarget_t					smoke[2];			// the smoke of the ghosts of Force Sight at half the size of the frame,
+	vkTarget_t					volume;				// the smoke of the level as a volume, marched at half the size of the frame
+	VkDescriptorSet				volumeSet;			//	(vk_smoke.cpp), and the set that shows it
 	int							smokeIndex;			// kept from frame to frame: the one that holds the last
 	int							smokeFrame;			// and the frame it was made in (tr.frameCount), 0: none
 	qboolean					finalValid;			// a frame has been rendered into it
@@ -385,6 +391,7 @@ extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
 extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
 extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
+extern int		rb_viewSerial;		// vk_backend.cpp: counts the views that are drawn
 extern int		rb_surfaceDlights;	// vk_backend.cpp: the moving lights of the surface being added (R_GhoulSurfaceDone)
 extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
 extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
@@ -475,6 +482,10 @@ void		VK_InitPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
+// the steps after the view of the level, between VK_BeginPostSteps() and VK_EndPostSteps(): the pass on the frame is
+// ended when they are called and when they return
+void		VK_BeginPostSteps( void );
+void		VK_EndPostSteps( void );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
@@ -487,9 +498,16 @@ void		VK_SparksShutdown( void );
 void		VK_SparksView( void );
 void		VK_SparksSimulate( void );
 void		VK_SparksDraw( uint32_t transform );
+// vk_post.cpp: after a pass over the level the scene goes on: the sets and the state of the shaders that draw geometry
+void		VK_ResumeScene( void );
+// vk_smoke.cpp: smoke as a volume (ext.SetSmoke)
+void		VK_SmokeInit( void );
+void		VK_SmokeShutdown( void );
+void		VK_SmokeDraw( void );
+void		RE_SetSmoke( const smokeVolume_t *smoke );
 qboolean	RE_EmitSparks( const sparkBurst_t *burst );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
-void		VK_Bloom( void );
+void		VK_Bloom( void );		// (one of the steps after the view of the level, see VK_BeginPostSteps)
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
 void		VK_ScreenFx( const screenEffect_t *fx );
@@ -515,6 +533,8 @@ void		VK_EndFrame( void );
 void		VK_WriteVideoFrame( void );
 void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth );
 void		VK_Scissor( int left, int top, int right, int bottom );
+qboolean	VK_BallBounds( const vec3_t origin, float radius, float *bounds );
+void		VK_ScissorBounds( const float *bounds );
 #ifndef RD_VISION_GLES
 extern qboolean	vk_glassReady;		// the frame was copied for the glass of this view (vk_backend.cpp, VK_GlassDraw)
 #endif
@@ -527,6 +547,7 @@ qboolean	VK_UploadIndexes( const vkBuffer_t *vertexBuffer, const vkSize_t *offse
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );
 void		VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits, int cullMode, qboolean polygonOffset );
+qboolean	VK_AddDrawRecords( const vkDraw_t *records, int count, uint32_t *first );
 
 // ------------------------------------------------------------------------------------------------------------
 // what a device has for the shared files, by the Vulkan file it is in. A rectangle is x, y, width, height as
@@ -584,6 +605,8 @@ void		VK_BeginCommands( vkFrame_t *frame );
 // and 0. Nothing of the state of a draw survives it, the shared files set stateValid to qfalse.
 void		VK_BeginTarget( vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad );
 void		VK_EndTarget( void );
+// with several samples a pixel: the frame and its depth are made of them now if they are stale (not on GLES)
+void		VK_MakeFrame( void );
 // the buffers of the frame and the texture table are what the draws read: at the start of a frame, and after VK_AddTarget()
 void		VK_BindFrameSets( void );
 // viewport and scissor of the draws that follow, the scissor cut to the frame
@@ -664,6 +687,9 @@ typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;
 void		VK_AddTarget( vkTarget_t *source, vkAdd_t how );
 // all of source into dest, which is at least as large, to its upper left corner. No target is begun.
 void		VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest );
+#ifndef RD_VISION_GLES
+void		VK_CopyTargetArea( vkTarget_t *source, vkTarget_t *dest, int margin );
+#endif
 // The depth of vk.depth at the pixels of count probes of the frame, from probe[first] on (x and y count from the
 // upper left corner). No target is begun. VK_ProbeDepth() has it when VK_BeginCommands() gets this frame again:
 // what the depth buffer holds, 0 to 1.

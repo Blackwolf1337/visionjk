@@ -43,7 +43,7 @@ cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
 
 // after a pass of its own in the middle of a view: the sets of the frame, the state and the viewport of the scene again
-static void VK_ResumeScene( void ) {
+void VK_ResumeScene( void ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
@@ -235,6 +235,31 @@ void VK_BlurFrame( float amount, float focus ) {
 
 /*
 ===============
+VK_BeginPostSteps, VK_EndPostSteps
+
+Round VK_SsrPrep(), VK_Bloom(), VK_Tonemap() and VK_Smaa(), the steps after the view of the level is drawn: each reads
+the frame and three of them draw into it. The pass on the frame is ended before the first and begun again after the
+last; a step that draws into the frame begins and ends it round its own draw. Each had ended the pass and begun it
+again for the next, which with several samples a pixel made the frame of its samples once more for nothing (the
+picture of v_ssr and the bloom read the same frame).
+===============
+*/
+void VK_BeginPostSteps( void ) {
+	if ( vk.frame ) {
+		VK_EndTarget();
+	}
+}
+
+void VK_EndPostSteps( void ) {
+	if ( vk.frame ) {
+		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+		// the shaders that draw geometry have other sets and other state
+		VK_ResumeScene();
+	}
+}
+
+/*
+===============
 VK_Bloom
 
 tay_bloom, what the Vulkan renderer of TaystJK has (r_bloom of Quake3e): what is brighter than tay_bloomThreshold
@@ -256,7 +281,6 @@ void VK_Bloom( void ) {
 	if ( !vk.frame || !tay_bloom->integer || intensity <= 0.0f ) {
 		return;
 	}
-	VK_EndTarget();
 
 	for ( int i = 0; i <= BLOOM_PASSES; i++ ) {
 		vkTarget_t *target = &vk.soft[i & 1];
@@ -273,9 +297,7 @@ void VK_Bloom( void ) {
 
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	VK_AddTarget( source, VKA_ADD );
-
-	// the shaders that draw geometry have other sets and other state
-	VK_ResumeScene();
+	VK_EndTarget();
 }
 
 /*
@@ -293,11 +315,8 @@ void VK_Smaa( void ) {
 	if ( !vk.frame || !v_smaa->integer ) {
 		return;
 	}
-	VK_EndTarget();
 	VK_SmaaPass( 0.1f / (float)( 1 << tr.overbrightBits ) );
-
-	// the shaders that draw geometry have other sets and other state
-	VK_ResumeScene();
+	VK_EndTarget();
 #endif
 }
 
@@ -322,11 +341,8 @@ void VK_Tonemap( void ) {
 	parm[0] = Com_Clamp( 0.05f, 16.0f, v_exposure->value );
 	parm[1] = (float)curve;
 	parm[2] = (float)( 1 << tr.overbrightBits );
-	VK_EndTarget();
 	VK_TonemapPass( parm );
-
-	// the shaders that draw geometry have other sets and other state
-	VK_ResumeScene();
+	VK_EndTarget();
 #endif
 }
 
@@ -354,7 +370,6 @@ void VK_SsrPrep( void ) {
 	parm[0] = rows[6][3];
 	parm[1] = rows[7][3];
 	parm[2] = parm[3] = 0.0f;
-	VK_EndTarget();
 	VK_SsrPrepPass( parm );
 	if ( vk.ssrShown != (int)tr.ssrImage->texnum ) {
 		VK_ShowTarget( (int)tr.ssrImage->texnum, &vk.ssrColor );
@@ -368,10 +383,6 @@ void VK_SsrPrep( void ) {
 	VectorCopy( rows[5], vk.ssrRows[6] );
 	vk.ssrRows[6][3] = 1.0f;
 	vk.ssrReady = qtrue;
-
-	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
-	// the shaders that draw geometry have other sets and other state
-	VK_ResumeScene();
 #endif
 }
 
@@ -701,13 +712,14 @@ void VK_ScreenFx( const screenEffect_t *fx ) {
 	if ( !vk.frame || !vk.depthReadable ) {
 		return;
 	}
-	VK_EndTarget();
-	{
-		const float depth[4] = { projection[14] * 0.5f, ( projection[10] - 1.0f ) * 0.5f, 0.0f, 0.0f };
-
-		VK_ScreenFxPrepPass( &vk.glow, prep, depth );
-	}
-	VK_CopyTarget( &vk.color, &vk.screen );
+	// Nothing but air that shimmers along lines (SCREENFX_HEAT: the blades of the sabers, flames): the picture changes
+	// only within the radius of each line (shaders/screenfx.frag, its last branch), everywhere else the pass writes
+	// the pixel it read. So it is cut to the part of the frame those lines reach. With a saber on that is every
+	// frame, 0.2 to 0.3 ms of it at 2560x1440 for a pass over all of the picture (measured 2026-11-26).
+	qboolean	lines = (qboolean)( fx->split <= 0.0f && fx->tint[3] <= 0.0f && fx->desaturate <= 0.0f && fx->radialBlur <= 0.0f
+		&& fx->vignette[3] <= 0.0f && fx->water <= 0.0f && fx->drops <= 0.0f && fx->sight <= 0.0f && fx->rage <= 0.0f
+		&& fx->protect <= 0.0f && fx->absorb <= 0.0f );
+	float		reach[4] = { 1.0f, 1.0f, 0.0f, 0.0f };		// left, top, right, bottom in texture coordinates of the frame
 
 	memset( parm, 0, sizeof( parm ) );
 	for ( int i = 0; i < fx->numSources && SCREENFX_SOURCE_VEC4 + 3 * count + 2 < VK_SCREENFX_VEC4S; i++ ) {
@@ -730,7 +742,47 @@ void VK_ScreenFx( const screenEffect_t *fx ) {
 		p[8] = (float)src->kind;
 		p[9] = src->seed;
 		count++;
+		if ( src->kind != SCREENFX_HEAT ) {
+			lines = qfalse;
+		} else {
+			// (its radius is a share of the height of the frame: across that is less of the width)
+			reach[0] = Q_min( reach[0], Q_min( p[0], p[2] ) - p[4] * fh / fw );
+			reach[1] = Q_min( reach[1], Q_min( p[1], p[3] ) - p[4] );
+			reach[2] = Q_max( reach[2], Q_max( p[0], p[2] ) + p[4] * fh / fw );
+			reach[3] = Q_max( reach[3], Q_max( p[1], p[3] ) + p[4] );
+		}
 	}
+#ifndef RD_VISION_GLES
+	memset( vk.passArea, 0, sizeof( vk.passArea ) );
+	if ( lines && count ) {
+		const int left = Com_Clampi( 0, vk.color.width, (int)floorf( reach[0] * vk.color.width ) - 2 );
+		const int top = Com_Clampi( 0, vk.color.height, (int)floorf( reach[1] * vk.color.height ) - 2 );
+		const int right = Com_Clampi( 0, vk.color.width, (int)ceilf( reach[2] * vk.color.width ) + 2 );
+		const int bottom = Com_Clampi( 0, vk.color.height, (int)ceilf( reach[3] * vk.color.height ) + 2 );
+
+		if ( right <= left || bottom <= top ) {
+			return;		// none of them in the picture: nothing changes
+		}
+		vk.passArea[0] = left;
+		vk.passArea[1] = top;
+		vk.passArea[2] = right - left;
+		vk.passArea[3] = bottom - top;
+	}
+#endif
+	VK_EndTarget();
+	{
+		const float depth[4] = { projection[14] * 0.5f, ( projection[10] - 1.0f ) * 0.5f, 0.0f, 0.0f };
+
+		VK_ScreenFxPrepPass( &vk.glow, prep, depth );
+	}
+#ifndef RD_VISION_GLES
+	// (cut to lines of air that shimmers: a pixel is taken from up to 0.012 of the height of the frame away for each
+	// line, shaders/screenfx.frag, and the four pixels around that place)
+	VK_CopyTargetArea( &vk.color, &vk.screen, (int)ceilf( 0.0125f * vk.color.height ) * count + 4 );
+#else
+	VK_CopyTarget( &vk.color, &vk.screen );
+#endif
+
 	parm[0][0] = fx->time;
 	parm[0][1] = fw / fh;
 	parm[0][2] = 1.0f / (float)( 1 << tr.overbrightBits );
@@ -784,6 +836,9 @@ void VK_ScreenFx( const screenEffect_t *fx ) {
 		vk.smokeFrame = tr.frameCount;
 	}
 	VK_ScreenFxPass( prep, &vk.soft[1], &vk.smoke[vk.smokeIndex], parm[0] );
+#ifndef RD_VISION_GLES
+	memset( vk.passArea, 0, sizeof( vk.passArea ) );
+#endif
 
 	// the shaders that draw geometry have other sets and other state
 	VK_ResumeScene();
@@ -1153,6 +1208,8 @@ qboolean VK_PuddleMirror( void ) {
 static void VK_SwapPuddleTargets( void ) {
 	vkTarget_t target;
 
+	// (what was drawn into the ones that go is read under another name from here on)
+	VK_MakeFrame();
 #define VK_SWAP( a, b )	( target = a, a = b, b = target )
 	VK_SWAP( vk.color, vk.reflect );
 	VK_SWAP( vk.colorMS, vk.reflectMS );
@@ -1242,6 +1299,8 @@ qboolean VK_ProbesLost( void ) {
 static void VK_SwapProbeTargets( void ) {
 	vkTarget_t target;
 
+	// (what was drawn into the ones that go is read under another name from here on)
+	VK_MakeFrame();
 #define VK_SWAP( a, b )	( target = a, a = b, b = target )
 	VK_SWAP( vk.color, vk.probeColor );
 	VK_SWAP( vk.colorMS, vk.probeColorMS );

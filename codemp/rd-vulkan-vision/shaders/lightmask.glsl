@@ -280,6 +280,30 @@ void main() {
 		o_color = vec4( 0.0 );
 		return;
 	}
+#ifdef LEVEL_RAYS
+	// Out of reach of all four lights of this mask: what LightShadow() gives then is known without the way the place
+	// faces and where it lies on the level (four more depths and a ray, which every pixel of the picture took first;
+	// OnLevel() moves it by less than ten units, and how far it is from a light changes by no more than that).
+	{
+		vec4 out_ = vec4( 0.0 );
+		bool near = false;
+
+		for ( int i = 0; i < 4; i++ ) {
+			int k = lower ? 4 + i : i;
+			int row = k < 2 ? 38 + k * 2 : k < 4 ? 303 + ( k - 2 ) * 2 : 372 + ( k - 4 ) * 2;
+			vec4 a = W[row], b = W[row + 1];
+
+			if ( a.w > 0.0 ) {
+				out_[i] = 1.0;
+				near = near || distance( NearestOnSegment( a.xyz, b.xyz, p ), p ) < a.w + 10.0;
+			}
+		}
+		if ( !near ) {
+			o_color = out_;
+			return;
+		}
+	}
+#endif
 	vec3 normal = SceneSurface( pixel, p, normalize( eye - p ) );
 #ifdef LEVEL_RAYS
 	p = OnLevel( p, normal );

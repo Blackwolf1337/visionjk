@@ -216,6 +216,24 @@ XCVAR_DEF( v_saberHilts,						"1",					NULL,					CVAR_ARCHIVE )
 // a shot throws sparks, splinters or dust and sounds by what it hits, and whines away off metal (weapons/cg_impact.c);
 // a bolt flying past the head whizzes, and the own shots rise as the ammunition runs out (weapons/cg_boltsound.c)
 XCVAR_DEF( v_levelFx,							"1",					NULL,					CVAR_ARCHIVE )
+// The smoke that stays (level/cg_smoke.c, on v_levelFx), to tune it. What an explosion leaves: Amount and Size times
+// as many and as large clouds, Time seconds it stays (and up to half as much again). All of it: Density times as
+// thick. How it settles: after SinkDelay msec it begins to sink, at up to SinkSpeed units a second, and over SinkTime
+// msec it has lain down, Height of its width high and Spread of its radius wider; Merge 1 makes one of clouds that
+// lie in each other. The dust of a shot: Impact times as large, ImpactTime times as long. (The defaults are what they
+// set in their game, 2026-11-26.)
+XCVAR_DEF( v_smokeAmount,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeSize,							"2",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeTime,							"5",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeDensity,						"0.75",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeSinkDelay,					"500",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeSinkSpeed,					"45",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeSinkTime,						"3500",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeHeight,						"0.5",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeSpread,						"0.3",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeMerge,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeImpact,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_smokeImpactTime,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_weaponImpacts,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelEffect,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelColour,						"50 50 255 100 0",		NULL,					CVAR_ARCHIVE )

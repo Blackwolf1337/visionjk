@@ -71,6 +71,13 @@ void VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to 
 	VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
 		? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT ) : VK_IMAGE_ASPECT_COLOR_BIT;
 
+	// about to be read: with several samples a pixel the frame, its depth and its glow are made of them first, if
+	// something was drawn since they were (vk_cmd.cpp)
+	if ( to == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || to == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+		|| to == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ) {
+		VK_FrameRead( cmd, target );
+	}
+
 	// a depth without stencil (the atlas of the shadow maps, vk_rt.cpp)
 	if ( target->format == VK_FORMAT_D32_SFLOAT || target->format == VK_FORMAT_D16_UNORM ) {
 		aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -546,6 +553,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 			VK_SAMPLE_COUNT_1_BIT );
 	}
 	vk.smokeFrame = 0;		// what they hold is nothing yet
+	// the smoke of the level as a volume (vk_smoke.cpp): what the rays through it give, at half the size of the frame
+	VK_CreateTarget( &vk.volume, Q_max( 1, ( vk.width + 1 ) / 2 ), Q_max( 1, ( vk.height + 1 ) / 2 ), vk.final.format, usage, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_SAMPLE_COUNT_1_BIT );
 
 	sampler.magFilter = sampler.minFilter = VK_FILTER_LINEAR;
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -555,6 +565,8 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		VK_PostSetOnce( sets[i] );
 		VK_WritePostSet( *sets[i], targets[i]->view );
 	}
+	VK_PostSetOnce( &vk.volumeSet );
+	VK_WritePostSet( vk.volumeSet, vk.volume.view );
 	// the copy of the frame the scope reads, filtered as the other ones (its view has an alpha of 1)
 	VK_PostSetOnce( &vk.screenSet );
 	VK_WritePostSet( vk.screenSet, vk.screen.view );
@@ -644,14 +656,18 @@ textures go to the device before the frame does (VK_PresentFrame).
 */
 void VK_CreateSmaaTargets( void ) {
 	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	// (with several samples a pixel the passes read vk.color itself and no copy of the frame is kept, VK_SmaaPass)
+	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
 
 	if ( vk.smaaEdges.image ) {
 		return;
 	}
 	VK_CreateTarget( &vk.smaaEdges, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.smaaWeights, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	VK_CreateTarget( &vk.smaaColor, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	if ( !multi ) {
+		VK_CreateTarget( &vk.smaaColor, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	}
 	// all of them filtered: SMAA reads between pixels on purpose, and at the middle of a pixel where it wants that
 	// pixel alone; the search texture is read pixel for pixel, as SMAA.hlsl has it with its point sampler
 	VK_PostSetOnce( &vk.smaaEdgesSet );
@@ -659,7 +675,7 @@ void VK_CreateSmaaTargets( void ) {
 	VK_PostSetOnce( &vk.smaaWeightsSet );
 	VK_WritePostSet( vk.smaaWeightsSet, vk.smaaWeights.view );
 	VK_PostSetOnce( &vk.smaaColorSet );
-	VK_WritePostSet( vk.smaaColorSet, vk.smaaColor.view );
+	VK_WritePostSet( vk.smaaColorSet, multi ? vk.color.view : vk.smaaColor.view );
 	VK_SmaaLookup( &vk.smaaArea, &vk.smaaAreaSet, vk.linearSampler, AREATEX_WIDTH, AREATEX_HEIGHT, VK_FORMAT_R8G8_UNORM, areaTexBytes,
 		sizeof( areaTexBytes ) );
 	VK_SmaaLookup( &vk.smaaSearch, &vk.smaaSearchSet, vk.postSampler, SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, VK_FORMAT_R8_UNORM, searchTexBytes,
@@ -671,6 +687,7 @@ void VK_DestroyPostTargets( void ) {
 	vk.ssrReady = qfalse;
 	VK_DestroyTarget( &vk.softDepth );
 	vk.softReady = qfalse;
+	VK_DestroyTarget( &vk.volume );
 	VK_DestroyTarget( &vk.probeColor );
 	VK_DestroyTarget( &vk.probeColorMS );
 	VK_DestroyTarget( &vk.probeDepth );

@@ -3531,7 +3531,9 @@ void VK_RT_Pass( void ) {
 	}
 	cmd = vk.frame->cmd;
 	VK_EndTarget();
-	// (the end of the level resolves its samples: a mark of its own, else the builds seem to cost it)
+	// (with several samples a pixel the depth of the level is made of them here, for the passes that follow and read
+	// it, VK_FrameRead: a mark of its own, else the builds seem to cost it)
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	VK_GpuMark( "level resolve" );
 
 	// what has to be built this frame and how much scratch memory that needs, before anything is recorded

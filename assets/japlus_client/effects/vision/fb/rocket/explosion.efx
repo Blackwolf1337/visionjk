@@ -1,5 +1,5 @@
 // VisionJK: rocket/explosion of the game for rd-vulkan-vision (client/fx/FxScheduler.cpp RegisterEffect takes
-// effects/vision/fb first): its parts as they were, a ball of fire from a flipbook added and its smoke rolling.
+// effects/vision/fb first): its parts as they were, a ball of fire from a flipbook added. Its smoke: smoke.efx beside this.
 
 // VisionJK (rd-vulkan-vision): a ball of fire from the flipbook (tools/materials/flipbooks.py)
 Particle
@@ -49,46 +49,6 @@ Particle
 		gfx/exp/slower_rocket_explosion
 		gfx/exp/rocket_explosion
 		gfx/exp/explosion1
-	]
-}
-
-// VisionJK (rd-vulkan-vision): rolling smoke from the flipbook instead of the added steam of the game, blended and
-// lit by the level (v_litParticles), fading softly into the walls (v_softParticles)
-Particle
-{
-	name				LingeringSmoke
-	flags				useAlpha
-	count				7
-	life				2200 3400
-	delay				150 450
-	cullrange			1600
-	origin				4 -24 -24 24 24 24
-	rotation			0 360
-	rotationDelta		-4 4
-	velocity			8 -22 -22 26 22 22
-	acceleration		-4 -6 -6 4 6 6
-	gravity				10 28
-	frames				8 8
-	rgb
-	{
-		start			0.42 0.40 0.38 0.55 0.52 0.48
-	}
-	alpha
-	{
-		start			0.85 1.0
-		end				0
-		parm			60 75
-		flags			nonlinear
-	}
-	size
-	{
-		start			16 24
-		end				70 95
-		flags			linear
-	}
-	shaders
-	[
-		gfx/vision/fb/smoke
 	]
 }
 

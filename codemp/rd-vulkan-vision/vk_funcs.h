@@ -80,6 +80,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdEndRendering ) \
 	X( vkCmdPipelineBarrier ) \
 	X( vkCmdPushConstants ) \
+	X( vkCmdResolveImage ) \
 	X( vkCmdBeginQuery ) \
 	X( vkCmdEndQuery ) \
 	X( vkCmdResetQueryPool ) \

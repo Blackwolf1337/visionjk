@@ -462,6 +462,112 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	VK_Draw( program, stateBits, state, changed, drawIndex );
 }
 
+// The part of the view a ball covers along one axis, as tangents. side, ahead: its middle from the eye, across and
+// along the view. qfalse: none of it. (Its middle plus and minus its radius over its distance is too little for a
+// ball close to the eye: smoke ended at a straight edge of the picture, their picture 2026-11-26.)
+static qboolean VK_BallSpan( float side, float ahead, float radius, float *lo, float *hi ) {
+	const float d = sqrtf( side * side + ahead * ahead );
+	const float limit = DEG2RAD( 88.0f );
+
+	*lo = -1e6f;
+	*hi = 1e6f;
+	if ( d <= radius ) {
+		return qtrue;
+	}
+	const float mid = atan2f( side, ahead ), half = asinf( radius / d );
+
+	if ( mid - half >= limit || mid + half <= -limit ) {
+		return qfalse;
+	}
+	if ( mid - half > -limit ) {
+		*lo = tanf( mid - half );
+	}
+	if ( mid + half < limit ) {
+		*hi = tanf( mid + half );
+	}
+	return qtrue;
+}
+
+/*
+===============
+VK_BallBounds
+
+What a ball covers of the view that is drawn (backEnd.viewParms), from -1 to 1 across and up: bounds x0, y0, x1, y1.
+qfalse: none of it. All of the view when the eye is in the ball or right at it. For the passes that need only the
+part of the picture something reaches: the smoke (vk_smoke.cpp), a moving light (vk_shade.cpp VK_DynamicLights).
+===============
+*/
+qboolean VK_BallBounds( const vec3_t origin, float radius, float *bounds ) {
+	const viewParms_t	*view = &backEnd.viewParms;
+	const float			tanX = tanf( DEG2RAD( view->fovX ) * 0.5f ), tanY = tanf( DEG2RAD( view->fovY ) * 0.5f );
+	vec3_t				to;
+	float				lo[2], hi[2];
+
+	VectorSubtract( origin, view->ori.origin, to );
+	const float ahead = DotProduct( to, view->ori.axis[0] );
+
+	if ( ahead <= -radius ) {
+		return qfalse;
+	}
+	if ( DotProduct( to, to ) < Square( radius + 8.0f ) ) {
+		bounds[0] = bounds[1] = -1.0f;
+		bounds[2] = bounds[3] = 1.0f;
+		return qtrue;
+	}
+	if ( !VK_BallSpan( -DotProduct( to, view->ori.axis[1] ), ahead, radius, &lo[0], &hi[0] )
+		|| !VK_BallSpan( DotProduct( to, view->ori.axis[2] ), ahead, radius, &lo[1], &hi[1] ) ) {
+		return qfalse;
+	}
+	bounds[0] = Q_max( lo[0] / tanX, -1.0f );
+	bounds[1] = Q_max( lo[1] / tanY, -1.0f );
+	bounds[2] = Q_min( hi[0] / tanX, 1.0f );
+	bounds[3] = Q_min( hi[1] / tanY, 1.0f );
+	return (qboolean)( bounds[0] < bounds[2] && bounds[1] < bounds[3] );
+}
+
+/*
+===============
+VK_ScissorBounds
+
+The scissor to a part of the viewport, bounds as VK_BallBounds() gives them (a pixel more each way); NULL: all of
+the viewport again.
+===============
+*/
+void VK_ScissorBounds( const float *bounds ) {
+	const int	top = vk.height - ( vk.viewport[1] + vk.viewport[3] );
+	int			left = vk.viewport[0], up = top, right = vk.viewport[0] + vk.viewport[2], down = top + vk.viewport[3];
+
+	if ( bounds ) {
+		left = Q_max( left, vk.viewport[0] + (int)floorf( ( bounds[0] * 0.5f + 0.5f ) * vk.viewport[2] ) - 1 );
+		right = Q_min( right, vk.viewport[0] + (int)ceilf( ( bounds[2] * 0.5f + 0.5f ) * vk.viewport[2] ) + 1 );
+		up = Q_max( up, top + (int)floorf( ( 0.5f - bounds[3] * 0.5f ) * vk.viewport[3] ) - 1 );
+		down = Q_min( down, top + (int)ceilf( ( 0.5f - bounds[1] * 0.5f ) * vk.viewport[3] ) + 1 );
+	}
+	VK_Scissor( left, up, right, down );
+}
+
+/*
+===============
+VK_AddDrawRecords
+
+Draws nobody draws: numbers a shader reads by their place in the draws of the frame (the moving lights of a view,
+generic.frag DynamicLight). Where they start; qfalse: no room.
+===============
+*/
+qboolean VK_AddDrawRecords( const vkDraw_t *records, int count, uint32_t *first ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || frame->numDraws + count > VK_FrameRoom( VK_MAX_DRAWS ) ) {
+		return qfalse;
+	}
+	*first = (uint32_t)frame->numDraws;
+	for ( int i = 0; i < count; i++ ) {
+		memcpy( frame->draws.mapped + VK_DRAW_STRIDE * ( frame->numDraws + i ), &records[i], sizeof( records[i] ) );
+	}
+	frame->numDraws += count;
+	return qtrue;
+}
+
 /*
 ===============
 RB_ReadPixels

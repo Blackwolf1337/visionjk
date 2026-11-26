@@ -2074,6 +2074,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_AddGrassPush					= re->ext.AddGrassPushToScene;
 		cgi.ext.R_SurfacePick					= CL_SurfacePick;
 		cgi.ext.R_LampsNear						= re->ext.LampsNear;
+		cgi.ext.R_SetSmoke						= re->ext.SetSmoke;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

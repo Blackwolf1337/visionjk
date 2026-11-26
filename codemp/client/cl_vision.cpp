@@ -67,6 +67,7 @@ static const char *const clCapabilities[] = {
 	"v_cgameGrassPush",		// ext.R_AddGrassPush: the grass of the level parts round players and pushes (cgame/level/cg_gust.c)
 	"v_cgameSurfacePick",	// ext.R_SurfacePick: the drawn surface under a ray and the contents of its shader (cgame/level/cg_motes.c)
 	"v_cgameLamps",			// ext.R_LampsNear: the lamps of the level near a place (cgame/level/cg_motes.c, dust in their light)
+	"v_cgameSmoke",			// ext.R_SetSmoke: smoke as a volume the renderer marches through (cgame/level/cg_smoke.c)
 	"v_cgameFeed",			// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
 	"v_cgameVoteKeys",		// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
 	"v_screenFxDrops",		// drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
