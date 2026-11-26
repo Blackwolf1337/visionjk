@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_explosion.h"
 #include "cgame/level/cg_gust.h"
+#include "cgame/level/cg_ripples.h"
 #include "cgame/level/cg_smoke.h"
 
 #define SURFACE_REACH		48.0f		// units around the blast it looks for what it went off on
@@ -346,6 +347,8 @@ static void Explosion_Go( int weapon, qboolean altFire, const vec3_t origin, con
 		return;
 	}
 	Explosion_Dirt( origin, size );
+	// water close by gets a ring and throws up spray (level/cg_ripples.c)
+	CG_RippleBlast( origin, size );
 	// its blast moves the smoke in the room and its own stays for a while (level/cg_smoke.c)
 	smoke = CG_SmokeBlast( origin, dir, size );
 	if ( !smoke ) {

@@ -629,6 +629,22 @@ void CG_WaterImpact( const vec3_t at, float strength ) {
 	trap->S_StartSound( (float *)at, ENTITYNUM_WORLD, CHAN_AUTO, water.poolSound[rand() % 3] );
 }
 
+// Something went into the water of the level at "at" (level/cg_ripples.c), strength 0 to 1: the crown of droplets it
+// throws up, as a drop into standing water does, and the sound of it
+void CG_WaterCrown( const vec3_t at, float strength ) {
+	const vec3_t	up = { 0.0f, 0.0f, 1.0f };
+	vec3_t			down;
+	int				i;
+
+	Water_Register();
+	if ( Water_Liquid() ) {
+		VectorScale( up, -( 150.0f + 300.0f * strength ), down );
+		for ( i = 0; i < 1 + (int)( strength * 4.0f ); i++ )
+			Water_Splash( at, up, down, qtrue );
+	}
+	trap->S_StartSound( (float *)at, ENTITYNUM_WORLD, CHAN_AUTO, water.poolSound[rand() % 3] );
+}
+
 /*
 =================
 CG_WaterWheel

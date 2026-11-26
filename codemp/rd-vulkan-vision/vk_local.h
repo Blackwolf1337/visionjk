@@ -79,6 +79,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_SMOKE_LIGHTS		4		// moving lights that light the smoke
 #define VK_SMOKE_BLOB_ROWS	3
 #define VK_SMOKE_VEC4S		( VK_WET_HEADER + 1 + SMOKE_MAX_BLOBS * VK_SMOKE_BLOB_ROWS + SMOKE_MAX_HOLES * 2 + VK_SMOKE_LIGHTS * 2 + 1 )	// shaders/smoke.frag: the view, the counts, three rows a blob, two a hole and a light, how many pixels of the frame one of its picture stands for
+#define VK_RIPPLE_SURFACES	4		// heights of water a view has rings on
+#define VK_RIPPLE_ROWS		5
+#define VK_RIPPLE_VEC4S		( VK_WET_HEADER + 1 + VK_RIPPLE_SURFACES + WET_MAX_SURFACE * VK_RIPPLE_ROWS )	// shaders/ripple.frag: the view, the counts, a row a surface, five a ring
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame
@@ -93,6 +96,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		ssr[7][4];					// v_ssr: the picture of the level of the frame before, see VK_SsrPrep()
 	float		blades[VK_BLADE_VEC4S][4];	// the saber blades drawn in 3D, see VK_SaberBlades()
 	float		smoke[VK_SMOKE_VEC4S][4];	// the smoke as a volume, see VK_SmokeDraw()
+	float		ripple[VK_RIPPLE_VEC4S][4];	// the rings on the water of the level, see VK_RippleDraw()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -504,6 +508,10 @@ void		VK_ResumeScene( void );
 void		VK_SmokeInit( void );
 void		VK_SmokeShutdown( void );
 void		VK_SmokeDraw( void );
+// the rings on the water of the level (vk_ripple.cpp)
+void		VK_RippleInit( void );
+void		VK_RippleShutdown( void );
+void		VK_RippleDraw( void );
 void		RE_SetSmoke( const smokeVolume_t *smoke );
 qboolean	RE_EmitSparks( const sparkBurst_t *burst );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
@@ -513,6 +521,8 @@ void		VK_ScopeBoxes( const scopeEffect_t *fx );
 void		VK_ScreenFx( const screenEffect_t *fx );
 void		VK_CaptureFrame( void );
 void		VK_DrawLiquids( void );
+// the light of the level at a point, the light of a lamp lit room where the level has no grid
+void		VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir );
 qboolean	VK_HasWet( void );
 void		VK_DrawWet( void );
 // the first nine rows of the passes over the view of the level (shaders/scene.glsl, ball.glsl), and the view as

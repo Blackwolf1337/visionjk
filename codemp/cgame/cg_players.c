@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberdrawn.h"
 #include "cgame/saber/cg_saberdrop.h"
 #include "cgame/saber/cg_saberbelt.h"
+#include "cgame/level/cg_ripples.h"
 #include "ghoul2/G2.h"
 #include "game/bg/bg_saga.h"
 
@@ -10538,8 +10539,11 @@ void CG_Player( centity_t *cent ) {
 		trap->R_AddRefEntityToScene( &seeker );
 	}
 
-	// add a water splash if partially in and out of water
-	CG_PlayerSplash( cent );
+	// add a water splash if partially in and out of water. VisionJK: rings on the water where the renderer draws
+	// them (level/cg_ripples.c), in place of the mark
+	if ( !CG_RipplePlayer( cent ) ) {
+		CG_PlayerSplash( cent );
+	}
 
 	renderfx |= RF_LIGHTING_ORIGIN;			// use the same origin for all
 

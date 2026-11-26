@@ -39,6 +39,7 @@ Ghoul2 Insert Start
 #include "cgame/weapons/cg_boltsound.h"
 #include "cgame/weapons/cg_boltlook.h"
 #include "cgame/weapons/cg_mines.h"
+#include "cgame/level/cg_ripples.h"
 /*
 Ghoul2 Insert end
 */
@@ -2507,6 +2508,8 @@ static void CG_Missile( centity_t *cent ) {
 	CG_ThermalFuse( cent );
 	CG_BoltWhiz( cent );
 	CG_MissileLooks( cent );
+	// through the surface of water it leaves a ring (level/cg_ripples.c)
+	CG_RippleMissile( cent );
 
 	if (s1->weapon == WP_SABER)
 	{

@@ -42,6 +42,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_airring.h"
 #include "cgame/weapons/cg_wallfx.h"
 #include "cgame/saber/cg_saberclash.h"
+#include "cgame/level/cg_ripples.h"
 //==========================================================================
 
 extern qboolean WP_SaberBladeUseSecondBladeStyle( saberInfo_t *saber, int bladeNum );
@@ -2534,6 +2535,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qfalse ) )
 			FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
 		CG_WaterImpact( cent->lerpOrigin, 0.7f );
+		CG_RippleShot( cent->currentState.origin2, cent->lerpOrigin );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_SHOT:
@@ -2554,6 +2556,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
 		CG_ChargeRingDisruptor( cent->currentState.origin2, cent->lerpOrigin, (qboolean)!!cent->currentState.shouldtarget );
 		CG_WaterImpact( cent->lerpOrigin, 0.9f );
+		CG_RippleShot( cent->currentState.origin2, cent->lerpOrigin );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_MISS:

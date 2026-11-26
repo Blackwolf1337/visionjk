@@ -1448,6 +1448,8 @@ extern	liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];	// what RE_AddLiquid was 
 extern	int				r_numLiquids;
 extern	wetSpot_t		r_wet[WET_MAX_SPOTS];		// what RE_AddWet was given this frame
 extern	int				r_numWet;
+extern	wetSpot_t		r_ripples[WET_MAX_SURFACE];	//	and of those the rings on the water of the level (WET_SURFACE)
+extern	int				r_numRipples;
 extern	paintDecal_t	r_paint[PAINT_MAX_DECALS];	// what RE_AddPaint was given this frame
 extern	int				r_numPaint;
 

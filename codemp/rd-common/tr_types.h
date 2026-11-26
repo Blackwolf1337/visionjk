@@ -232,6 +232,12 @@ typedef struct liquidSegment_s {
 								// its width, wet: how fresh and full, seed: the shape of its edge
 #define WET_BLOOD_FOOT_LEFT		8	// the print of a foot that stepped in blood (cgame/cg_slice.c), as WET_FOOT_LEFT
 #define WET_BLOOD_FOOT_RIGHT	9
+#define WET_SURFACE		10		// a ring on the water of the level (cgame/level/cg_ripples.c), which is not the level under
+								// a pixel: origin on the water, which is level; radius: how far it runs out, wet: how
+								// strong, flow: 0 to 1 of its life, puddle: 0 to 1, where its crests are, seed: 16 bits,
+								// where round it there is water (65535: all round). Up to WET_MAX_SURFACE in one frame,
+								// they do not count as spots. rd-vulkan-vision: shaders/ripple.frag
+#define WET_MAX_SURFACE	48
 
 typedef struct wetSpot_s {
 	vec3_t		origin;

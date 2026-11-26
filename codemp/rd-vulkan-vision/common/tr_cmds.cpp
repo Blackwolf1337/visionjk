@@ -317,20 +317,27 @@ RE_AddWet
 
 Wet places for the scene of this frame (wetSpot_t), added to the ones it has. They hold for one frame. NULL: only
 the question whether this renderer draws them. rd-vulkan-vision draws them over the scene before its water
-(VK_DrawWet); where the device can not, it says qfalse and the cgame draws its puddles as marks.
+(VK_DrawWet); where the device can not, it says qfalse and the cgame draws its puddles as marks. The rings on the
+water of the level (WET_SURFACE) are kept apart: they are drawn after what is transparent (vk_ripple.cpp).
 =============
 */
 wetSpot_t	r_wet[WET_MAX_SPOTS];
 int			r_numWet;
+wetSpot_t	r_ripples[WET_MAX_SURFACE];
+int			r_numRipples;
 
 qboolean	RE_AddWet( const wetSpot_t *spots, int count ) {
 	if ( !VK_HasWet() ) {
 		return qfalse;
 	}
-	if ( spots && count > 0 ) {
-		count = Q_min( count, WET_MAX_SPOTS - r_numWet );
-		memcpy( r_wet + r_numWet, spots, sizeof( *spots ) * count );
-		r_numWet += count;
+	for ( int i = 0; spots && i < count; i++ ) {
+		if ( spots[i].kind == WET_SURFACE ) {
+			if ( r_numRipples < WET_MAX_SURFACE ) {
+				r_ripples[r_numRipples++] = spots[i];
+			}
+		} else if ( r_numWet < WET_MAX_SPOTS ) {
+			r_wet[r_numWet++] = spots[i];
+		}
 	}
 	return qtrue;
 }
@@ -599,6 +606,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	r_screenFxSet = qfalse;
 	r_numLiquids = 0;
 	r_numWet = 0;
+	r_numRipples = 0;
 	r_numPaint = 0;
 	ui2DNumVerts = ui2DNumIndexes = 0;
 	glState.finishCalled = qfalse;

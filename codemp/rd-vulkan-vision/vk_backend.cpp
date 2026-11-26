@@ -1013,9 +1013,6 @@ static void RB_DrawWet( int depthRange ) {
 	VK_SmokeDraw();
 	VK_GpuMark( "smoke" );
 #endif
-	// the saber blades over the solid level, under the sparks and flashes of their clashes (shaders/saber.glsl)
-	VK_SaberBlades( qfalse );
-	VK_GpuMark( "saber blades" );
 	// v_softParticles: the distance of the solid level for the sprites that come now
 #ifndef RD_VISION_GLES
 	if ( rb_softLater ) {
@@ -1404,7 +1401,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// (the sparks bounce off it: v_gpuSparks wants it too)
 	rb_softLater = (qboolean)( levelView && ( v_softParticles->integer || v_gpuSparks->integer ) && vk.depthReadable && !probeFace && !puddle );
 	vk.softReady = qfalse;
-	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 || rb_softLater ) );
+	vk.solidReady = qfalse;
+	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || rb_softLater ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)
 	rb_deferDlights = (qboolean)( levelView && VK_RT_Wanted() );
 	rb_sweepSurfs = cmd->drawSurfs;
@@ -1421,9 +1419,29 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_wetLater = qfalse;
 	rb_softLater = qfalse;
 #ifndef RD_VISION_GLES
+	vk.solidReady = vk.softReady;
 	vk.softReady = qfalse;
 #endif
 	rb_deferDlights = qfalse;
+#ifndef RD_VISION_GLES
+	// the rings on the water of the level, over its transparent surfaces and under the clear water of the cgame
+	if ( levelView && r_numRipples ) {
+		VK_GpuMark( "level" );
+		VK_RippleDraw();
+		VK_GpuMark( "water rings" );
+	}
+	// The saber blades (shaders/saber.glsl), added onto the view of the level once all of it is drawn. They were added
+	// before what is transparent: water or glass behind a blade was then drawn over it, and a stage that multiplies
+	// (the lightmap of water) took the blade away (their picture 2026-11-26). Light that is added does not care for the
+	// order among sparks and flashes, which are added too; of what covers, a blade now shines through what lies in
+	// front of it (smoke), which a glowing blade may. Glass writes its depth: the blades are held against the solid
+	// level alone (vk.solidReady), or a blade behind a pane were gone.
+	if ( levelView && backEnd.refdef.numSaberBlades > 0 ) {
+		VK_GpuMark( "level" );
+		VK_SaberBlades( qfalse );
+		VK_GpuMark( "saber blades" );
+	}
+#endif
 	if ( levelView && r_numLiquids ) {
 		VK_DrawLiquids();
 	}
@@ -1434,7 +1452,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 		return (const void *)( cmd + 1 );
 	}
 #ifndef RD_VISION_GLES
-	// the saber blades in a mirror or portal of the level (the view of the level draws them in RB_DrawWet)
+	// the saber blades in a mirror or portal of the level (the view of the level drew its own above)
 	if ( backEnd.viewParms.isPortal && !puddle && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		VK_SaberBlades( qtrue );
 		VK_GpuMark( "saber blades in a portal" );

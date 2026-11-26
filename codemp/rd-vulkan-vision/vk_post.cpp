@@ -441,8 +441,8 @@ static void VK_BladeArea( const saberBlade_t *blade, const float ( *rows )[4], c
 VK_SaberBlades
 
 The saber blades of the scene (ext.AddSaberBladeToScene) in 3D, added onto the frame (shaders/saber.glsl): their
-numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them after its
-solid surfaces and before what is transparent (RB_DrawWet), portal qtrue a mirror or portal in it at its end; of
+numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them at its
+end, over what is transparent too (vk_backend.cpp), portal qtrue a mirror or portal in it at its end; of
 those only the first of a frame, the globals have room for one more view. glow qtrue: into the buffer of r_DynamicGlow
 of the view of the level (shaders/saberglow.frag), for the soft halo the flat blades get from their glow stages.
 ===============
@@ -475,7 +475,15 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 	VK_ViewRows( rows, viewport );
 	memcpy( portal ? globals->blades[VK_BLADE_PORTAL] : globals->blades[0], rows, sizeof( rows ) );
 	// (the blades the same for both views, in w of their colour the views each is in)
-	VectorSet4( globals->blades[VK_WET_HEADER], (float)count, 0.0f, 0.0f, 0.0f );
+	// The view of the level holds the blades against the solid level alone where it has its distance (vk.softDepth):
+	// glass writes its depth, and a blade behind a pane were hidden by it. (y is the level's alone: a mirror or portal
+	// of the same frame shares the rows.)
+	const qboolean solid = (qboolean)( !portal && vk.solidReady && vk.softDepth.image );
+
+	globals->blades[VK_WET_HEADER][0] = (float)count;
+	if ( !portal ) {
+		globals->blades[VK_WET_HEADER][1] = solid ? 1.0f : 0.0f;
+	}
 	for ( int i = 0; i < count; i++ ) {
 		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
 		float				( *r )[4] = &globals->blades[VK_WET_HEADER + 1 + i * VK_BLADE_ROWS];
@@ -521,7 +529,7 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 		return;		// nothing of them in the view
 	}
 
-	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.depthSet, vk.depthSet };
+	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.depthSet, solid ? vk.softSet : vk.depthSet };
 	VkCommandBuffer			cmd = vk.frame->cmd;
 
 	VK_EndTarget();
@@ -887,8 +895,7 @@ steps where one piece meets the next.
 #define LIQUID_ABSORB	0.035f		// how much it darkens per unit of the way through it, red first
 #define LIQUID_WAVES	1.0f		// how strongly its surface ripples
 
-// the light of the level at a point, the light of a lamp lit room where the level has no grid
-static void VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir ) {
+void VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir ) {
 	if ( !tr.world || !R_LightForPoint( (float *)point, ambient, directed, dir ) ) {
 		VectorSet( ambient, 96.0f, 96.0f, 96.0f );
 		VectorSet( directed, 160.0f, 160.0f, 160.0f );

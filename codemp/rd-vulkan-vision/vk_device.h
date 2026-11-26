@@ -239,6 +239,9 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkShaderModule				softDepthShader;
 	VkPipeline					softDepthPipeline;
 	qboolean					softReady;			// drawn for the view that is being drawn
+	qboolean					solidReady;			// it holds the solid level of the view whose list was drawn last: for the
+													// passes at the end of that view that must not stop at glass, which
+													// writes its depth (the saber blades, the rings on water)
 	int							softShown;			// the slot of the texture table it was written into, -1: none
 	VkPipeline					ssrPrepPipeline;
 	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)

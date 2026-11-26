@@ -706,6 +706,7 @@ qboolean VK_InitVulkan( void ) {
 	VK_RT_Init();
 	VK_SparksInit();
 	VK_SmokeInit();
+	VK_RippleInit();
 	VK_StageTime( "ray tracing and shadow maps" );
 	// the cgame asks for the shadows of the players where the renderer has them (with traced rays, or with shadow maps
 	// where the card has no ray tracing, vk_rt.cpp)
@@ -749,6 +750,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 
 	VK_SparksShutdown();
 	VK_SmokeShutdown();
+	VK_RippleShutdown();
 	VK_RT_Shutdown();
 	VK_ShutdownWorld();
 	VK_ShutdownModels();

@@ -280,6 +280,8 @@ set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/level/cg_gust.h"
 	"${MPDir}/cgame/level/cg_motes.c"
 	"${MPDir}/cgame/level/cg_motes.h"
+	"${MPDir}/cgame/level/cg_ripples.c"
+	"${MPDir}/cgame/level/cg_ripples.h"
 	"${MPDir}/cgame/level/cg_smoke.c"
 	"${MPDir}/cgame/level/cg_smoke.h"
 	"${MPDir}/cgame/weapons/cg_impact.c"
