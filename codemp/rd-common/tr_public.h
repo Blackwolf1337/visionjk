@@ -383,6 +383,9 @@ typedef struct refexport_s {
 		// The lamps of the level within radius of origin, the strongest for that place first, at most max. Returns how
 		// many. NULL: the renderer has none.
 		int					(*LampsNear)							( const vec3_t origin, float radius, levelLamp_t *out, int max );
+		// The smoke of the scene of this frame as a volume (smokeVolume_t), between R_ClearScene and R_RenderScene;
+		// NULL or no blobs: none. NULL as a function: the renderer has none.
+		void				(*SetSmoke)								( const smokeVolume_t *smoke );
 	} ext;
 
 } refexport_t;

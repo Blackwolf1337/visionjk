@@ -572,8 +572,9 @@ static VkFormat VK_FrameFormat( void ) {
 }
 
 static void VK_CreateFrameTargets( void ) {
+	// (a part of the frame is made of its samples by a copy: VK_BackdropPass)
 	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FrameFormat(),
-		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
@@ -582,8 +583,8 @@ static void VK_CreateFrameTargets( void ) {
 			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FrameFormat(), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FrameFormat(),
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
 	}
@@ -704,6 +705,7 @@ qboolean VK_InitVulkan( void ) {
 	VK_StageTime( "post, frames, images" );
 	VK_RT_Init();
 	VK_SparksInit();
+	VK_SmokeInit();
 	VK_StageTime( "ray tracing and shadow maps" );
 	// the cgame asks for the shadows of the players where the renderer has them (with traced rays, or with shadow maps
 	// where the card has no ray tracing, vk_rt.cpp)
@@ -746,6 +748,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	}
 
 	VK_SparksShutdown();
+	VK_SmokeShutdown();
 	VK_RT_Shutdown();
 	VK_ShutdownWorld();
 	VK_ShutdownModels();

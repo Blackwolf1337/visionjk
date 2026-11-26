@@ -252,9 +252,10 @@ static void VK_CreateLayouts( void ) {
 	// the two of the smoke of the screen effects, the copy of the frame the scope reads, the mirror of the puddles,
 	// the depth, the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures), and the distance
 	// of the level of v_softParticles that the sparks of v_gpuSparks bounce off
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 17;
+	// and the smoke of the level as a volume and the noise of its billows (vk_smoke.cpp)
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 19;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 18;
+	pool.maxSets = VK_FRAMES + 20;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );

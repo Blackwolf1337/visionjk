@@ -162,16 +162,6 @@ vec4 PbrGrid( Draw d, vec3 world ) {
 	return vec4( ( v.rgb / v.a ) * 2.0 - 1.0, v.a );
 }
 
-// The reflection probe a cell of the light grid takes (R_CreateProbes): its number, read as it is from a pixel of the
-// grid picture (the layout of PbrGrid).
-float ProbeOfCell( Draw d, ivec3 g ) {
-	ivec3 cells = ivec3( d.grid2.xyz );
-	int tiles = int( d.grid0.w );
-	g = clamp( g, ivec3( 0 ), cells - 1 );
-	ivec2 texel = ivec2( ( g.z % tiles ) * cells.x + g.x, ( g.z / tiles ) * cells.y + g.y );
-	return floor( texelFetch( TEX5( d ), texel, 0 ).r * 255.0 + 0.5 );
-}
-
 // What the probe sees in a direction of the world, at a level for the roughness. Its six faces lie side by side in a
 // row of the atlas, looking along +x, -x, +y, -y, +z, -z (forward, left, up as R_ProbeViews has them); a face shows
 // left on the left and up at the top. Kept half a pixel of its level inside its face.
@@ -205,6 +195,9 @@ vec3 ProbeSample( Draw d, float probe, vec3 dir, float level ) {
 // near the point is to it), so the mirror goes over from one probe to the next across a cell and not at its edge.
 // Cells that take the same probe give their weight to the first of them, so a probe is read once however many cells
 // take it (mostly one or two). Found once for all the reads of the probes a pixel makes.
+// The probe a cell takes (R_CreateProbes) is its number in a pixel of the grid picture (the layout of PbrGrid). Where
+// that pixel lies is worked out for the two layers, rows and columns the eight cells share and not for each cell:
+// dividing whole numbers is slow on a graphics card, and it was done sixteen times a pixel.
 struct ProbeSet {
 	float	probe[8];
 	float	weight[8];
@@ -214,10 +207,16 @@ ProbeSet ProbesNear( Draw d, vec3 world ) {
 	ProbeSet set;
 	vec3 g = ( world - d.grid0.xyz ) * d.grid1.xyz;
 	vec3 base = floor( g ), f = g - base;
+	ivec3 cells = ivec3( d.grid2.xyz );
+	int tiles = int( d.grid0.w );
+	ivec3 lo = clamp( ivec3( base ), ivec3( 0 ), cells - 1 ), hi = clamp( ivec3( base ) + 1, ivec3( 0 ), cells - 1 );
+	ivec2 layerLo = ivec2( ( lo.z % tiles ) * cells.x, ( lo.z / tiles ) * cells.y );
+	ivec2 layerHi = ivec2( ( hi.z % tiles ) * cells.x, ( hi.z / tiles ) * cells.y );
 	for ( int i = 0; i < 8; i++ ) {
-		vec3 corner = vec3( float( i & 1 ), float( ( i >> 1 ) & 1 ), float( ( i >> 2 ) & 1 ) );
-		vec3 w3 = mix( 1.0 - f, f, corner );
-		set.probe[i] = ProbeOfCell( d, ivec3( base ) + ivec3( corner ) );
+		bvec3 far = bvec3( ( i & 1 ) != 0, ( i & 2 ) != 0, ( i & 4 ) != 0 );
+		vec3 w3 = mix( 1.0 - f, f, vec3( far ) );
+		ivec2 texel = ( far.z ? layerHi : layerLo ) + ivec2( far.x ? hi.x : lo.x, far.y ? hi.y : lo.y );
+		set.probe[i] = floor( texelFetch( TEX5( d ), texel, 0 ).r * 255.0 + 0.5 );
 		set.weight[i] = w3.x * w3.y * w3.z;
 	}
 	// (fixed bounds, so the arrays stay in registers)
@@ -304,10 +303,14 @@ vec2 FollowParallax( Draw d, vec2 uv ) {
 }
 
 // How much of a moving light the bumps of the height leave at uv: from there up towards the light (l, in the frame of the
-// texture) the height must stay under the ray. Soft, what stands close to the point counts most.
-float ParallaxLight( Draw d, vec2 uv, vec2 dx, vec2 dy, vec3 l, float depth ) {
+// texture) the height must stay under the ray. Soft, what stands close to the point counts most. start: the height at
+// uv, which is the same for every light of the pixel and is read once for all of them.
+float ParallaxLight( Draw d, vec2 uv, vec2 dx, vec2 dy, vec3 l, float depth, float start ) {
 	const int STEPS = 8;
-	float start = textureGrad( TEX2( d ), uv, dx, dy ).a;
+	// (at the top of the height nothing stands over the point: the way to the light has no length)
+	if ( start >= 1.0 ) {
+		return 1.0;
+	}
 	vec2 along = l.xy / max( l.z, 0.15 ) * depth * ( 1.0 - start );
 	float over = 0.0;
 
@@ -447,6 +450,64 @@ vec3 NearestToRay( vec3 a, vec3 b, vec3 p, vec3 r ) {
    comes from the nearest point of the tube and the shine from the point nearest the mirrored ray, so the highlight on
    a floor runs along the blade. Worked out in linear light; the light colour and its fall in the light of the game
    as before. tex0: the texture of the surface (white where the frame already holds it: then the pass multiplies). */
+vec4 SafeColor( vec4 c );
+
+// the numbers of one dynamic light: from the draw of its pass, or from its place in the list of the view
+struct Lamp {
+	vec4	parm;		// where, w: how far it reaches
+	vec4	grid0;		// a tube: its start, w its reach; a band: its axis, w negative; a rectangle: a half edge, w -2
+	vec4	grid1;		// a tube: its end; a rectangle: the other half edge; w: the channel of its shadow mask
+	vec3	color;
+	uint	mask;		// the texture with the shadow mask
+};
+
+Lamp LampOf( Draw d ) {
+	return Lamp( d.parm, d.grid0, d.grid1, d.baseColor.rgb, d.tex1 );
+}
+
+// A pass draws one light, the draw itself (bits 1), or several at once: the lights of the level view on a surface
+// of the level (vk_shade.cpp VK_DynamicLights), which lie in the draws from d.decals on, the draw names them a bit
+// each in d.numDecals. Each light is worked out as in a pass of its own and they are added up as the passes were;
+// the texture, the parallax and the material of the place are looked up once, which is what a pass for each light
+// cost most (5 ms a frame in rocket fire at 2560x1440, measured 2026-11-26).
+#ifdef VK_GLES
+#define LAMP_BITS( d )		1u
+#define LAMP( d, i )		LampOf( d )
+#define LOWEST_BIT( x )		0
+#define LAMP_MASK( lamp )	u_tex1
+#else
+#define LAMP_BITS( d )		( ( d ).numDecals != 0u ? ( d ).numDecals : 1u )
+#define LAMP( d, i )		( ( d ).numDecals != 0u ? LampOf( DRAWS( ( d ).decals + uint( i ) ) ) : LampOf( d ) )
+#define LOWEST_BIT( x )		findLSB( x )
+#define LAMP_MASK( lamp )	u_textures[nonuniformEXT( ( lamp ).mask )]
+#endif
+
+#ifndef VK_GLES
+// How much of a light the level and the players hide at the pixel, 0 to 1: their shadows from the lights, made into a
+// mask before the light passes (vk_rt.cpp, smlights.frag). clip: the point where it was in the view the mask was
+// made in (globals.rt 42-45, its rect 46). grid1.w of the light says the channel of the mask, the lamp its texture. A
+// model has it negative, -1 - the channel: the mask is made at the pixels of the scene, his own among them, so a leg
+// behind his body is in its shadow.
+float LampShadow( Lamp lamp, bool model, vec4 clip ) {
+	int channel = model ? int( -lamp.grid1.w + 0.5 ) - 1 : int( lamp.grid1.w + 0.5 );
+	if ( channel <= 0 || clip.w <= 1.0 ) {
+		return 0.0;
+	}
+	vec2 ndc = clip.xy / clip.w;
+	vec4 rect = globals.rt[46];
+	vec2 pixel = vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
+	// (the mask has the size of the frame, shaders/rtlightresolve.frag; its picture is two masks high, channels
+	// 5 to 8 in the lower one, vk_rt.cpp)
+	vec2 maskSize = vec2( textureSize( LAMP_MASK( lamp ), 0 ) );
+	vec2 at = pixel / vec2( maskSize.x, maskSize.y * 0.5 );
+	at.y = clamp( at.y, 0.0, 1.0 ) * 0.5;
+	// (not into the other mask at the edge of the screen)
+	at.y = clamp( at.y, 0.5 / maskSize.y, 0.5 - 0.5 / maskSize.y ) + ( channel > 4 ? 0.5 : 0.0 );
+	// (the mask is one picture without smaller copies: read as it is, inside the loops over the lights)
+	return textureLod( LAMP_MASK( lamp ), at, 0.0 )[( channel - 1 ) & 3];
+}
+#endif
+
 vec4 DynamicLight( Draw d ) {
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
@@ -469,85 +530,71 @@ vec4 DynamicLight( Draw d ) {
 			flat_ = -flat_;		// a surface seen from its back
 		}
 	}
-	bool tube = d.grid0.w > 0.0;
-	// A rectangle that glows (grid0.w -2, a lamp panel of the level on a player, vk_shade.cpp VK_DynamicLights): round
-	// parm with the half edges grid0.xyz and grid1.xyz. It lights from all of its face: how far it is counts from its
-	// nearest point, the angle from where its face lies on average (its corners and its middle, so a large panel beside
-	// somebody lights him from a wide angle and its light ends softly), the shine from where it shows in the surface as
-	// in a mirror. Until 2026-11-25 a panel lit from its middle alone, a point.
-	bool rect = d.grid0.w < -1.5;
-	float range = tube ? d.grid0.w : d.parm.w;
-	vec3 lightPos = tube ? NearestOnSegment( d.grid0.xyz, d.grid1.xyz, v_position )
-		: rect ? NearestOnRect( d.parm.xyz, d.grid0.xyz, d.grid1.xyz, v_position ) : d.parm.xyz;
-	vec3 toLight = lightPos - v_position;
-	float dist = length( toLight );
-	if ( dist >= range ) {
-		discard;
-	}
-	// A light a little below the plane still lights it: the light of an explosion lies just under the floor it hit,
-	// a blade on the floor lies in it. It is taken as standing a hand above the plane for the angle. Not on a model
-	// (grid1.w -1, vk_shade.cpp VK_DynamicLights): its sides round away from the light, and lit from above the plane
-	// they took the light where they turn from it and ended in a hard line 12 units behind it (their picture
-	// 2026-11-24, a blade at a player's legs). The angle alone fades it there.
-	float above = dot( flat_, toLight );
-	if ( !model && above <= -12.0 ) {
-		discard;
-	}
-	vec3 l = model ? toLight / max( dist, 0.001 ) : normalize( toLight + flat_ * max( 16.0 - above, 0.0 ) );
-	if ( rect ) {
-		vec3 c = d.parm.xyz - v_position, r = d.grid0.xyz, u = d.grid1.xyz;
-
-		l = normalize( normalize( c ) + 0.5 * ( normalize( c + r + u ) + normalize( c + r - u ) + normalize( c - r + u ) + normalize( c - r - u ) ) );
-	}
-
-	float x = dist / range;
-	float window = clamp( 1.0 - x * x * x * x, 0.0, 1.0 );
-	// (about what the round light image of rd-vanilla gave halfway out, brighter close by). Not on a model: the light
-	// of a weapon sits in it and in the hand that holds it, which turned white and covered the glow of the charge
-	// (their picture 2026-11-24, the bowcaster); it is taken as at least a hand away.
-	float xa = model ? max( dist, 24.0 ) / range : x;
-	float fall = window * window / ( 1.0 + 4.0 * xa * xa ) * ( model ? 1.0 : 1.6 );
-	// A band of light (grid0.w negative, ext.AddBandLightToScene): it leaves only round the plane through it across
-	// its axis grid0.xyz, as the glowing ring of a thermal detonator lets it out past the body, and softly less out of
-	// that plane; -grid0.w is how far out of it it still has most of it (the sine of the angle).
-	if ( d.grid0.w < 0.0 && !rect ) {
-		float off = dot( toLight, d.grid0.xyz ) / ( max( dist, 0.001 ) * -d.grid0.w );
-		fall *= exp( -off * off );
-	}
-	vec3 radiance = pow( d.baseColor.rgb * fall, vec3( 2.2 ) );
+	// Which of the lights reach this place. A light a little below the plane still lights it: the light of an
+	// explosion lies just under the floor it hit, a blade on the floor lies in it. Not on a model (grid1.w -1,
+	// vk_shade.cpp VK_DynamicLights): its sides round away from the light, and lit from above the plane they took
+	// the light where they turn from it and ended in a hard line 12 units behind it (their picture 2026-11-24, a
+	// blade at a player's legs). The angle alone fades it there.
+	// And which of those the shadows leave anything of (lit): a light behind a wall reaches the place and gives it
+	// nothing.
+	uint reach = 0u, lit = 0u;
 #ifndef VK_GLES
-	// The shadows of the players from this light, made a frame ago into a mask (vk_rt.cpp, smlights.frag): grid1.w
-	// says the channel, tex1 shows the mask; the point is looked up where it was in the view the mask was made in
-	// (globals.rt 42-45, its rect 46).
-	int channel = model ? int( -d.grid1.w + 0.5 ) - 1 : int( d.grid1.w + 0.5 );
-	if ( channel > 0 ) {
-		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
-		vec4 clip = mat4( globals.rt[42], globals.rt[43], globals.rt[44], globals.rt[45] ) * vec4( world, 1.0 );
-		if ( clip.w > 1.0 ) {
-			vec2 ndc = clip.xy / clip.w;
-			vec4 rect = globals.rt[46];
-			vec2 pixel = vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
-			// (the mask has the size of the frame, shaders/rtlightresolve.frag; its picture is two masks high, channels
-			// 5 to 8 in the lower one, vk_rt.cpp)
-			vec2 maskSize = vec2( textureSize( TEX1( d ), 0 ) );
-			vec2 at = pixel / vec2( maskSize.x, maskSize.y * 0.5 );
-			at.y = clamp( at.y, 0.0, 1.0 ) * 0.5;
-			// (not into the other mask at the edge of the screen)
-			at.y = clamp( at.y, 0.5 / maskSize.y, 0.5 - 0.5 / maskSize.y ) + ( channel > 4 ? 0.5 : 0.0 );
-			vec4 mask = texture( TEX1( d ), at );
-			radiance *= 1.0 - mask[( channel - 1 ) & 3];
+	vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+	vec4 clip = mat4( globals.rt[42], globals.rt[43], globals.rt[44], globals.rt[45] ) * vec4( world, 1.0 );
+#endif
+	for ( uint left = LAMP_BITS( d ); left != 0u; left &= left - 1u ) {
+		int i = LOWEST_BIT( left );
+		Lamp lamp = LAMP( d, i );
+		vec3 lightPos = lamp.grid0.w > 0.0 ? NearestOnSegment( lamp.grid0.xyz, lamp.grid1.xyz, v_position )
+			: lamp.grid0.w < -1.5 ? NearestOnRect( lamp.parm.xyz, lamp.grid0.xyz, lamp.grid1.xyz, v_position ) : lamp.parm.xyz;
+		vec3 toLight = lightPos - v_position;
+
+		if ( length( toLight ) < ( lamp.grid0.w > 0.0 ? lamp.grid0.w : lamp.parm.w ) && ( model || dot( flat_, toLight ) > -12.0 ) ) {
+			reach |= 1u << uint( i );
+#ifndef VK_GLES
+			if ( LampShadow( lamp, model, clip ) < 1.0 ) {
+				lit |= 1u << uint( i );
+			}
+#else
+			lit |= 1u << uint( i );
+#endif
 		}
+	}
+#ifndef VK_GLES
+	// Whether any light gives anything to this pixel or to the three it is worked out with: the card shades blocks of
+	// two by two pixels together, and each of them needs the others to know how the texture changes from one pixel
+	// to the next (the size it is read at). So a pixel in the shadow of every light may stop only where the whole
+	// block is, and it learns that from its neighbours by how its own answer changes to theirs (Penner, "Shader
+	// Amortization using Pixel Quad Message Passing", GPU Pro 2). Asked here, before any pixel leaves.
+	float mine = lit != 0u ? 1.0 : 0.0;
+	float pair = mine + abs( dFdxFine( mine ) );
+	float block = pair + abs( dFdyFine( pair ) );
+#endif
+	if ( reach == 0u ) {
+		discard;
+	}
+#ifndef VK_GLES
+	// All in shadow: what follows (the way through the height of the parallax, the textures, each light) would add
+	// up to nothing, which is what goes out, with the count of the lights in alpha as their passes left it. That work
+	// was most of what a light behind a wall cost.
+	if ( block == 0.0 ) {
+		return vec4( 0.0, 0.0, 0.0, float( bitCount( reach ) ) );
 	}
 #endif
 
+	// what of the place is the same for every light: where its texture is under the parallax, its colour, its material
+	vec3 stageNormal = vec3( 0.0 );
+	mat3 stageFrame = mat3( 1.0 );
+	vec2 dx = vec2( 0.0 ), dy = vec2( 0.0 );
 	vec2 uv = v_texCoord0;
 	// The parallax of the stage this light falls on, or it lay flat on top of the carved surface: the same place of the
 	// texture as PbrStage worked out (with the normal it took), and the bumps throw shadows from this light.
 	float parallax = PBR( d.flags ) && ( d.pbrFlags & PBR_HEIGHT ) != 0u ? d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 ) : 0.0;
 	if ( parallax > 0.0 ) {
-		vec3 stageNormal = FlatNormal( toEye );
-		mat3 stageFrame = CotangentFrame( stageNormal, v_position, uv );
-		vec2 dx = dFdx( uv ), dy = dFdy( uv );
+		stageNormal = FlatNormal( toEye );
+		stageFrame = CotangentFrame( stageNormal, v_position, uv );
+		dx = dFdx( uv );
+		dy = dFdy( uv );
 
 		if ( ( d.pbrFlags & PBR_RAISED ) != 0u ) {
 			// tessellated (vk_shade.cpp VK_DynamicLights): the surface already stands where the texture is, the height in
@@ -558,7 +605,6 @@ vec4 DynamicLight( Draw d ) {
 			uv = Parallax( d, uv, vec3( dot( stageFrame[0], toEye ), dot( stageFrame[1], toEye ), dot( stageNormal, toEye ) ), parallax, d.pbr2.x,
 				clamp( 320.0 / max( v_depth, 1.0 ), 0.25, 1.0 ) );
 		}
-		radiance *= ParallaxLight( d, uv, dx, dy, vec3( dot( stageFrame[0], l ), dot( stageFrame[1], l ), dot( stageNormal, l ) ), parallax );
 	}
 	// (vertColor: the colour of the entity on this stage, white where it has none: vk_shade.cpp VK_DynamicLights. Its
 	// alpha 2: the stage lies under the same texture drawn again by its alpha in no colour, as the players with a colour
@@ -607,49 +653,121 @@ vec4 DynamicLight( Draw d ) {
 		s.f0 = mix( vec3( d.material2.z > 0.0 ? d.material2.z : 0.04 ), albedo, s.metalness );
 		s.coat = d.pbr2.y;
 		s.coatRoughness = d.pbr2.z;
-		s.along = cos( d.material2.x ) * frame[0] + sin( d.material2.x ) * frame[1];
 		s.anisotropy = d.pbr2.w;
+		// (the axis of the brush strokes is asked for only where the material has them, SurfaceLight)
+		if ( abs( s.anisotropy ) > 0.01 ) {
+			s.along = cos( d.material2.x ) * frame[0] + sin( d.material2.x ) * frame[1];
+		}
 	}
 
-	vec3 diffuse = vec3( 0.0 );
-	vec3 shine;
-	if ( tube ) {
-		// the diffuse light from the nearest point, the shine from the one nearest the mirrored ray; a tube is no
-		// point, its highlight is a little wider
-		vec3 unused = vec3( 0.0 );
-		vec3 r = reflect( -toEye, s.n );
-		vec3 specPos = NearestToRay( d.grid0.xyz, d.grid1.xyz, v_position, r );
-		vec3 ls = normalize( specPos - v_position + ( model ? vec3( 0.0 ) : flat_ * max( 16.0 - dot( flat_, specPos - v_position ), 0.0 ) ) );
-		SurfaceLight( s, l, radiance, 0.0, diffuse );
-		shine = SurfaceLight( s, ls, radiance, 0.15, unused );
-	} else if ( rect ) {
-		// the shine: where the mirrored ray meets the plane of the panel, or the point of the panel nearest to that
-		vec3 unused = vec3( 0.0 );
-		vec3 mirrored = reflect( -s.v, s.n );
-		vec3 face = normalize( cross( d.grid0.xyz, d.grid1.xyz ) );
-		float along = dot( mirrored, face );
-		float t = abs( along ) > 1e-4 ? dot( d.parm.xyz - v_position, face ) / along : -1.0;
-		vec3 specPos = NearestOnRect( d.parm.xyz, d.grid0.xyz, d.grid1.xyz, t > 0.0 ? v_position + mirrored * t : lightPos );
+	// (the lights in whose shadow the pixel lies count as lights of it, as their passes did: the alpha)
+#ifdef VK_GLES
+	vec4 sum = vec4( 0.0 );
+#else
+	vec4 sum = vec4( 0.0, 0.0, 0.0, float( bitCount( reach & ~lit ) ) );
+#endif
+	// what every light of the pixel asks for again: the height under it (ParallaxLight), the ray from the eye mirrored
+	// in the surface, whether its light is wrapped round it
+	float height = parallax > 0.0 ? textureGrad( TEX2( d ), uv, dx, dy ).a : 1.0;
+	vec3 mirrored = reflect( -toEye, s.n );
+	bool wrapped = model && !PBR( d.flags );
 
-		SurfaceLight( s, l, radiance, 0.0, diffuse );
-		shine = SurfaceLight( s, normalize( specPos - v_position ), radiance, 0.15, unused );
-	} else {
-		shine = SurfaceLight( s, l, radiance, 0.0, diffuse );
-	}
-	// A model without a material of its own (cloth, skin, hair of the old models) takes no shine: the faint one of the
-	// level, by a lamp right beside a player on his round surfaces, turned into highlights and bright rims at his
-	// outline as on plastic (their picture 2026-11-24).
-	// Its light also reaches a little round its sides, as on cloth and skin: lit by the angle alone it ended where the
-	// surface turned across the light, a hard line between the lit and the dark side (their word 2026-11-24, "soften
-	// the transitions"). Full on the side that faces the light, nothing from 30 degrees behind its edge.
-	if ( model && !PBR( d.flags ) ) {
-		const float WRAP = 0.5;
-		float wrap = clamp( ( dot( s.n, l ) + WRAP ) / ( 1.0 + WRAP ), 0.0, 1.0 );
+	for ( uint left = lit; left != 0u; left &= left - 1u ) {
+		int i = LOWEST_BIT( left );
+		Lamp lamp = LAMP( d, i );
+		bool tube = lamp.grid0.w > 0.0;
+		// A rectangle that glows (grid0.w -2, a lamp panel of the level on a player, vk_shade.cpp VK_DynamicLights): round
+		// parm with the half edges grid0.xyz and grid1.xyz. It lights from all of its face: how far it is counts from its
+		// nearest point, the angle from where its face lies on average (its corners and its middle, so a large panel beside
+		// somebody lights him from a wide angle and its light ends softly), the shine from where it shows in the surface as
+		// in a mirror. Until 2026-11-25 a panel lit from its middle alone, a point.
+		bool rect = lamp.grid0.w < -1.5;
+		float range = tube ? lamp.grid0.w : lamp.parm.w;
+		vec3 lightPos = tube ? NearestOnSegment( lamp.grid0.xyz, lamp.grid1.xyz, v_position )
+			: rect ? NearestOnRect( lamp.parm.xyz, lamp.grid0.xyz, lamp.grid1.xyz, v_position ) : lamp.parm.xyz;
+		vec3 toLight = lightPos - v_position;
+		float dist = length( toLight );
+		// (it is taken as standing a hand above the plane for the angle, see above)
+		float above = dot( flat_, toLight );
+		vec3 l = model ? toLight / max( dist, 0.001 ) : normalize( toLight + flat_ * max( 16.0 - above, 0.0 ) );
+		if ( rect ) {
+			vec3 c = lamp.parm.xyz - v_position, r = lamp.grid0.xyz, u = lamp.grid1.xyz;
 
-		diffuse = s.albedo * radiance * wrap * wrap;
-		shine = vec3( 0.0 );
+			l = normalize( normalize( c ) + 0.5 * ( normalize( c + r + u ) + normalize( c + r - u ) + normalize( c - r + u ) + normalize( c - r - u ) ) );
+		}
+
+		float x = dist / range;
+		float window = clamp( 1.0 - x * x * x * x, 0.0, 1.0 );
+		// (about what the round light image of rd-vanilla gave halfway out, brighter close by). Not on a model: the light
+		// of a weapon sits in it and in the hand that holds it, which turned white and covered the glow of the charge
+		// (their picture 2026-11-24, the bowcaster); it is taken as at least a hand away.
+		float xa = model ? max( dist, 24.0 ) / range : x;
+		float fall = window * window / ( 1.0 + 4.0 * xa * xa ) * ( model ? 1.0 : 1.6 );
+		// A band of light (grid0.w negative, ext.AddBandLightToScene): it leaves only round the plane through it across
+		// its axis grid0.xyz, as the glowing ring of a thermal detonator lets it out past the body, and softly less out of
+		// that plane; -grid0.w is how far out of it it still has most of it (the sine of the angle).
+		if ( lamp.grid0.w < 0.0 && !rect ) {
+			float off = dot( toLight, lamp.grid0.xyz ) / ( max( dist, 0.001 ) * -lamp.grid0.w );
+			fall *= exp( -off * off );
+		}
+		vec3 radiance = pow( lamp.color * fall, vec3( 2.2 ) );
+#ifndef VK_GLES
+		radiance *= 1.0 - LampShadow( lamp, model, clip );
+#endif
+		// Nothing of it comes here (a light without colour, the very edge of its reach): all that follows would come out
+		// as nothing, so it is left away. It still counts as a light of the pixel, as its pass did: the alpha.
+		if ( radiance == vec3( 0.0 ) ) {
+			sum.a += 1.0;
+			continue;
+		}
+		// where its shine comes from: a tube and a rectangle are no points
+		vec3 ls = l;
+		if ( tube ) {
+			// the point of the tube nearest the mirrored ray (the diffuse light comes from its nearest point)
+			vec3 specPos = NearestToRay( lamp.grid0.xyz, lamp.grid1.xyz, v_position, mirrored );
+			ls = normalize( specPos - v_position + ( model ? vec3( 0.0 ) : flat_ * max( 16.0 - dot( flat_, specPos - v_position ), 0.0 ) ) );
+		} else if ( rect ) {
+			// where the mirrored ray meets the plane of the panel, or the point of the panel nearest to that
+			vec3 face = normalize( cross( lamp.grid0.xyz, lamp.grid1.xyz ) );
+			float along = dot( mirrored, face );
+			float t = abs( along ) > 1e-4 ? dot( lamp.parm.xyz - v_position, face ) / along : -1.0;
+			vec3 specPos = NearestOnRect( lamp.parm.xyz, lamp.grid0.xyz, lamp.grid1.xyz, t > 0.0 ? v_position + mirrored * t : lightPos );
+
+			ls = normalize( specPos - v_position );
+		}
+		// the bumps of the parallax throw shadows from this light
+		if ( parallax > 0.0 ) {
+			radiance *= ParallaxLight( d, uv, dx, dy, vec3( dot( stageFrame[0], l ), dot( stageFrame[1], l ), dot( stageNormal, l ) ), parallax, height );
+		}
+
+		vec3 diffuse = vec3( 0.0 );
+		vec3 shine;
+		if ( tube || rect ) {
+			// a tube and a panel are no points, their highlight is a little wider
+			vec3 unused = vec3( 0.0 );
+
+			SurfaceLight( s, l, radiance, 0.0, diffuse );
+			shine = SurfaceLight( s, ls, radiance, 0.15, unused );
+		} else {
+			shine = SurfaceLight( s, l, radiance, 0.0, diffuse );
+		}
+		// A model without a material of its own (cloth, skin, hair of the old models) takes no shine: the faint one of the
+		// level, by a lamp right beside a player on his round surfaces, turned into highlights and bright rims at his
+		// outline as on plastic (their picture 2026-11-24).
+		// Its light also reaches a little round its sides, as on cloth and skin: lit by the angle alone it ended where the
+		// surface turned across the light, a hard line between the lit and the dark side (their word 2026-11-24, "soften
+		// the transitions"). Full on the side that faces the light, nothing from 30 degrees behind its edge.
+		if ( wrapped ) {
+			const float WRAP = 0.5;
+			float wrap = clamp( ( dot( s.n, l ) + WRAP ) / ( 1.0 + WRAP ), 0.0, 1.0 );
+
+			diffuse = s.albedo * radiance * wrap * wrap;
+			shine = vec3( 0.0 );
+		}
+		// (each as its own pass put it into the frame: worked out in linear light, added in the light of the game)
+		sum += SafeColor( vec4( pow( diffuse * occlusion + shine, vec3( 1.0 / 2.2 ) ), 1.0 ) );
 	}
-	return vec4( pow( diffuse * occlusion + shine, vec3( 1.0 / 2.2 ) ), 1.0 );
+	return sum;
 }
 
 #ifndef VK_GLES
@@ -964,8 +1082,9 @@ vec4 PbrStage( Draw d ) {
 	s.coatRoughness = d.pbr2.z;
 	s.sheen = ( d.pbrFlags & PBR_SHEEN_ALBEDO ) != 0u ? albedo : d.material.rgb;
 	s.sheenRoughness = d.material.w;
-	s.along = cos( d.material2.x ) * frame[0] + sin( d.material2.x ) * frame[1];
 	s.anisotropy = d.pbr2.w;
+	// (asked for only where the material has brush strokes: SurfaceLight, the mirror below)
+	s.along = abs( s.anisotropy ) > 0.01 ? cos( d.material2.x ) * frame[0] + sin( d.material2.x ) * frame[1] : frame[0];
 	float nv = max( dot( n, toEye ), 1e-4 );
 
 	// The light of the grid and of an entity is many lamps of the level taken together, from all around a direction,
@@ -981,31 +1100,34 @@ vec4 PbrStage( Draw d ) {
 	// map (green), the grid (blue), 8: what the reflection probe shows as a mirror, 9: the albedo checked against what
 	// real surfaces have (sRGB 30 to 240, metals 186 and more): too dark blue, too bright red, a dark metal magenta,
 	// the rest grey, 10: roughness alone, 11: metalness alone
-	if ( d.pbr.w == 9.0 ) {
-		float lum = dot( base.rgb, vec3( 0.2126, 0.7152, 0.0722 ) ) * 255.0;
-		if ( metalness >= 0.5 ) {
-			return lum < 186.0 ? vec4( 1.0, 0.0, 1.0, alpha ) : vec4( vec3( lum / 255.0 ), alpha );
+	// (v_pbr 1, as it is played: none of them)
+	if ( d.pbr.w > 1.5 ) {
+		if ( d.pbr.w == 9.0 ) {
+			float lum = dot( base.rgb, vec3( 0.2126, 0.7152, 0.0722 ) ) * 255.0;
+			if ( metalness >= 0.5 ) {
+				return lum < 186.0 ? vec4( 1.0, 0.0, 1.0, alpha ) : vec4( vec3( lum / 255.0 ), alpha );
+			}
+			return lum < 30.0 ? vec4( 0.0, 0.2, 1.0, alpha ) : lum > 240.0 ? vec4( 1.0, 0.1, 0.0, alpha ) : vec4( vec3( lum / 255.0 ), alpha );
+		} else if ( d.pbr.w == 10.0 ) {
+			return vec4( vec3( roughness ), alpha );
+		} else if ( d.pbr.w == 11.0 ) {
+			return vec4( vec3( metalness ), alpha );
+		} else if ( d.pbr.w == 2.0 ) {
+			return vec4( pow( albedo * ( ambient + directed * max( dot( flat_, l ), 0.0 ) ), vec3( 1.0 / 2.2 ) ), alpha );
+		} else if ( d.pbr.w == 3.0 ) {
+			return vec4( pow( shine, vec3( 1.0 / 2.2 ) ), alpha );
+		} else if ( d.pbr.w == 4.0 ) {
+			return vec4( n * 0.5 + 0.5, alpha );
+		} else if ( d.pbr.w == 8.0 && ( d.pbrFlags & PBR_PROBES ) != 0u ) {
+			vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+			return vec4( ProbesAround( d, world, normalize( mat3( t.model ) * reflect( -toEye, n ) ), 0.0 ), alpha );
+		} else if ( d.pbr.w == 7.0 ) {
+			return vec4( ( d.pbrFlags & PBR_RMO ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_NORMAL ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_GRID ) != 0u ? 1.0 : 0.0, alpha );
+		} else if ( d.pbr.w == 6.0 ) {
+			return vec4( roughness, metalness, occlusion, alpha );
+		} else if ( d.pbr.w == 5.0 ) {
+			return vec4( l * 0.5 + 0.5, alpha ) * length( directed ) / max( length( ambient + directed ), 1e-4 );
 		}
-		return lum < 30.0 ? vec4( 0.0, 0.2, 1.0, alpha ) : lum > 240.0 ? vec4( 1.0, 0.1, 0.0, alpha ) : vec4( vec3( lum / 255.0 ), alpha );
-	} else if ( d.pbr.w == 10.0 ) {
-		return vec4( vec3( roughness ), alpha );
-	} else if ( d.pbr.w == 11.0 ) {
-		return vec4( vec3( metalness ), alpha );
-	} else if ( d.pbr.w == 2.0 ) {
-		return vec4( pow( albedo * ( ambient + directed * max( dot( flat_, l ), 0.0 ) ), vec3( 1.0 / 2.2 ) ), alpha );
-	} else if ( d.pbr.w == 3.0 ) {
-		return vec4( pow( shine, vec3( 1.0 / 2.2 ) ), alpha );
-	} else if ( d.pbr.w == 4.0 ) {
-		return vec4( n * 0.5 + 0.5, alpha );
-	} else if ( d.pbr.w == 8.0 && ( d.pbrFlags & PBR_PROBES ) != 0u ) {
-		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
-		return vec4( ProbesAround( d, world, normalize( mat3( t.model ) * reflect( -toEye, n ) ), 0.0 ), alpha );
-	} else if ( d.pbr.w == 7.0 ) {
-		return vec4( ( d.pbrFlags & PBR_RMO ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_NORMAL ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_GRID ) != 0u ? 1.0 : 0.0, alpha );
-	} else if ( d.pbr.w == 6.0 ) {
-		return vec4( roughness, metalness, occlusion, alpha );
-	} else if ( d.pbr.w == 5.0 ) {
-		return vec4( l * 0.5 + 0.5, alpha ) * length( directed ) / max( length( ambient + directed ), 1e-4 );
 	}
 
 	// What it throws back of the light around it: what the nearest reflection probe sees in the direction of the
@@ -1390,7 +1512,7 @@ void main() {
 	}
 #endif
 	if ( DLIGHT( d.flags ) ) {
-		o_color = SafeColor( DynamicLight( d ) );
+		o_color = DynamicLight( d );
 		return;
 	}
 #ifndef VK_GLES

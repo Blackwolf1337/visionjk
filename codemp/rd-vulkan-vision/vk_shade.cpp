@@ -1040,6 +1040,88 @@ static const textureBundle_t *VK_LightBundle( const shaderStage_t *pStage ) {
 	return NULL;
 }
 
+// the numbers of a light in a draw (generic.frag Lamp): a point at reaching radius, or a tube between start and end
+// reaching lineRange from it, or a band round bandAxis, or a rectangle with the half edges rectRight and rectUp
+static void VK_LampDraw( vkDraw_t *draw, const vec3_t color, const vec3_t at, float radius, const float *start, const float *end,
+	float lineRange, const float *bandAxis, float bandWidth, const float *rectRight, const float *rectUp ) {
+	VectorCopy( color, draw->baseColor );
+	VectorCopy( at, draw->parm );
+	draw->parm[3] = radius;
+	// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
+	draw->grid0[3] = 0.0f;
+	if ( lineRange > 0.0f ) {
+		VectorCopy( start, draw->grid0 );
+		draw->grid0[3] = lineRange;
+		VectorCopy( end, draw->grid1 );
+	} else if ( bandWidth > 0.0f ) {
+		// a band: its axis in grid0, how wide negative in grid0.w
+		VectorCopy( bandAxis, draw->grid0 );
+		draw->grid0[3] = -bandWidth;
+	} else if ( rectRight ) {
+		// a rectangle that glows, a lamp panel: its half edges from at in grid0 and grid1, grid0.w -2
+		VectorCopy( rectRight, draw->grid0 );
+		draw->grid0[3] = -2.0f;
+		VectorCopy( rectUp, draw->grid1 );
+	}
+}
+
+// a ball in the level that holds all a moving light reaches (a tube: all within its reach of the line between its ends)
+static float VK_LightBall( const dlight_t *dl, vec3_t middle ) {
+	if ( dl->lineRange > 0.0f ) {
+		VectorAdd( dl->lineStart, dl->lineEnd, middle );
+		VectorScale( middle, 0.5f, middle );
+		return dl->lineRange + 0.5f * Distance( dl->lineStart, dl->lineEnd );
+	}
+	VectorCopy( dl->origin, middle );
+	return dl->radius;
+}
+
+#ifndef RD_VISION_GLES
+// The moving lights of the view that is drawn, for the surfaces of the level: as draws nobody draws, which
+// generic.frag DynamicLight reads by their place, so one pass lights a surface with all of them (VK_DynamicLights).
+// Made once a view, while the level itself is drawn: its lights are in its own space then.
+static struct {
+	const vkFrame_t	*frame;
+	int				view;				// rb_viewSerial it was made for
+	qboolean		made;				// qfalse: there was no room, a pass for each light
+	uint32_t		first;				// where they start in the draws of the frame
+	uint32_t		shown;				// a bit for each that reaches into the picture
+	float			bounds[MAX_DLIGHTS][4];	//	and the part of it (VK_BallBounds)
+} vk_lightList;
+
+static qboolean VK_LightList( qboolean levelView ) {
+	vkDraw_t records[MAX_DLIGHTS];
+
+	if ( vk_lightList.frame == vk.frame && vk_lightList.view == rb_viewSerial ) {
+		return vk_lightList.made;
+	}
+	vk_lightList.frame = vk.frame;
+	vk_lightList.view = rb_viewSerial;
+	vk_lightList.shown = 0;
+	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
+		const dlight_t	*dl = &backEnd.refdef.dlights[l];
+		vkDraw_t		*draw = &records[l];
+		vec3_t			color, middle;
+		uint32_t		slot = 0;
+		// (the shadows of the players from it only in the view of the level itself, the one the mask was made for)
+		const int		channel = levelView ? VK_RT_LightChannel( dl, &slot ) : 0;
+		const float		reach = VK_LightBall( dl, middle );
+
+		memset( draw, 0, sizeof( *draw ) );
+		VectorScale( dl->color, Com_Clamp( 0.0f, 8.0f, v_dlightScale->value ), color );
+		VK_LampDraw( draw, color, dl->transformed, dl->radius, dl->lineStartTransformed, dl->lineEndTransformed, dl->lineRange,
+			dl->bandAxisTransformed, dl->bandWidth, NULL, NULL );
+		draw->tex1 = channel ? slot : tr.dlightImage->texnum;
+		draw->grid1[3] = (float)channel;
+		if ( VK_BallBounds( middle, reach, vk_lightList.bounds[l] ) ) {
+			vk_lightList.shown |= 1u << l;
+		}
+	}
+	vk_lightList.made = VK_AddDrawRecords( records, backEnd.refdef.num_dlights, &vk_lightList.first );
+	return vk_lightList.made;
+}
+#endif
+
 static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	const shader_t *shader = tess.shader;
 	const shaderStage_t *textured = NULL;
@@ -1137,59 +1219,106 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
-	// one light pass: a point at in the space of the model reaching radius, or the tube or band of dl; channel: the
-	// shadow mask
-	auto pass = [&]( const vec3_t color, const vec3_t at, float radius, const dlight_t *tube, int channel, uint32_t slot,
-		const float *rectRight = NULL, const float *rectUp = NULL ) {
-		vkDraw_t draw;
+	// A light pass draws all of the batch: every surface of the level with this shader that any light touches. The
+	// light itself ends at its reach (generic.frag DynamicLight discards what is further), so its pass is cut to the
+	// part of the picture that reach covers, and left out when that is none of it. The picture is the same, the
+	// pixels the device starts on for nothing are not. Not for a model with a scale (its space is not that of the
+	// level), nor in the views with a picture of their own shape. (Checked 2026-11-26: with the passes drawn only
+	// outside of their parts the picture was the one without moving lights. The OpenGL ES device, which was not run
+	// with it, draws its passes whole as before.)
+#ifdef RD_VISION_GLES
+	const qboolean cut = qfalse;
+#else
+	const qboolean cut = (qboolean)( !backEnd.viewParms.probeFace && !backEnd.viewParms.isPuddle
+		&& !( ent && ent != &tr.worldEntity && ent->e.nonNormalizedAxes ) );
+#endif
+	qboolean wasCut = qfalse;
+	const uint32_t blend = ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) ) | GLS_DEPTHFUNC_EQUAL;
 
-		VK_InitDraw( &draw, transform, bones );
-		draw.flags |= VKD_DLIGHT;
-		VK_IdentityTexCoords( &draw );
-		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
-		draw.tex1 = channel ? slot : tr.dlightImage->texnum;
-		if ( matStage && VK_PbrDraw( matStage, shader, qfalse, &draw ) ) {
+	// what a light pass has of the surface, the same for every light on it
+	auto surface = [&]( vkDraw_t *draw ) {
+		VK_InitDraw( draw, transform, bones );
+		draw->flags |= VKD_DLIGHT;
+		VK_IdentityTexCoords( draw );
+		draw->tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
+		if ( matStage && VK_PbrDraw( matStage, shader, qfalse, draw ) ) {
 			// its normal map, rmo map and numbers; the grid and the probes are no part of a lamp
-			draw.pbrFlags &= ~VKP_GRID;
+			draw->pbrFlags &= ~VKP_GRID;
 			// Tessellated: the bumps are real, no parallax on top of them, but the light does not see them as shapes
 			// (they are not in the rays or the shadow maps), so they throw the shadows of the parallax from the same
 			// height, in units.
 			if ( tessFrom ) {
-				draw.pbr[2] = tessFrom->tess[0];
-				draw.pbrFlags |= VKP_RAISED;
+				draw->pbr[2] = tessFrom->tess[0];
+				draw->pbrFlags |= VKP_RAISED;
 			}
 		}
-		VectorCopy( color, draw.baseColor );
-		VectorCopy4( tint, draw.vertColor );	// (generic.frag DynamicLight: what the texture is coloured with, and where)
-		VectorCopy( at, draw.parm );
-		draw.parm[3] = radius;
-		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
-		draw.grid0[3] = 0.0f;
-		if ( tube && tube->lineRange > 0.0f ) {
-			VectorCopy( tube->lineStartTransformed, draw.grid0 );
-			draw.grid0[3] = tube->lineRange;
-			VectorCopy( tube->lineEndTransformed, draw.grid1 );
-		} else if ( tube && tube->bandWidth > 0.0f ) {
-			// a band: its axis in grid0, how wide negative in grid0.w
-			VectorCopy( tube->bandAxisTransformed, draw.grid0 );
-			draw.grid0[3] = -tube->bandWidth;
-		} else if ( rectRight ) {
-			// a rectangle that glows, a lamp panel: its half edges from at in grid0 and grid1, grid0.w -2
-			VectorCopy( rectRight, draw.grid0 );
-			draw.grid0[3] = -2.0f;
-			VectorCopy( rectUp, draw.grid1 );
+		VectorCopy4( tint, draw->vertColor );	// (generic.frag DynamicLight: what the texture is coloured with, and where)
+	};
+
+#ifndef RD_VISION_GLES
+	// The lights on a surface of the level in one pass: the device draws the surface once, looks up its texture, its
+	// parallax and its material once, and works out each light that reaches a place as a pass of its own did
+	// (generic.frag DynamicLight, the list of the view: VK_LightList). A pass for each light drew all of that again
+	// for every light: 5 ms a frame in eight seconds of rocket fire at 2560x1440, where the lights of the blasts
+	// reach most of the picture (measured 2026-11-26). Where the light is added, which is where the surface has a
+	// texture of its own. A model stays with a pass a light: its lights are in its own space.
+	if ( ent == &tr.worldEntity && !bones && textured && cut && tess.dlightBits && VK_LightList( levelView ) ) {
+		const uint32_t	bits = (uint32_t)tess.dlightBits & vk_lightList.shown;
+		float			bounds[4] = { 1.0f, 1.0f, -1.0f, -1.0f };
+		vkDraw_t		draw;
+
+		if ( !bits ) {
+			return;		// none of its lights reaches into the picture
 		}
+		for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
+			if ( bits & ( 1u << l ) ) {
+				bounds[0] = Q_min( bounds[0], vk_lightList.bounds[l][0] );
+				bounds[1] = Q_min( bounds[1], vk_lightList.bounds[l][1] );
+				bounds[2] = Q_max( bounds[2], vk_lightList.bounds[l][2] );
+				bounds[3] = Q_max( bounds[3], vk_lightList.bounds[l][3] );
+			}
+		}
+		surface( &draw );
+		draw.tex1 = tr.dlightImage->texnum;
+		draw.decals = vk_lightList.first;
+		draw.numDecals = bits;
+		VK_ScissorBounds( bounds );
+		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), blend, cullMode, (qboolean)shader->polygonOffset );
+		VK_ScissorBounds( NULL );
+		return;
+	}
+#endif
+
+	// one light pass: a point at in the space of the model reaching radius, or the tube or band of dl; channel: the
+	// shadow mask. middle, reach: a ball in the level that holds all the light reaches.
+	auto pass = [&]( const vec3_t color, const vec3_t at, float radius, const dlight_t *tube, int channel, uint32_t slot,
+		const vec3_t middle, float reach, const float *rectRight = NULL, const float *rectUp = NULL ) {
+		vkDraw_t draw;
+
+		if ( cut ) {
+			float bounds[4];
+
+			if ( !VK_BallBounds( middle, reach, bounds ) ) {
+				return;
+			}
+			VK_ScissorBounds( bounds );
+			wasCut = qtrue;
+		}
+
+		surface( &draw );
+		draw.tex1 = channel ? slot : tr.dlightImage->texnum;
+		VK_LampDraw( &draw, color, at, radius, tube ? tube->lineStartTransformed : NULL, tube ? tube->lineEndTransformed : NULL,
+			tube ? tube->lineRange : 0.0f, tube ? tube->bandAxisTransformed : NULL, tube ? tube->bandWidth : 0.0f, rectRight, rectUp );
 		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
 		// and tex1. A model has it negative, -1 - the channel (generic.frag DynamicLight): the mask is made at the
 		// pixels of the scene, his own among them, so a leg behind his body is in its shadow.
 		draw.grid1[3] = model ? -1.0f - (float)channel : (float)channel;
-		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
-			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
+		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), blend, cullMode, (qboolean)shader->polygonOffset );
 	};
 
 	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
 		const dlight_t *dl = &backEnd.refdef.dlights[l];
-		vec3_t color;
+		vec3_t color, middle;
 		int channel = 0;
 		uint32_t slot = 0;
 
@@ -1203,7 +1332,9 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			channel = VK_RT_LightChannel( dl, &slot );
 		}
 #endif
-		pass( color, dl->transformed, dl->radius, ( dl->lineRange > 0.0f || dl->bandWidth > 0.0f ) ? dl : NULL, channel, slot );
+		const float reach = VK_LightBall( dl, middle );
+
+		pass( color, dl->transformed, dl->radius, ( dl->lineRange > 0.0f || dl->bandWidth > 0.0f ) ? dl : NULL, channel, slot, middle, reach );
 	}
 	// the lamps of the level that light this player, moved into the space of the model as R_TransformDlights does
 	for ( int k = 0; k < lamps; k++ ) {
@@ -1218,7 +1349,13 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			right[i] = DotProduct( ent->lampRight[k], backEnd.ori.axis[i] );
 			up[i] = DotProduct( ent->lampUp[k], backEnd.ori.axis[i] );
 		}
-		pass( ent->lampColor[k], at, ent->lampRange[k], NULL, 0, 0, rect ? right : NULL, rect ? up : NULL );
+		// (a panel: all within its reach of its face)
+		pass( ent->lampColor[k], at, ent->lampRange[k], NULL, 0, 0, ent->lampOrigin[k],
+			ent->lampRange[k] + ( rect ? VectorLength( ent->lampRight[k] ) + VectorLength( ent->lampUp[k] ) : 0.0f ),
+			rect ? right : NULL, rect ? up : NULL );
+	}
+	if ( wasCut ) {
+		VK_ScissorBounds( NULL );
 	}
 }
 

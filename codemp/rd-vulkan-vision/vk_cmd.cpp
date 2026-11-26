@@ -373,6 +373,138 @@ void VK_ShutdownFrames( void ) {
 	vk.frame = NULL;
 }
 
+/*
+With several samples a pixel (r_ext_multisample) the frame is drawn into colorMS and depthMS and its glow into glowMS,
+and color, depth and glow, which everything else reads (the passes over the level, the blurs, the gamma pass, the
+flares), are made of them: the colours by their average, the depth by the first sample of every pixel. Until 2026-11-26
+every pass on the frame did that at its end, for all of the frame, colour and depth: about twelve times a frame at 0.06
+ms each (2560x1440, two samples, measured), most of them for nobody: the frame was begun again before anything had read
+it, or only its depth was asked for, which had not changed since it was made the last time.
+
+Now a pass leaves the samples as they are and only says what it may have changed: the colours when it begins on them
+(vk.colorStale, vk.glowStale), the depth when it begins by clearing it, when it is cleared (VK_ClearDepth) or when a
+draw writes it (VK_Draw; the passes over whole targets have pipelines that never do). Whoever reads one of the three
+puts it into the layout for that with VK_TargetLayout(), which asks VK_FrameRead() first: stale, it is made then.
+*/
+// VK_BackdropPass made the part of the frame it reads itself: its passes take color as it is
+static qboolean vk_readPart;
+// VK_SmaaPass: the pass on the frame that is begun now reads color while it writes the samples
+static qboolean vk_keepColor;
+
+// color of the samples of colorMS (and glow of glowMS): a pass that draws nothing and ends by putting the average of
+// each pixel's samples into it
+static void VK_MakeColor( VkCommandBuffer cmd, vkTarget_t *samples, vkTarget_t *color ) {
+	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+
+	VK_TargetLayout( cmd, samples, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_TargetLayout( cmd, color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	colorInfo.imageView = samples->view;
+	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+	colorInfo.resolveImageView = color->view;
+	colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	info.renderArea.extent.width = (uint32_t)color->width;
+	info.renderArea.extent.height = (uint32_t)color->height;
+	info.layerCount = 1;
+	info.colorAttachmentCount = 1;
+	info.pColorAttachments = &colorInfo;
+	qvkCmdBeginRendering( cmd, &info );
+	qvkCmdEndRendering( cmd );
+}
+
+// depth of the samples of depthMS, the same way: the first sample of every pixel
+static void VK_MakeDepth( VkCommandBuffer cmd ) {
+	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+
+	VK_TargetLayout( cmd, &vk.depthMS, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	depthInfo.imageView = vk.depthMS.view;
+	depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthInfo.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+	depthInfo.resolveImageView = vk.depth.view;
+	depthInfo.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	info.renderArea.extent.width = (uint32_t)vk.depth.width;
+	info.renderArea.extent.height = (uint32_t)vk.depth.height;
+	info.layerCount = 1;
+	info.pDepthAttachment = &depthInfo;
+	info.pStencilAttachment = &depthInfo;
+	qvkCmdBeginRendering( cmd, &info );
+	qvkCmdEndRendering( cmd );
+}
+
+// Only a part of color is read next (left, top, right, bottom in its pixels): stale, that part alone is made of its
+// samples, and the frame stays stale for whoever reads it after. Until vk_readPart is taken back, color is read as it
+// is. Making all of the frame costs about 0.06 ms at 2560x1440 with two samples, and every panel of the HUD asked for
+// it, 0.9 ms a frame for eighteen panels (measured 2026-11-26), for a blur that reads a small part.
+static void VK_MakeColorPart( VkCommandBuffer cmd, int left, int top, int right, int bottom ) {
+	VkImageResolve part;
+
+	if ( vk.samples <= VK_SAMPLE_COUNT_1_BIT || !vk.colorStale ) {
+		return;
+	}
+	memset( &part, 0, sizeof( part ) );
+	part.srcSubresource.aspectMask = part.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	part.srcSubresource.layerCount = part.dstSubresource.layerCount = 1;
+	part.srcOffset.x = part.dstOffset.x = left;
+	part.srcOffset.y = part.dstOffset.y = top;
+	part.extent.width = (uint32_t)Q_max( right - left, 1 );
+	part.extent.height = (uint32_t)Q_max( bottom - top, 1 );
+	part.extent.depth = 1;
+	VK_TargetLayout( cmd, &vk.colorMS, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	qvkCmdResolveImage( cmd, vk.colorMS.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.color.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &part );
+	vk_readPart = qtrue;
+}
+
+/*
+===============
+VK_FrameRead
+
+target is about to be read (VK_TargetLayout, between passes): color, depth or glow that no longer hold what their
+samples do are made of them
+===============
+*/
+void VK_FrameRead( VkCommandBuffer cmd, vkTarget_t *target ) {
+	if ( vk.samples <= VK_SAMPLE_COUNT_1_BIT ) {
+		return;
+	}
+	if ( target == &vk.color ) {
+		if ( vk.colorStale && !vk_readPart ) {
+			vk.colorStale = qfalse;
+			VK_MakeColor( cmd, &vk.colorMS, &vk.color );
+		}
+	} else if ( target == &vk.glow ) {
+		if ( vk.glowStale ) {
+			vk.glowStale = qfalse;
+			VK_MakeColor( cmd, &vk.glowMS, &vk.glow );
+		}
+	} else if ( target == &vk.depth ) {
+		if ( vk.depthStale ) {
+			vk.depthStale = qfalse;
+			VK_MakeDepth( cmd );
+		}
+	}
+}
+
+/*
+===============
+VK_MakeFrame
+
+color and depth are made now if they are stale: before the targets of the frame are traded for others (the view of
+the puddles, the faces of the probes), which are read under other names afterwards
+===============
+*/
+void VK_MakeFrame( void ) {
+	VK_FrameRead( vk.frame->cmd, &vk.color );
+	VK_FrameRead( vk.frame->cmd, &vk.depth );
+}
+
 // colorLoad: 0 what is in the target does not matter, 1 clear it, 2 keep it. depthLoad: keep the depth too.
 static void VK_BeginRendering( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad ) {
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
@@ -381,14 +513,14 @@ static void VK_BeginRendering( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_
 
 	colorInfo.imageView = color->view;
 	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	// Anti aliasing: the scene and its glow are drawn into targets with several samples a pixel. The end of the
-	// pass puts their average into the plain target, which is what everything else reads (the gamma pass, the
-	// copy for refraction, the blur of the glow).
+	// Anti aliasing: the scene and its glow are drawn into targets with several samples a pixel
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT && ( color == &vk.color || color == &vk.glow ) ) {
 		colorInfo.imageView = ( color == &vk.color ) ? vk.colorMS.view : vk.glowMS.view;
-		colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorInfo.resolveImageView = color->view;
-		colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		if ( color == &vk.color ) {
+			vk.colorStale = qtrue;
+		} else {
+			vk.glowStale = qtrue;
+		}
 	}
 	colorInfo.loadOp = ( colorLoad == 1 ) ? VK_ATTACHMENT_LOAD_OP_CLEAR : ( colorLoad == 2 ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE );
 	colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -401,11 +533,10 @@ static void VK_BeginRendering( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_
 		depthInfo.imageView = depth->view;
 		depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT && depth == &vk.depth ) {
-			// the plain depth gets the first sample of every pixel: the flares read it
 			depthInfo.imageView = vk.depthMS.view;
-			depthInfo.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
-			depthInfo.resolveImageView = depth->view;
-			depthInfo.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			if ( !depthLoad ) {
+				vk.depthStale = qtrue;
+			}
 		}
 		depthInfo.loadOp = depthLoad ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
 		// the glow pass draws over the depth of the scene
@@ -427,7 +558,11 @@ The targets get the layout for drawing first, and with them the ones with severa
 void VK_BeginTarget( vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 
-	VK_TargetLayout( cmd, color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	// (with several samples a pixel color, depth and glow are not drawn into, but they leave the layout they are read
+	// in all the same: whoever reads them after this has to ask for it, and gets them made of their samples then)
+	if ( !( vk_keepColor && color == &vk.color ) ) {
+		VK_TargetLayout( cmd, color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	}
 	if ( depth ) {
 		VK_TargetLayout( cmd, depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 	}
@@ -530,6 +665,7 @@ void VK_ClearDepth( int x, int y, int width, int height ) {
 	attachment.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 	attachment.clearValue.depthStencil.depth = 1.0f;
 	VK_ClearRect( x, y, width, height, &attachment );
+	vk.depthStale = qtrue;
 }
 
 void VK_ClearColor( int x, int y, int width, int height, const float *color ) {
@@ -570,6 +706,7 @@ void VK_BeginCommands( vkFrame_t *frame ) {
 	VK_CHECK( qvkBeginCommandBuffer( frame->cmd, &begin ) );
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.boundVertexBuffer = vk.boundIndexBuffer = VK_NULL_HANDLE;
+	vk.colorStale = vk.depthStale = vk.glowStale = qfalse;
 	// (the fence says the device is through with what this frame recorded the last time)
 	VK_GpuRead( frame );
 	frame->numMarks = 0;
@@ -824,6 +961,10 @@ void VK_Draw( vkProgram_t program, uint32_t stateBits, uint32_t state, uint32_t 
 	if ( changed & VKS_DEPTH_WRITE ) {
 		qvkCmdSetDepthWriteEnable( cmd, ( state & VKS_DEPTH_WRITE ) ? VK_TRUE : VK_FALSE );
 	}
+	// (the plain depth no longer holds what the samples do, VK_FrameRead)
+	if ( state & VKS_DEPTH_WRITE ) {
+		vk.depthStale = qtrue;
+	}
 	if ( changed & VKS_DEPTH_EQUAL ) {
 		qvkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL );
 	}
@@ -998,6 +1139,11 @@ void VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float streng
 	}
 
 	VK_EndTarget();
+	// (the part of the frame the blur reads, three pixels more each way)
+	VK_MakeColorPart( cmd, Com_Clampi( 0, vk.color.width, (int)( area.offset.x * vk.color.width / (float)sw ) - 3 ),
+		Com_Clampi( 0, vk.color.height, (int)( area.offset.y * vk.color.height / (float)sh ) - 3 ),
+		Com_Clampi( 0, vk.color.width, (int)( ( area.offset.x + area.extent.width ) * vk.color.width / (float)sw ) + 4 ),
+		Com_Clampi( 0, vk.color.height, (int)( ( area.offset.y + area.extent.height ) * vk.color.height / (float)sh ) + 4 ) );
 	for ( int i = 0; i <= passes; i++ ) {
 		vkTarget_t	*target = &vk.soft[i & 1];
 		const float	offset = i ? i - 0.5f : 0.5f;
@@ -1007,6 +1153,7 @@ void VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float streng
 		source = target;
 	}
 
+	vk_readPart = qfalse;
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	{
 		const VkDescriptorSet	set = VK_PostSet( source );
@@ -1027,17 +1174,32 @@ void VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float streng
 }
 
 // The depth is not drawn into while the pass reads it: the pass that follows takes it back (VK_BeginTarget).
-static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+// area: only that part of the frame is wanted (left, top, width, height in its pixels, width 0: all), the pass is
+// cut to it in the pixels of its target and two more each way.
+static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm, const int *area = NULL ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkDescriptorSet sets[2] = { VK_PostSet( source ), vk.depthSet };
+	// (source NULL: the shader reads the depth alone, the set of the frame only fills the place and the frame is not
+	// made of its samples for it)
+	const VkDescriptorSet sets[2] = { source ? VK_PostSet( source ) : vk.postSet, vk.depthSet };
 
-	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	if ( source ) {
+		VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	}
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 	vk.boundPipeline = pipeline;
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
 	VK_FullTarget( cmd, target );
+	if ( area && area[2] > 0 ) {
+		const int	left = Q_max( area[0] * target->width / vk.color.width - 2, 0 );
+		const int	top = Q_max( area[1] * target->height / vk.color.height - 2, 0 );
+		const int	right = Q_min( ( area[0] + area[2] ) * target->width / vk.color.width + 3, target->width );
+		const int	bottom = Q_min( ( area[1] + area[3] ) * target->height / vk.color.height + 3, target->height );
+		VkRect2D	scissor = { { left, top }, { (uint32_t)Q_max( right - left, 0 ), (uint32_t)Q_max( bottom - top, 0 ) } };
+
+		qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	}
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.focusPipelineLayout, 0, 2, sets, 0, NULL );
 	qvkCmdPushConstants( cmd, vk.focusPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 4, parm );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
@@ -1050,7 +1212,7 @@ void VK_SsrPrepPass( const float *parm ) {
 }
 
 void VK_SoftDepthPass( const float *parm ) {
-	VK_DepthPass( vk.softDepthPipeline, &vk.color, &vk.softDepth, parm );
+	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.softDepth, parm );
 }
 
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
@@ -1062,7 +1224,7 @@ void VK_ScopePrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm
 }
 
 void VK_ScreenFxPrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
-	VK_DepthPass( vk.screenFxPrepPipeline, source, target, parm );
+	VK_DepthPass( vk.screenFxPrepPipeline, source, target, parm, vk.passArea );
 }
 
 // as VK_BlurPass(), with the globals of the frame and two sources
@@ -1121,7 +1283,14 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 	vk.boundPipeline = vk.screenFxPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 5, sets, 0, NULL );
 	VK_FullTarget( cmd, &vk.color );
+	if ( vk.passArea[2] > 0 ) {
+		// only where the effects of this frame change the picture (VK_ScreenFx)
+		const VkRect2D scissor = { { vk.passArea[0], vk.passArea[1] }, { (uint32_t)vk.passArea[2], (uint32_t)vk.passArea[3] } };
+
+		qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	}
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_FullTarget( cmd, &vk.color );
 }
 
 // The depth is a target of the frame while the wet places and the sprayed pictures read it, but in the layout for
@@ -1145,10 +1314,11 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 
 	colorInfo.imageView = multi ? colorMS->view : color->view;
 	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	if ( multi ) {
-		colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorInfo.resolveImageView = color->view;
-		colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// (what reads it next makes it of its samples, VK_FrameRead)
+	if ( glow ) {
+		vk.glowStale = qtrue;
+	} else {
+		vk.colorStale = qtrue;
 	}
 	colorInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1158,8 +1328,7 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
 	info.renderArea.extent.width = (uint32_t)color->width;
 	info.renderArea.extent.height = (uint32_t)color->height;
-	// (a part only: with many samples a pass over all of it resolves all of it again; never past the image, which
-	// loses the device)
+	// (a part only, the pass draws no more than that; never past the image, which loses the device)
 	if ( area ) {
 		const int x = Com_Clampi( 0, color->width, area[0] ), y = Com_Clampi( 0, color->height, area[1] );
 
@@ -1176,8 +1345,7 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 	qvkCmdBeginRendering( cmd, &info );
 }
 
-// (area: the part of the target the boxes of the places cover, VK_DrawWet(); with several samples a pixel only that
-// part is resolved again)
+// (area: the part of the target the boxes of the places cover, VK_DrawWet(): the pass is cut to it)
 void VK_WetPass( const float *wet, int count, const int *viewport, const int *area ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
@@ -1258,12 +1426,14 @@ static void VK_SmaaStep( VkPipeline pipeline, vkTarget_t *target, const VkDescri
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
-// The copy of the frame is what the first and the last pass read: the frame itself is the target of the last.
-// With r_ext_multisample the last pass writes every sample of vk.colorMS, which the end of the target resolves
-// into vk.color again, so what is drawn over the frame later (the 2D) keeps it.
+// A copy of the frame is what the first and the last pass read: the frame itself is the target of the last.
+// With r_ext_multisample the last pass writes every sample of vk.colorMS and not vk.color, so the passes read
+// vk.color itself, made of the samples before, and no copy is made; what is drawn over the frame later (the 2D)
+// keeps what the pass wrote, and vk.color is made of the samples again when it is read.
 void VK_SmaaPass( float threshold ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const float push[8] = { 1.0f / vk.width, 1.0f / vk.height, (float)vk.width, (float)vk.height, threshold, 0.0f, 0.0f, 0.0f };
+	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
 	VkDescriptorSet weightSets[3], blendSets[2];
 
 	// (before the sets are taken: the first time they are made here)
@@ -1271,14 +1441,21 @@ void VK_SmaaPass( float threshold ) {
 	weightSets[0] = vk.smaaEdgesSet;
 	weightSets[1] = vk.smaaAreaSet;
 	weightSets[2] = vk.smaaSearchSet;
+	// (the set of the colours shows vk.color itself with several samples a pixel, VK_CreateSmaaTargets)
 	blendSets[0] = vk.smaaColorSet;
 	blendSets[1] = vk.smaaWeightsSet;
 
-	VK_CopyTarget( &vk.color, &vk.smaaColor );
+	if ( multi ) {
+		VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	} else {
+		VK_CopyTarget( &vk.color, &vk.smaaColor );
+	}
 	VK_SmaaStep( vk.smaaEdgePipeline, &vk.smaaEdges, &vk.smaaColorSet, 1, push );
 	VK_SmaaStep( vk.smaaWeightPipeline, &vk.smaaWeights, weightSets, 3, push );
 
+	vk_keepColor = multi;
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	vk_keepColor = qfalse;
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaBlendPipeline );
 	vk.boundPipeline = vk.smaaBlendPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 2, blendSets, 0, NULL );
@@ -1313,7 +1490,8 @@ void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
-void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
+// area: only that part of the picture and margin pixels around it (left, top, width, height), NULL: all of it
+static void VK_CopyTargetPart( vkTarget_t *source, vkTarget_t *dest, const int *area, int margin ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	VkImageCopy region;
 
@@ -1323,11 +1501,38 @@ void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
 	region.extent.width = (uint32_t)source->width;
 	region.extent.height = (uint32_t)source->height;
 	region.extent.depth = 1;
+	if ( area ) {
+		const int left = Com_Clampi( 0, source->width, area[0] - margin ), top = Com_Clampi( 0, source->height, area[1] - margin );
+		const int right = Com_Clampi( 0, source->width, area[0] + area[2] + margin );
+		const int bottom = Com_Clampi( 0, source->height, area[1] + area[3] + margin );
+
+		if ( right <= left || bottom <= top ) {
+			return;
+		}
+		region.srcOffset.x = region.dstOffset.x = left;
+		region.srcOffset.y = region.dstOffset.y = top;
+		region.extent.width = (uint32_t)( right - left );
+		region.extent.height = (uint32_t)( bottom - top );
+		// (a part of the frame: no more of it is made of its samples than is copied)
+		if ( source == &vk.color ) {
+			VK_MakeColorPart( cmd, left, top, right, bottom );
+		}
+	}
 	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	vk_readPart = qfalse;
 	VK_TargetLayout( cmd, dest, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 	qvkCmdCopyImage( cmd, source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dest->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 	VK_TargetLayout( cmd, dest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+}
+
+void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
+	VK_CopyTargetPart( source, dest, NULL, 0 );
+}
+
+// the part of the frame the passes of the screen effects are cut to (vk.passArea), with margin pixels around it
+void VK_CopyTargetArea( vkTarget_t *source, vkTarget_t *dest, int margin ) {
+	VK_CopyTargetPart( source, dest, vk.passArea[2] > 0 ? vk.passArea : NULL, margin );
 }
 
 // the pixels go into the buffer of the frame, one word of 32 bits for each probe
