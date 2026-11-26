@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cgame/cg_local.h"
 #include "cgame/weapons/cg_impact.h"
+#include "cgame/level/cg_smoke.h"
 
 #define IMPACT_SOUNDS		3
 #define RICOCHET_SOUNDS		2
@@ -272,9 +273,12 @@ static void Impact_Show( impactKind_t kind, const vec3_t at, const vec3_t normal
 	}
 	if ( look->puff > 0.0f && dustShader && cg.time >= nextPuff ) {
 		const int	puffs = Q_max( 1, (int)( look->puffs * scale + 0.5f ) );
+		vec3_t		dust;
 		int			i, k;
 
-		for ( i = 0; i < puffs; i++ ) {
+		// the dust as smoke with depth where the renderer has it (level/cg_smoke.c), else as sprites
+		VectorSet( dust, look->r, look->g, look->b );
+		for ( i = CG_SmokeImpact( at, normal, look->puff * ( 0.7f + 0.3f * scale ), dust, puffs ) ? puffs : 0; i < puffs; i++ ) {
 			vec3_t p, vel;
 
 			// (off the wall by what v_softParticles fades away, or there is nothing left of it)

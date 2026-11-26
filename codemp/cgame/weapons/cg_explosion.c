@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/weapons/cg_explosion.h"
 #include "cgame/level/cg_gust.h"
+#include "cgame/level/cg_smoke.h"
 
 #define SURFACE_REACH		48.0f		// units around the blast it looks for what it went off on
 #define DEBRIS_NEAR			2500.0f		// further away: no bits, no dust cloud
@@ -76,6 +77,7 @@ static const impactChips_t ceilingChips[IMPACT_KINDS] = {
 
 static fire_t		fires[FIRES];
 static fxHandle_t	flameEffect, smokeEffect, dustFallEffect;
+static fxHandle_t	rocketSmokeEffect, thermalSmokeEffect;	// 0: not rd-vulkan-vision, the effects of the game smoke
 static qhandle_t	dustShader;
 static int			nextDustFall;
 
@@ -91,6 +93,13 @@ void CG_ExplosionRegister( void ) {
 	smokeEffect = trap->FX_RegisterEffect( "effects/volumetric/black_smoke.efx" );
 	dustFallEffect = trap->FX_RegisterEffect( "effects/chunks/dustfall.efx" );
 	dustShader = trap->R_RegisterShader( "gfx/vision/impact_dust" );
+	// (the rolling smoke of the two explosions that rd-vulkan-vision has its own effects for, effects/vision/fb: it is
+	// apart from them, for where the blast leaves no smoke with depth)
+	rocketSmokeEffect = thermalSmokeEffect = 0;
+	if ( CG_SmokeSheet() ) {
+		rocketSmokeEffect = trap->FX_RegisterEffect( "effects/vision/fb/rocket/smoke.efx" );
+		thermalSmokeEffect = trap->FX_RegisterEffect( "effects/vision/fb/thermal/smoke.efx" );
+	}
 	CG_ThermalRegister();
 }
 
@@ -151,8 +160,9 @@ static qboolean Explosion_Surface( const vec3_t origin, const vec3_t dir, vec3_t
 	return (qboolean)( best < 1.0f );
 }
 
-// a cloud of the dust of what it hit, and bits of it
-static void Explosion_Debris( const vec3_t at, const vec3_t normal, impactKind_t kind, float size ) {
+// A cloud of the dust of what it hit, and bits of it. cloud: not where the blast left smoke with depth (level/
+// cg_smoke.c): the sprites rose for two seconds over smoke that is there at once and falls.
+static void Explosion_Debris( const vec3_t at, const vec3_t normal, impactKind_t kind, float size, qboolean cloud ) {
 	const impactChips_t	*chips = &debrisChips[kind];
 	vec3_t				color;
 	int					i, k;
@@ -166,7 +176,7 @@ static void Explosion_Debris( const vec3_t at, const vec3_t normal, impactKind_t
 		CG_GpuSparks( at, normal, GPUSPARKS_DRAG_GLASS, 4.0f * size );
 		trap->S_StartSound( at, ENTITYNUM_WORLD, CHAN_AUTO, cgs.media.glassChunkSound );
 	}
-	if ( !dustShader || !CG_ImpactDustColor( kind, color ) ) {
+	if ( !cloud || !dustShader || !CG_ImpactDustColor( kind, color ) ) {
 		return;
 	}
 	for ( i = (int)( 4.0f * size + 0.5f ); i > 0; i-- ) {
@@ -328,6 +338,7 @@ static void Explosion_Dirt( const vec3_t origin, float size ) {
 static void Explosion_Go( int weapon, qboolean altFire, const vec3_t origin, const vec3_t dir ) {
 	int				numFires, material, surfaceFlags;
 	const float		size = Explosion_Size( weapon, altFire, &numFires );
+	qboolean		smoke;
 	vec3_t			at, normal;
 	impactKind_t	kind;
 
@@ -335,12 +346,29 @@ static void Explosion_Go( int weapon, qboolean altFire, const vec3_t origin, con
 		return;
 	}
 	Explosion_Dirt( origin, size );
+	// its blast moves the smoke in the room and its own stays for a while (level/cg_smoke.c)
+	smoke = CG_SmokeBlast( origin, dir, size );
+	if ( !smoke ) {
+		const fxHandle_t rolling = weapon == WP_ROCKET_LAUNCHER ? rocketSmokeEffect : weapon == WP_THERMAL ? thermalSmokeEffect : 0;
+
+		if ( rolling ) {
+			vec3_t from, out;
+
+			// (in the air dir has no length)
+			VectorCopy( origin, from );
+			VectorCopy( dir, out );
+			if ( VectorNormalize( out ) < 0.1f ) {
+				VectorSet( out, 0.0f, 0.0f, 1.0f );
+			}
+			trap->FX_PlayEffectID( rolling, from, out, -1, -1, qfalse );
+		}
+	}
 	if ( !v_weaponImpacts.integer ) {
 		return;
 	}
 	if ( Explosion_Surface( origin, dir, at, normal ) && CG_ImpactMaterial( at, normal, qfalse, &material, &surfaceFlags ) ) {
 		kind = CG_ImpactKindOf( material );
-		Explosion_Debris( at, normal, kind, size );
+		Explosion_Debris( at, normal, kind, size, (qboolean)!smoke );
 		CG_GustBlast( at, normal, material, size );
 		// (nothing burns on snow, ice or water)
 		if ( numFires && normal[2] >= FLOOR_NORMAL && kind != IMPACT_COLD && !( surfaceFlags & SURF_NOMARKS ) ) {

@@ -34,6 +34,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_explosion.h"
 #include "cgame/level/cg_doors.h"
 #include "cgame/level/cg_gust.h"
+#include "cgame/level/cg_smoke.h"
 #include "cgame/level/cg_motes.h"
 #include "cgame/weapons/cg_airring.h"
 #include "cgame/weapons/cg_wallfx.h"
@@ -2752,6 +2753,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_MotesFrame();
 		// heavy doors that open (level/cg_doors.c)
 		CG_DoorsFrame();
+		// smoke that hangs in the room and moves with pushes, blasts and blades (level/cg_smoke.c)
+		CG_SmokeFrame();
 		CG_AirRingsScene();
 		CG_WallFxScene();
 		CG_SaberSoundNearMiss();
