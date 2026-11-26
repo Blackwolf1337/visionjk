@@ -882,6 +882,10 @@ typedef struct cgameImport_s {
 		// The lamps of the level (its panels that glow) within radius of origin, the strongest for that place first, at
 		// most max; returns how many (cgame/level/cg_motes.c: the dust in their light).
 		int				(*R_LampsNear)							( const vec3_t origin, float radius, levelLamp_t *out, int max );
+		// Only where the ROM cvar v_cgameSmoke is 1, an older engine ends this table before; NULL: the renderer has
+		// none. The smoke of the scene of this frame as a volume (smokeVolume_t), between R_ClearScene and
+		// R_RenderScene (cgame/level/cg_smoke.c).
+		void			(*R_SetSmoke)							( const smokeVolume_t *smoke );
 	} ext;
 } cgameImport_t;
 
