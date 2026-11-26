@@ -1,0 +1,43 @@
+// VisionJK: the smoke of thermal/explosion for rd-vulkan-vision, apart from it: the cgame plays it where the blast leaves
+// no smoke with depth (cgame/weapons/cg_explosion.c, cgame/level/cg_smoke.c). Beside that smoke, which is there at
+// once and falls, this one rose for three seconds.
+
+// VisionJK (rd-vulkan-vision): rolling smoke from the flipbook instead of the added steam of the game, blended and
+// lit by the level (v_litParticles), fading softly into the walls (v_softParticles)
+Particle
+{
+	name				LingeringSmoke
+	flags				useAlpha
+	count				8
+	life				2400 3600
+	delay				150 450
+	cullrange			1600
+	origin				4 -24 -24 24 24 24
+	rotation			0 360
+	rotationDelta		-4 4
+	velocity			8 -22 -22 26 22 22
+	acceleration		-4 -6 -6 4 6 6
+	gravity				10 28
+	frames				8 8
+	rgb
+	{
+		start			0.42 0.40 0.38 0.55 0.52 0.48
+	}
+	alpha
+	{
+		start			0.85 1.0
+		end				0
+		parm			60 75
+		flags			nonlinear
+	}
+	size
+	{
+		start			18 26
+		end				80 110
+		flags			linear
+	}
+	shaders
+	[
+		gfx/vision/fb/smoke
+	]
+}
