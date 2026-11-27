@@ -18,7 +18,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	ssr[7];
 	vec4	glass[10];		// the views of what lies behind thick glass (VK_GlassRows of vk_post.cpp, VK_GLASS_VEC4S)
 	vec4	blades[247];
-	vec4	smoke[357];
+	vec4	smoke[359];
 } globals;
 layout( set = 1, binding = 0 ) uniform sampler2D u_smoke;	// the smoke on the way and how much of the frame it hides
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel

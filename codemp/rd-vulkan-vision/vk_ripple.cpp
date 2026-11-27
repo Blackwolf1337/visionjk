@@ -64,10 +64,16 @@ void VK_RippleShutdown( void ) {
 VK_RippleDraw
 
 In the view of the level itself, after its draw list: the rings of this frame over the part of the view they cover.
-The frame is copied there first (the pass reads it to the side of each pixel) and begun again afterwards.
+The frame is copied there first (the pass reads it to the side of each pixel) and begun again afterwards. Rings seen
+through thick glass are drawn before it instead (part RIPPLE_BEHIND_GLASS, vk_backend.cpp where the thick glass
+begins), as the smoke is: the glass bends the water it shows, and the rings drawn after it lay unbent on that (their
+word 2026-11-27: water inside the glass gets the bulge of the glass on its rings, water that is not stays as it was).
 ===============
 */
-void VK_RippleDraw( void ) {
+void VK_RippleDraw( int part ) {
+#ifndef RD_VISION_GLES
+	VK_Checkpoint( "the rings on the water" );
+#endif
 	float			rows[VK_WET_HEADER][4] = { { 0.0f } };
 	int				viewport[4];
 	float			x0 = 1.0f, y0 = 1.0f, x1 = -1.0f, y1 = -1.0f;
@@ -80,7 +86,7 @@ void VK_RippleDraw( void ) {
 	if ( !vk.frame || !rp.pipeline || r_numRipples <= 0 || !tr.screenImage ) {
 		return;
 	}
-	if ( backEnd.viewParms.isPortal || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
+	if ( ( backEnd.viewParms.isPortal && !backEnd.viewParms.glassView ) || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
 		|| ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		return;
 	}
@@ -128,16 +134,35 @@ void VK_RippleDraw( void ) {
 	if ( area[2] <= 0 || area[3] <= 0 ) {
 		return;
 	}
-	vkGlobals_t	*globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	vkGlobals_t	*globals = VK_GlobalsEdit();
 	float		( *r )[4] = &globals->ripple[VK_WET_HEADER];
 	int			first = 0;
 
 	memcpy( globals->ripple[0], rows, sizeof( rows ) );
 	// (water that was made glass writes its depth: the rings are held against the solid level alone where the view
-	// has its distance, or they were gone from such water)
-	const qboolean solid = (qboolean)( vk.solidReady && vk.softDepth.image );
+	// has its distance, or they were gone from such water. In the middle of the list, for the rings behind thick glass,
+	// it is there once the passes after the solid level made it (vk.frontReady): vk.solidReady is set at the end of the
+	// list only, and against the depth, which holds the glass by then, every ring behind it was gone (their picture
+	// 2026-11-27, "jetzt fehlen die ringe"); as vk_smoke.cpp asks)
+	const qboolean solid = (qboolean)( ( vk.frontReady || vk.solidReady ) && vk.softDepth.image );
 
-	VectorSet4( globals->ripple[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, solid ? 1.0f : 0.0f, 0.0f );
+	// Which rings: those behind thick glass (part RIPPLE_BEHIND_GLASS, called before the glass takes its copy of the
+	// frame, so it bends them with the water they lie on), the others (RIPPLE_IN_FRONT), or all where the view has no
+	// thick glass. Told by the faces of the thick glass the eye sees (VK_GlassMask; for the later part the copy
+	// VK_KeepThickGlass made before the thin panes made them again): where the nearest thing at a pixel is nearer
+	// than the water, glass stands in front of it there (shaders/ripple.frag). w: 0 all, 1 behind, 2 not behind.
+	const vkTarget_t	*faces = NULL;
+
+	if ( part == RIPPLE_BEHIND_GLASS ) {
+		faces = vk.glassReady ? &vk.glassDepth : NULL;
+		if ( !faces ) {
+			return;
+		}
+	} else if ( vk.thickReady ) {
+		faces = &vk.thickDepth;
+	}
+	VectorSet4( globals->ripple[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, solid ? 1.0f : 0.0f,
+		faces ? ( part == RIPPLE_BEHIND_GLASS ? 1.0f : 2.0f ) : 0.0f );
 	VectorSet4( r[0], (float)surfaces, (float)rings, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
 		(float)( RIPPLE_MARGIN - 4 ) );
 	for ( int s = 0; s < surfaces; s++ ) {
@@ -166,11 +191,19 @@ void VK_RippleDraw( void ) {
 		}
 	}
 
-	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.screenSet, solid ? vk.softSet : vk.depthSet };
+	VK_GlobalsCommit();
+	const VkDescriptorSet	depthSet = solid ? vk.softDepth.readSet : vk.depth.readSet;
+	const VkDescriptorSet	sets[4] = { vk.frame->set, vk.screen.readSet, depthSet, faces ? faces->readSet : depthSet };
 	VkCommandBuffer			cmd = vk.frame->cmd;
 	VkRect2D				scissor;
 
-	VK_LevelFragments( qfalse );
+	// (the count of the fragments of the level runs in its render pass: stopped, and in the middle of the list, before
+	// the thick glass, taken up again afterwards)
+	const qboolean			counting = part == RIPPLE_BEHIND_GLASS ? VK_PauseLevelFragments() : qfalse;
+
+	if ( part != RIPPLE_BEHIND_GLASS ) {
+		VK_LevelFragments( qfalse );
+	}
 	VK_EndTarget();
 	// the part of the frame the pass reads, with what lies to the side of it
 	memcpy( vk.passArea, area, sizeof( vk.passArea ) );
@@ -180,7 +213,7 @@ void VK_RippleDraw( void ) {
 	VK_BeginOverLevel( cmd, area, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rp.pipeline );
 	vk.boundPipeline = rp.pipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 1, &vk.frame->globalsOffset );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	scissor.offset.x = area[0];
 	scissor.offset.y = area[1];
@@ -194,4 +227,7 @@ void VK_RippleDraw( void ) {
 	// the shaders that draw geometry have other sets and other state
 	VK_ResumeScene();
 	VK_InvalidateTransform();
+	if ( counting ) {
+		VK_LevelFragments( qtrue );
+	}
 }

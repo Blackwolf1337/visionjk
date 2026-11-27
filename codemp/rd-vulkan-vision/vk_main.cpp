@@ -34,8 +34,48 @@ static cvar_t	*v_hdr;				// the frame in 16 bit floats, tone mapped at the end o
 static char		vk_versionString[64];
 static char		vk_driverString[64];
 
+PFN_vkCmdSetCheckpointNV		qvkCmdSetCheckpointNV;
+PFN_vkGetQueueCheckpointDataNV	qvkGetQueueCheckpointDataNV;
+
 void VK_Fatal( const char *what, VkResult result ) {
+	// a lost device: the last places of the commands it reached, into the console and so into the crash log
+	if ( result == VK_ERROR_DEVICE_LOST && vk.checkpoints && vk.queue && qvkGetQueueCheckpointDataNV ) {
+		VkCheckpointDataNV	data[32];
+		uint32_t			count = 0;
+
+		qvkGetQueueCheckpointDataNV( vk.queue, &count, NULL );
+		count = Q_min( count, (uint32_t)ARRAY_LEN( data ) );
+		for ( uint32_t i = 0; i < count; i++ ) {
+			data[i].sType = VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV;
+			data[i].pNext = NULL;
+		}
+		qvkGetQueueCheckpointDataNV( vk.queue, &count, data );
+		ri.Printf( PRINT_ALL, "Vulkan: the device was lost. The last places it reached (%u):\n", count );
+		for ( uint32_t i = 0; i < count; i++ ) {
+			const char *stage = data[i].stage == VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT ? "begun"
+				: ( data[i].stage == VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT ? "done" : "at stage" );
+
+			ri.Printf( PRINT_ALL, "  %s (0x%x): %s\n", stage, (unsigned)data[i].stage,
+				data[i].pCheckpointMarker ? (const char *)data[i].pCheckpointMarker : "?" );
+		}
+	}
 	Com_Error( ERR_FATAL, "Vulkan: %s failed with %i", what, (int)result );
+}
+
+// whether the device has the extension (a list of up to 512 is looked at)
+static qboolean VK_DeviceHasExtension( const char *name ) {
+	VkExtensionProperties	available[512];
+	uint32_t				count = ARRAY_LEN( available );
+
+	if ( qvkEnumerateDeviceExtensionProperties( vk.physicalDevice, NULL, &count, available ) < 0 ) {
+		return qfalse;
+	}
+	for ( uint32_t i = 0; i < count; i++ ) {
+		if ( !strcmp( available[i].extensionName, name ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
 }
 
 void VK_WaitIdle( void ) {
@@ -341,7 +381,7 @@ static qboolean VK_RayTracingUsable( void ) {
 
 static void VK_CreateDevice( void ) {
 	const float priority = 1.0f;
-	const char *extensions[4] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const char *extensions[6] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	uint32_t numExtensions = 1;
 	VkDeviceQueueCreateInfo queue = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 	VkPhysicalDeviceRayQueryFeaturesKHR query = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
@@ -393,6 +433,11 @@ static void VK_CreateDevice( void ) {
 		f12.bufferDeviceAddress = VK_TRUE;
 		f13.pNext = &accel;
 	}
+	// (NVIDIA: where a lost device was, VK_Fatal)
+	vk.checkpoints = VK_DeviceHasExtension( VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME );
+	if ( vk.checkpoints ) {
+		extensions[numExtensions++] = VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME;
+	}
 
 	queue.queueFamilyIndex = vk.queueFamily;
 	queue.queueCount = 1;
@@ -403,6 +448,13 @@ static void VK_CreateDevice( void ) {
 	info.ppEnabledExtensionNames = extensions;
 	VK_CHECK( qvkCreateDevice( vk.physicalDevice, &info, NULL, &vk.device ) );
 	VK_LoadDeviceFunctions();
+	qvkCmdSetCheckpointNV = NULL;
+	qvkGetQueueCheckpointDataNV = NULL;
+	if ( vk.checkpoints ) {
+		qvkCmdSetCheckpointNV = (PFN_vkCmdSetCheckpointNV)qvkGetDeviceProcAddr( vk.device, "vkCmdSetCheckpointNV" );
+		qvkGetQueueCheckpointDataNV = (PFN_vkGetQueueCheckpointDataNV)qvkGetDeviceProcAddr( vk.device, "vkGetQueueCheckpointDataNV" );
+		vk.checkpoints = (qboolean)( qvkCmdSetCheckpointNV && qvkGetQueueCheckpointDataNV );
+	}
 	qvkGetDeviceQueue( vk.device, vk.queueFamily, 0, &vk.queue );
 
 	pool.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -579,13 +631,15 @@ static void VK_CreateFrameTargets( void ) {
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
 			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
 		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FrameFormat(),
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
-		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		// (copied to vk.subDepthMS and back round the depth of the glass, vk_post.cpp VK_KeepDepth)
+		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+			| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
 	}
 }
@@ -618,6 +672,7 @@ qboolean VK_ResizeFrame( int width, int height ) {
 	vk.height = glConfig.vidHeight = height;
 	VK_CreateFrameTargets();
 	VK_WriteSet( vk.postSet, vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vk.color.readSet = vk.postSet;
 	VK_InitPost();
 	vk.finalValid = qfalse;
 	// the size Wayland takes the swapchain in, see VK_CreateSwapchain()
@@ -818,6 +873,7 @@ void VK_GfxInfo_f( void ) {
 		VK_MAX_IMAGES, numBlockImages, vk.numPipelines, vk.statPipelineMs, vk.numSamplers );
 	VK_FrameInfo_f();
 	VK_MemoryInfo_f();
+	ri.Printf( PRINT_ALL, "places for a lost device: %s\n", vk.checkpoints ? "on" : "off" );
 	ri.Printf( PRINT_ALL, "validation layer: %s", vk.validation ? "on" : "off" );
 	if ( vk.validation ) {
 		ri.Printf( PRINT_ALL, ", %i messages so far", vk.validationMessages );

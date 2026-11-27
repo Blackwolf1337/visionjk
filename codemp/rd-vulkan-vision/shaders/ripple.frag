@@ -27,11 +27,12 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	ssr[7];
 	vec4	glass[10];		// the views of what lies behind thick glass (VK_GlassRows of vk_post.cpp, VK_GLASS_VEC4S)
 	vec4	blades[247];
-	vec4	smoke[357];
+	vec4	smoke[359];
 	vec4	ripple[256];
 } globals;
 layout( set = 1, binding = 0 ) uniform sampler2D u_image;	// the copy of the frame
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
+layout( set = 3, binding = 0 ) uniform sampler2D u_faces;	// W[9].w 1 or 2: how far the nearest thing is, glass or solid (vk_post.cpp VK_GlassMask)
 
 #define W		globals.ripple
 
@@ -115,6 +116,16 @@ void main() {
 
 		if ( t <= 0.0 || t >= scene - 0.5 || t > FAR_OFF ) {
 			continue;
+		}
+		// Thick glass in front of the water at the pixel (the nearest thing there is nearer than the water, as generic.frag
+		// GlassOwn tells its own face): its rings are drawn before the glass, which bends them with the water (W[9].w
+		// 1, vk_ripple.cpp RIPPLE_BEHIND_GLASS), the others after everything transparent (2)
+		if ( W[9].w > 0.5 ) {
+			bool behindGlass = texelFetch( u_faces, ivec2( gl_FragCoord.xy ), 0 ).r < t - ( 1.0 + t * 0.015 );
+
+			if ( behindGlass != ( W[9].w < 1.5 ) ) {
+				continue;
+			}
 		}
 		vec2 at = eye.xy + ray.xy * t;
 		float wobble = Noise( at * 0.022 ) * 2.0 - 1.0;

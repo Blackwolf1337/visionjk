@@ -924,6 +924,8 @@ static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkD
 	// behind its plane, not its copy of the frame (generic.frag GlassBehind; the entries of the two in the texture
 	// table are in globals.glass, VK_GlassRows: the draw has no place left for them).
 	draw->pbr3[0] = ( vk.frontReady && vk.worldReady && backEnd.viewParms.numGlassViews && !backEnd.viewParms.isPortal ) ? 1.0f : 0.0f;
+	// which round of the thick glass this is (vk_backend.cpp RB_DrawGlassRounds), told apart by the faces the eye sees
+	draw->pbr3[1] = draw->pbr[1] > 1.5f ? (float)rb_glassRound : 0.0f;
 	draw->pbr[2] = mat->ior;
 	draw->pbr[3] = (float)v_pbr->integer;
 	draw->pbr2[0] = mat->transmission;
@@ -1595,7 +1597,10 @@ void RB_StageIteratorGeneric( void ) {
 
 			VK_InitDraw( &draw, transform, bones );
 			VK_DrawTess( &draw, VKP_DEPTH, GLS_DEPTHMASK_TRUE, cullMode, qfalse );
-			RB_MarkPrepassed( shader );
+			// (not the glass: its depth is put back after its faces are taken, vk_post.cpp VK_KeepDepth)
+			if ( !rb_glassPrepass ) {
+				RB_MarkPrepassed( shader );
+			}
 		}
 		return;
 	}

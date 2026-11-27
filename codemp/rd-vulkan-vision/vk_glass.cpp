@@ -67,19 +67,20 @@ void VK_GlassDebugDraw( void ) {
 	if ( backEnd.viewParms.isPortal || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace ) {
 		return;
 	}
-	vkGlobals_t				*globals = (vkGlobals_t *)vk.frame->globals.mapped;
-	const VkDescriptorSet	sets[4] = { vk.frame->set, vk.softSet, vk.glassSet, vk.depthSet };
+	vkGlobals_t				*globals = VK_GlobalsEdit();
+	const VkDescriptorSet	sets[4] = { vk.frame->set, vk.softDepth.readSet, vk.glassDepth.readSet, vk.depth.readSet };
 	VkCommandBuffer			cmd = vk.frame->cmd;
 
 	VK_ViewRows( rows, viewport );
 	memcpy( globals->glassDebug, rows, sizeof( rows ) );
 	VectorSet4( globals->glassDebug[VK_WET_HEADER], vk_glassDebugSolid ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
+	VK_GlobalsCommit();
 	VK_LevelFragments( qfalse );
 	VK_EndTarget();
 	VK_BeginOverLevel( cmd, NULL, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gd.pipeline );
 	vk.boundPipeline = gd.pipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 1, &vk.frame->globalsOffset );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	VK_EndTarget();

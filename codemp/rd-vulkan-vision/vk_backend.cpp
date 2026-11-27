@@ -623,6 +623,8 @@ typedef struct postRender_s {
 } postRender_t;
 
 static postRender_t	g_postRenders[MAX_POST_RENDERS];
+// a view drawn in the middle of another one leaves the entries of that one in the list (RB_DrawDeferredViews)
+static int			rb_postBase;
 static int			g_numPostRenders;
 
 // makes the entity the one that is drawn: its time, its matrices, its lights. Returns its depth range.
@@ -861,7 +863,6 @@ int					rb_viewSerial;		// counts the views that are drawn: what is made once a 
 int					rb_surfaceDlights;
 static drawSurf_t	*rb_sweepSurfs;
 static int			rb_sweepCount;
-static qboolean		rb_entityReset;		// the run of the light passes set other entities: the run it came from sets its own again
 // A view with thick glass (RB_GlassLayers): what stands behind a pane of it is drawn before the glass, which shows it
 // moved with everything else behind it: the saber blades (VK_SaberBlades, early) and what is transparent (rb_fxPass).
 // What stands in front of the glass is drawn as everything else is; the glass reads a picture of what lies behind
@@ -872,6 +873,10 @@ static int			rb_glassPanes;		// how many panes of thick glass the view has (RB_G
 static qboolean		rb_bladePending;
 static int			rb_bladeAt;
 static qboolean		rb_layering;		// the run of the list of the view of the level, and the runs it starts
+// the views of what lies behind glass that wait for the view of the level they were made for (RB_DrawDeferredViews)
+static const struct drawSurfsCommand_s	*rb_deferred[GLASS_VIEWS];
+static int			rb_numDeferred;
+static qboolean		rb_nested;			// such a view is being drawn
 static cvar_t		*v_glassDebug;
 
 static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs );
@@ -892,6 +897,8 @@ marked when it was drawn into the pre-pass, and only marked shaders test equal, 
 cvar_t				*v_depthPrepass;
 qboolean			rb_prepassWanted;	// set by RB_DrawSurfs: this run of the list is the view of the level
 qboolean			rb_depthPrepass;
+qboolean			rb_glassPrepass;	// RB_GlassPrepass: the depth of the glass is put back afterwards, its shaders are not marked as pre-passed
+int					rb_glassRound;		// RB_DrawGlassRounds: 1 the thick glass behind other glass, 2 the nearest, 0 all
 qboolean			rb_prepassOn;
 static int			rb_prepassView;
 static int			rb_prepassShaders[MAX_SHADERS];
@@ -998,6 +1005,15 @@ static void RB_AddDrawSurf( const drawSurf_t *drawSurf ) {
 	}
 }
 
+#ifndef RD_VISION_GLES
+static void RB_DrawDeferredViews( void );
+
+// the view being drawn is the view of the level itself (no mirror, portal, puddle or view behind glass, no model of the HUD)
+static qboolean RB_IsLevelView( void ) {
+	return (qboolean)( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+}
+#endif
+
 static void RB_DrawWet( int depthRange ) {
 	if ( !rb_wetLater ) {
 		return;
@@ -1006,8 +1022,19 @@ static void RB_DrawWet( int depthRange ) {
 	VK_LevelFragments( qfalse );
 	VK_GpuMark( "level" );
 #ifndef RD_VISION_GLES
-	VK_RT_Pass();
-	VK_GpuMark( VK_RT_Rays() ? "rt shadows" : "shadows (maps)" );
+	if ( rb_nested ) {
+		// a view behind glass: the shadows again, against what the view of the level built
+		VK_RT_SubPass();
+	} else {
+		VK_RT_Pass();
+		VK_GpuMark( VK_RT_Rays() ? "rt shadows" : "shadows (maps)" );
+		// the views behind the glass of the level, with these shadows, before the level does the rest over its solid
+		// surfaces (what they make of the distance of the solid level and of the smoke it makes again then)
+		if ( rb_layering && rb_numDeferred && RB_IsLevelView() ) {
+			RB_DrawDeferredViews();
+			VK_GpuMark( "glass views" );
+		}
+	}
 #endif
 	VK_DrawWet();
 	VK_GpuMark( "wet and paint" );
@@ -1016,14 +1043,8 @@ static void RB_DrawWet( int depthRange ) {
 		rb_dlightsOnly = qtrue;
 		RB_RenderDrawSurfList( rb_sweepSurfs, rb_sweepCount );
 		rb_dlightsOnly = qfalse;
-		rb_entityReset = qtrue;
 		VK_GpuMark( "moving lights" );
 	}
-#ifndef RD_VISION_GLES
-	// the smoke of the level as a volume, over the solid level and under the blades (vk_smoke.cpp)
-	VK_SmokeDraw();
-	VK_GpuMark( "smoke" );
-#endif
 	// v_softParticles: the distance of the solid level for the sprites that come now
 #ifndef RD_VISION_GLES
 	if ( rb_softLater ) {
@@ -1044,7 +1065,6 @@ static void RB_DrawWet( int depthRange ) {
 		backEnd.currentEntity = entity;
 		backEnd.ori = ori;
 		VK_InvalidateTransform();
-		rb_entityReset = qtrue;
 	}
 	VK_GpuMark( "sparks" );
 #endif
@@ -1071,8 +1091,8 @@ static void RB_GlassCvars( void ) {
 	v_glassDebug = ri.Cvar_Get( "v_glassDebug", "0", 0,
 		"How thick glass gets what it shows. 1: in colours, blue the glass, red what stands in front of it, where the glass "
 		"reads the view of what lies behind its plane. 2: without those views, to compare. 3: the planes of the glass and "
-		"which got a view, printed once a second. 6: the distance of the solid level in bands of 32 units, as the passes "
-		"at the end of the view have it" );
+		"which got a view, printed once a second. 4: the glass shows that view alone in its part. 6: the distance of the "
+		"solid level in bands of 32 units, as the passes at the end of the view have it" );
 }
 
 /*
@@ -1116,6 +1136,7 @@ static void RB_GlassPrepass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	backEnd.ori = backEnd.viewParms.world;
 	VK_InvalidateTransform();
 	rb_depthPrepass = qtrue;
+	rb_glassPrepass = qtrue;
 	for ( int i = 0; i < numDrawSurfs; i++ ) {
 		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
 		if ( !RB_ShaderHasGlass( shader ) ) {
@@ -1137,6 +1158,7 @@ static void RB_GlassPrepass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		RB_EndSurface();
 	}
 	rb_depthPrepass = qfalse;
+	rb_glassPrepass = qfalse;
 	VK_InvalidateTransform();
 }
 
@@ -1184,7 +1206,6 @@ the rest of the main run, rb_fxPass 2, leaves that out. A chain of small entitie
 each of its bits in the run it belongs to (RB_FxWanted).
 */
 int					rb_fxPass;
-static qboolean		rb_earlyRun;		// the run of the list that draws what is transparent and lies behind thick glass
 static qboolean		rb_fxPending;
 static int			rb_fxAt;			// before the surface of the list with this number: the first thick glass
 
@@ -1427,102 +1448,158 @@ static void RB_GlassViewBlades( void ) {
 }
 #endif
 
-static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+#ifndef RD_VISION_GLES
+/*
+===============
+RB_DrawDeferredViews
+
+The views of what lies behind glass (R_GlassViews) come before the view of the level they were made for, as the front
+end makes them. They are kept until that view has made the shadows of the frame (its phase 3), and drawn then, into
+targets of their own (VK_BeginGlassView): so they can have what the view of the level has. Everything of the view of
+the level that drawing another view changes is kept here and given back after it.
+===============
+*/
+static const void *RB_DrawSurfs( const void *data );
+
+static void RB_DrawDeferredViews( void ) {
+	static vkGlobals_t	globals;
+	byte				early[MAX_SABER_BLADES];
+
+	if ( !rb_numDeferred || rb_nested ) {
+		return;
+	}
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	const backEndState_t	saved = backEnd;
+	const qboolean			overLater = rb_overLater, sawOver = rb_sawOver, glowView = (qboolean)rb_glowView, sawLate = rb_sawLate;
+	const qboolean			wetLater = rb_wetLater, softLater = rb_softLater, deferDlights = rb_deferDlights;
+	drawSurf_t				*sweepSurfs = rb_sweepSurfs;
+	const int				sweepCount = rb_sweepCount;
+	const qboolean			prepassOn = rb_prepassOn, prepassWanted = rb_prepassWanted, layering = rb_layering;
+	const int				prepassView = rb_prepassView, glassPanes = rb_glassPanes, fxPass = rb_fxPass, fxAt = rb_fxAt, bladeAt = rb_bladeAt;
+	const qboolean			fxPending = rb_fxPending, bladePending = rb_bladePending;
+	const qboolean			softReady = vk.softReady, frontReady = vk.frontReady, solidReady = vk.solidReady;
+	const qboolean			glassReady = vk.glassReady, worldReady = vk.worldReady, glassReadyDraw = vk_glassReady;
+	const bool				stencilled = tr_stencilled;
+	const qboolean			distortionPrePost = tr_distortionPrePost;
+	const int				postBase = rb_postBase;
+	static glassPane_t		panes[GLASS_LAYER_PANES];
+
+	VK_Checkpoint( "the views behind glass begin" );
+	memcpy( panes, rb_panes, sizeof( panes ) );
+	VK_GetEarlyBlades( early );
+	memcpy( &globals, VK_GlobalsEdit(), sizeof( globals ) );
+	rb_postBase = g_numPostRenders;
+	rb_nested = qtrue;
+
+	for ( int i = 0; i < rb_numDeferred; i++ ) {
+		RB_DrawSurfs( rb_deferred[i] );
+	}
+
+	rb_nested = qfalse;
+	rb_numDeferred = 0;
+	rb_postBase = postBase;
+	VK_Checkpoint( "the views behind glass are done" );
+	backEnd = saved;
+	rb_overLater = overLater;
+	rb_sawOver = sawOver;
+	rb_glowView = glowView;
+	rb_sawLate = sawLate;
+	rb_wetLater = wetLater;
+	rb_softLater = softLater;
+	rb_deferDlights = deferDlights;
+	rb_sweepSurfs = sweepSurfs;
+	rb_sweepCount = sweepCount;
+	rb_prepassOn = prepassOn;
+	rb_prepassWanted = prepassWanted;
+	rb_layering = layering;
+	rb_prepassView = prepassView;
+	rb_glassPanes = glassPanes;
+	rb_fxPass = fxPass;
+	rb_fxAt = fxAt;
+	rb_bladeAt = bladeAt;
+	rb_fxPending = fxPending;
+	rb_bladePending = bladePending;
+	vk.softReady = softReady;
+	vk.frontReady = frontReady;
+	vk.solidReady = solidReady;
+	vk.glassReady = glassReady;
+	vk.worldReady = worldReady;
+	vk_glassReady = glassReadyDraw;
+	tr_stencilled = stencilled;
+	tr_distortionPrePost = distortionPrePost;
+	memcpy( rb_panes, panes, sizeof( panes ) );
+	VK_SetEarlyBlades( early, MAX_SABER_BLADES );
+	// the numbers of the frame as the view of the level had them, with the views behind its glass now drawn
+	memcpy( VK_GlobalsEdit(), &globals, sizeof( globals ) );
+	VK_GlassRows();
+	// and its view
+	tess.shader = NULL;
+	VK_SetProjection( backEnd.viewParms.projectionMatrix );
+	VK_SetViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth,
+		backEnd.viewParms.viewportHeight, 0.0f, 1.0f );
+	backEnd.currentEntity = &tr.worldEntity;
+	backEnd.ori = backEnd.viewParms.world;
+	VK_InvalidateTransform();
+}
+#endif
+
+/*
+===============
+RB_RenderDrawSurfList
+
+A view draws its list in a fixed order of phases (2026-11-27; before, the passes were started by the run of the list
+when it came to certain surfaces, and parts of it were run again under global switches):
+
+1. the clear of the view, the depth pre-pass of the solid level, the distance of the level alone (RB_DepthPrepass,
+   VK_WorldDepth)
+2. the solid surfaces (the list up to the first one past SS_BANNER)
+3. what the level does over its solid surfaces: shadows, wet places, the light passes of the solid surfaces, smoke,
+   the distance for soft sprites, sparks (RB_DrawWet)
+4. what is transparent before thick glass in the list; with thick glass in the view: the saber blades behind it
+   (VK_SaberBlades early) and what is transparent and lies behind a pane of it (rbRun_t behind)
+5. the glass and everything after it in the list, the glass with its copies of the frame; what lies behind a pane was
+   drawn in 4 and is left out here
+6. what the list put off to its end, the distortions (RB_DistortionFill)
+
+The glow pass and the run for the entities after the glow go through the same phases (3 and 4 have nothing to do
+then). The light passes of the solid surfaces are one part of the list drawn in a mode of its own (rb_dlightsOnly).
+===============
+*/
+typedef enum {
+	RB_RUN_ALL,			// as it comes
+	RB_RUN_BEHIND,		// what is transparent, no glass, and lies behind a pane of thick glass (rb_fxPass 1)
+} rbRunMode_t;
+
+typedef struct {
+	int			depthRange;			// what the last batch left the viewport at
+	int			glassCaptures;		// copies of the frame for glass in this run (v_glassCaptures)
+	qboolean	forceCapture;		// the next glass copies the frame in any case (what it shows was drawn after the last copy)
+	drawSurf_t	*listEnd;			// the end of the whole list (the glass pre-pass looks on to it)
+} rbRun_t;
+
+// the surfaces start to end of the list, batched, onto the view as it is
+static void RB_DrawRange( rbRun_t *run, drawSurf_t *drawSurfs, int start, int end, rbRunMode_t mode ) {
 	shader_t *shader = NULL, *oldShader = NULL;
 	int fogNum = 0, oldFogNum = -1;
 	int entityNum = 0, oldEntityNum = -1;
 	int dlighted = 0, oldDlighted = qfalse;
-	int depthRange = 0, oldDepthRange = 0;
+	int depthRange = 0, oldDepthRange = run->depthRange;
 	uint64_t oldSort = (uint64_t)-1;
 	const float originalTime = backEnd.refdef.floatTime;	// save original time for entity shader offsets
-	drawSurf_t *drawSurf = drawSurfs;
+	drawSurf_t *drawSurf = drawSurfs + start;
 	// what VK_ShaderMergesEntities() says about a shader, asked once for a run of surfaces
 	const shader_t *mergeShader = NULL;
 	int shaderMerges = 0;
 	// the entity came into a batch that was begun, RB_SetEntity() has not run for it
 	qboolean mergedEntity = qfalse;
-#ifndef RD_VISION_GLES
-	int glassCaptures = 0;
-	qboolean forceCapture = qfalse;
 
-	RB_GlassCvars();
-	vk_glassReady = qfalse;
-#endif
-
-	// (the run of the light passes keeps the view, its depth and its stencil as the first run left them, the run of
-	// the front layer too)
-	if ( !rb_dlightsOnly && !rb_earlyRun ) {
-		RB_BeginDrawingView();
-		if ( backEnd.isHyperspace ) {
-			return;
-		}
-		backEnd.pc.c_surfaces += numDrawSurfs;
-#ifndef RD_VISION_GLES
-		// (after the clear of the view, before its first surface; only while the materials are lit per pixel: a
-		// texture times its lightmap costs about what the pre-pass costs, so without them it gains nothing)
-		if ( rb_prepassWanted && !g_bRenderGlowingObjects && v_depthPrepass->integer && v_pbr->integer ) {
-			RB_DepthPrepass( drawSurfs, numDrawSurfs );
-			// (a view with thick glass: the distance of the level alone, while the depth holds nothing else)
-			if ( rb_layering && rb_glassPanes ) {
-				VK_WorldDepth();
-			}
-		}
-#endif
-	}
 	backEnd.currentEntity = &tr.worldEntity;
-
-	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
+	for ( int i = start; i < end; i++, drawSurf++ ) {
 		// VisionJK: marks on a tessellated surface are a batch of their own for each such surface (srfPoly_t tessShader)
 		shader_t *markTess = ( *drawSurf->surface == SF_POLY ) ? ( (srfPoly_t *)drawSurf->surface )->tessShader : NULL;
 
-#ifndef RD_VISION_GLES
-		// VisionJK: the saber blades that stand behind thick glass, before it (after what the solid level still has to do)
-		// and the saber blades that stand behind thick glass, before it (after what the solid level still has to do)
-		if ( rb_layering && !rb_dlightsOnly && !rb_earlyRun && rb_bladePending && i == rb_bladeAt ) {
-			if ( oldShader != NULL ) {
-				RB_EndSurface();
-			}
-			rb_bladePending = qfalse;
-			RB_DrawWet( oldDepthRange );
-			rb_entityReset = qfalse;
-			VK_GpuMark( "level" );
-			VK_SaberBlades( qfalse, qfalse, qtrue );
-			VK_GpuMark( "saber blades" );
-			RB_SetDepthRange( oldDepthRange );
-			// (the glass that comes takes its picture of the frame now, with them in it)
-			forceCapture = qtrue;
-			oldShader = NULL;
-			oldSort = (uint64_t)-1;
-			oldFogNum = -1;
-			oldEntityNum = -1;
-			mergedEntity = qfalse;
-		}
-		// and what is transparent and lies behind thick glass: the rest of the list is run for it alone
-		if ( rb_layering && !rb_dlightsOnly && !rb_earlyRun && rb_fxPending && i == rb_fxAt ) {
-			const qboolean ready = vk_glassReady;
-
-			if ( oldShader != NULL ) {
-				RB_EndSurface();
-			}
-			rb_fxPending = qfalse;
-			RB_DrawWet( oldDepthRange );
-			rb_entityReset = qfalse;
-			rb_earlyRun = qtrue;
-			rb_fxPass = 1;
-			RB_RenderDrawSurfList( drawSurf, numDrawSurfs - i );
-			rb_earlyRun = qfalse;
-			// (from here on this run leaves out what that one drew)
-			rb_fxPass = 2;
-			vk_glassReady = ready;
-			RB_SetDepthRange( oldDepthRange );
-			forceCapture = qtrue;
-			oldShader = NULL;
-			oldSort = (uint64_t)-1;
-			oldFogNum = -1;
-			oldEntityNum = -1;
-			mergedEntity = qfalse;
-		}
-#endif
 		if ( drawSurf->sort == oldSort && markTess == tess.markTess && !rb_fxPass ) {
 			// fast path, same as previous sort
 			RB_AddDrawSurf( drawSurf );
@@ -1553,12 +1630,13 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		// VisionJK: what is transparent, from the first thick glass on: the run before the glass has what lies behind
 		// a pane and no glass, the main run the rest (RB_SurfBehindGlass)
 		if ( rb_fxPass ) {
-			qboolean mine = (qboolean)( !rb_earlyRun );
+			const qboolean behindRun = (qboolean)( mode == RB_RUN_BEHIND );
+			qboolean mine = (qboolean)( !behindRun );
 
 			if ( shader->sort > SS_OPAQUE && !RB_ShaderHasGlass( shader ) ) {
 				const int behind = RB_SurfBehindGlass( drawSurf, entityNum );
 
-				mine = (qboolean)( behind == 2 || ( behind == 1 ) == (qboolean)rb_earlyRun );
+				mine = (qboolean)( behind == 2 || ( behind == 1 ) == behindRun );
 			}
 			if ( !mine ) {
 				shader = oldShader;
@@ -1642,14 +1720,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) || markTess != tess.markTess ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
-				if ( shader->sort > SS_BANNER ) {
-					RB_DrawWet( oldDepthRange );
-					if ( rb_entityReset ) {
-						rb_entityReset = qfalse;
-						oldEntityNum = -1;
-						mergedEntity = qfalse;
-					}
-				}
 			}
 #ifndef RD_VISION_GLES
 			// VisionJK: glass shows the scene as drawn so far, so the frame is copied before each glass shader, up to
@@ -1657,11 +1727,11 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			// of the reflection probes and not in the glow pass. (Also in a view of what lies behind glass: drawn as
 			// its shader text says there, a pane that is clear as glass stood in that view as the glowing texture it
 			// was made of, and the glass in front of it showed that round a player, t3_bounty 2026-11-27.)
-			if ( shader != oldShader && ( glassCaptures < v_glassCaptures->integer || forceCapture ) && !g_bRenderGlowingObjects
+			if ( shader != oldShader && ( run->glassCaptures < v_glassCaptures->integer || run->forceCapture ) && !g_bRenderGlowingObjects
 				&& !backEnd.viewParms.probeFace && v_pbr->integer && RB_ShaderHasGlass( shader ) ) {
 				// where glass begins in the list (the thick glass, later the thin panes): its depth first, and the
 				// picture of the faces the eye sees (VK_GlassMask); only the view of the level
-				if ( ( !oldShader || !RB_ShaderHasGlass( oldShader ) ) && !rb_dlightsOnly && vk.depthReadable
+				if ( ( !oldShader || !RB_ShaderHasGlass( oldShader ) ) && rb_glassRound != 2 && !rb_dlightsOnly && vk.depthReadable
 					&& !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 					// (in the whole depth: after the view weapon, which is drawn into the nearest part of it, the depth
 					// of the glass went there as well, and the glass, drawn behind its own depth, was gone in first
@@ -1669,8 +1739,27 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 					if ( oldDepthRange ) {
 						RB_SetDepthRange( 0 );
 					}
-					RB_GlassPrepass( drawSurf, numDrawSurfs - i );
+					// (the depth of the frame without the glass is kept and put back after the mask: each pane is then
+					// drawn far to near as it writes its depth, and glass behind glass shows, vk_post.cpp VK_KeepDepth)
+					const qboolean keptDepth = VK_KeepDepth();
+
+					RB_GlassPrepass( drawSurf, (int)( run->listEnd - drawSurf ) );
 					VK_GlassMask();
+					if ( keptDepth ) {
+						VK_PutBackDepth();
+					}
+					// the first, thick glass: its faces kept for the smoke and the rings in front of it, and the smoke
+					// and the rings on the water behind it now, so they are in the copy of the frame the glass bends
+					// (vk_smoke.cpp, vk_ripple.cpp)
+					if ( !vk.thickReady && !R_IsThinGlass( shader ) && RB_IsLevelView() ) {
+						VK_KeepThickGlass();
+						VK_SmokeDraw( SMOKE_BEHIND_GLASS );
+						VK_GpuMark( "smoke" );
+						if ( r_numRipples ) {
+							VK_RippleDraw( RIPPLE_BEHIND_GLASS );
+							VK_GpuMark( "water rings" );
+						}
+					}
 					if ( oldDepthRange ) {
 						RB_SetDepthRange( oldDepthRange );
 					}
@@ -1678,9 +1767,10 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 					oldEntityNum = -1;
 					mergedEntity = qfalse;
 				}
+				VK_Checkpoint( "a copy of the frame for glass" );
 				VK_CaptureFrame();
-				glassCaptures++;
-				forceCapture = qfalse;
+				run->glassCaptures++;
+				run->forceCapture = qfalse;
 				vk_glassReady = qtrue;
 			}
 #endif
@@ -1716,25 +1806,188 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	if ( oldShader != NULL ) {
 		RB_EndSurface();
 	}
-	if ( rb_dlightsOnly || rb_earlyRun ) {
-		return;		// the run of the light passes or of what lies behind the glass is done, the rest
-					// belongs to the first run
+	run->depthRange = oldDepthRange;
+}
+
+/*
+===============
+RB_DrawGlassRounds
+
+From the surface from on to end: what is transparent before the thick glass, the thick glass in two rounds, the rest.
+The thick glass is sorted far to near by the middle of each surface (tr_main.cpp R_SortGlass) and writes its depth,
+so a large surface close to the eye came after a pane farther off that stands in front of part of it, and was gone
+behind its depth there: water behind a light shaft made glass (their word 2026-11-27). Round 1 draws the glass that
+lies behind other glass and faces the eye, round 2 with a new copy of the frame the nearest glass, told apart by the
+faces the eye sees (VK_GlassMask, generic.frag GlassStage). Only where the view takes that picture.
+===============
+*/
+static void RB_DrawGlassRounds( rbRun_t *run, drawSurf_t *drawSurfs, int from, int end ) {
+	int thickStart = end, thickEnd = end;
+
+#ifndef RD_VISION_GLES
+	if ( v_pbr->integer && v_glassCaptures->integer > 0 && vk.depthReadable && !g_bRenderGlowingObjects && !rb_dlightsOnly
+		&& !backEnd.viewParms.isPortal && !backEnd.viewParms.probeFace
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		for ( int i = from; i < end; i++ ) {
+			shader_t	*shader;
+			int			entityNum, fogNum, dlighted;
+
+			R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
+			const qboolean thick = (qboolean)( RB_ShaderHasGlass( shader ) && !R_IsThinGlass( shader ) );
+
+			if ( thick && thickStart == end ) {
+				thickStart = i;
+			} else if ( !thick && thickStart < end ) {
+				thickEnd = i;
+				break;
+			}
+		}
+	}
+#endif
+	if ( thickStart >= end ) {
+		RB_DrawRange( run, drawSurfs, from, end, RB_RUN_ALL );
+		return;
+	}
+	if ( from < thickStart ) {
+		RB_DrawRange( run, drawSurfs, from, thickStart, RB_RUN_ALL );
+	}
+	rb_glassRound = 1;
+	RB_DrawRange( run, drawSurfs, thickStart, thickEnd, RB_RUN_ALL );
+#ifndef RD_VISION_GLES
+	// (without the picture of the faces round 1 drew all of it)
+	if ( vk.glassReady ) {
+		VK_Checkpoint( "the nearest thick glass" );
+		rb_glassRound = 2;
+		run->forceCapture = qtrue;
+		RB_DrawRange( run, drawSurfs, thickStart, thickEnd, RB_RUN_ALL );
+	}
+#endif
+	rb_glassRound = 0;
+	if ( thickEnd < end ) {
+		RB_DrawRange( run, drawSurfs, thickEnd, end, RB_RUN_ALL );
+	}
+}
+
+static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	rbRun_t run;
+
+	memset( &run, 0, sizeof( run ) );
+	run.listEnd = drawSurfs + numDrawSurfs;
+#ifndef RD_VISION_GLES
+	RB_GlassCvars();
+	vk_glassReady = qfalse;
+#endif
+	// the light passes of the solid surfaces: the view, its depth and its stencil stay as the run they belong to left them
+	if ( rb_dlightsOnly ) {
+		RB_DrawRange( &run, drawSurfs, 0, numDrawSurfs, RB_RUN_ALL );
+		return;
+	}
+
+	// 1. the view begins
+	RB_BeginDrawingView();
+	if ( backEnd.isHyperspace ) {
+		return;
+	}
+	backEnd.pc.c_surfaces += numDrawSurfs;
+#ifndef RD_VISION_GLES
+	// (after the clear of the view, before its first surface; only while the materials are lit per pixel: a
+	// texture times its lightmap costs about what the pre-pass costs, so without them it gains nothing)
+	if ( rb_prepassWanted && !g_bRenderGlowingObjects && v_depthPrepass->integer && v_pbr->integer ) {
+		RB_DepthPrepass( drawSurfs, numDrawSurfs );
+		// (a view with thick glass: the distance of the level alone, while the depth holds nothing else)
+		if ( rb_layering && rb_glassPanes ) {
+			VK_WorldDepth();
+		}
+	}
+#endif
+
+	// where the phases begin in the list: the first surface past the solid ones, and the first thick glass when
+	// something is drawn before it (RB_GlassLayers)
+	int solidEnd = numDrawSurfs;
+
+	for ( int i = 0; i < numDrawSurfs; i++ ) {
+		shader_t	*shader;
+		int			entityNum, fogNum, dlighted;
+
+		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
+		if ( shader->sort > SS_BANNER ) {
+			solidEnd = i;
+			break;
+		}
+	}
+	int glassAt = numDrawSurfs;
+#ifndef RD_VISION_GLES
+	if ( rb_layering && ( rb_fxPending || rb_bladePending ) ) {
+		glassAt = Com_Clampi( 0, numDrawSurfs, rb_fxPending ? rb_fxAt : rb_bladeAt );
+	}
+#endif
+	const int first = Q_min( solidEnd, glassAt );
+
+	// 2. the solid surfaces
+	VK_Checkpoint( "phase 2: the solid surfaces" );
+	RB_DrawRange( &run, drawSurfs, 0, first, RB_RUN_ALL );
+	VK_Checkpoint( "phase 3: over the solid surfaces" );
+	// 3. what the level does over them, and the views behind its glass (they need the shadows of the frame)
+	RB_DrawWet( run.depthRange );
+#ifndef RD_VISION_GLES
+	if ( rb_layering && RB_IsLevelView() ) {
+		RB_DrawDeferredViews();
+		RB_SetDepthRange( run.depthRange );
+	}
+#endif
+	// 4. what is transparent before the thick glass, the blades and what is transparent behind it
+#ifndef RD_VISION_GLES
+	if ( glassAt < numDrawSurfs ) {
+		if ( solidEnd < glassAt ) {
+			RB_DrawRange( &run, drawSurfs, solidEnd, glassAt, RB_RUN_ALL );
+		}
+		if ( rb_bladePending ) {
+			rb_bladePending = qfalse;
+			VK_GpuMark( "level" );
+			VK_SaberBlades( qfalse, qfalse, qtrue );
+			VK_GpuMark( "saber blades" );
+			RB_SetDepthRange( run.depthRange );
+			// (the glass that comes takes its picture of the frame now, with them in it)
+			run.forceCapture = qtrue;
+		}
+		if ( rb_fxPending ) {
+			VK_Checkpoint( "phase 4: what is transparent behind glass" );
+			rb_fxPending = qfalse;
+			rb_fxPass = 1;
+			RB_DrawRange( &run, drawSurfs, glassAt, numDrawSurfs, RB_RUN_BEHIND );
+			// (from here on what that drew is left out)
+			rb_fxPass = 2;
+			vk_glassReady = qfalse;
+			RB_SetDepthRange( run.depthRange );
+			run.forceCapture = qtrue;
+		}
+		// 5. the glass and the rest
+		VK_Checkpoint( "phase 5: the glass and the rest" );
+		RB_DrawGlassRounds( &run, drawSurfs, glassAt, numDrawSurfs );
+	} else
+#endif
+	{
+		// 4 and 5 without anything drawn before the thick glass
+		RB_DrawGlassRounds( &run, drawSurfs, first, numDrawSurfs );
 	}
 #ifndef RD_VISION_GLES
 	vk_glassReady = qfalse;
 #endif
-	// the list had nothing transparent: before what was put off to the end
-	RB_DrawWet( oldDepthRange );
+
+	// 6. what was put off to the end
+	VK_Checkpoint( "phase 6: what was put off" );
+	const float originalTime = backEnd.refdef.floatTime;
+	int depthRange = run.depthRange;
 
 	if ( tr_stencilled && tr_distortionPrePost ) {
 		// ok, cap it now: without what is drawn after everything else
 		RB_DistortionFill();
 	}
 
-	// what was put off to the end, the last first as rd-vanilla has it
+	// the last first, as rd-vanilla has it
 	int lastPostEnt = -1;
 
-	while ( g_numPostRenders > 0 ) {
+	while ( g_numPostRenders > rb_postBase ) {
 		const postRender_t *post = &g_postRenders[--g_numPostRenders];
 
 		RB_BeginSurface( post->shader, post->fogNum );
@@ -1823,6 +2076,16 @@ static void RB_RenderOverSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 static const void *RB_DrawSurfs( const void *data ) {
 	const drawSurfsCommand_t *cmd = (const drawSurfsCommand_t *)data;
 
+#ifndef RD_VISION_GLES
+	// a view of what lies behind glass is drawn in the middle of the view of the level it was made for, which comes
+	// after it (RB_DrawDeferredViews)
+	if ( cmd->viewParms.glassView && !rb_nested ) {
+		if ( rb_numDeferred < GLASS_VIEWS ) {
+			rb_deferred[rb_numDeferred++] = cmd;
+		}
+		return (const void *)( cmd + 1 );
+	}
+#endif
 	VK_BeginFrame();
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes ) {
@@ -1830,9 +2093,14 @@ static const void *RB_DrawSurfs( const void *data ) {
 	}
 	// what came before this view: the start of the frame (uploads, passes of their own) before the first one, the 2D
 	// between two scenes (the models of the HUD and the menus) before the others
-	VK_GpuMark( VK_GpuFirstMark() ? "frame start" : "2d between views" );
+	if ( !rb_nested ) {
+		VK_GpuMark( VK_GpuFirstMark() ? "frame start" : "2d between views" );
+	}
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
+	VK_Checkpoint( backEnd.viewParms.glassView ? "a view behind glass begins" : backEnd.viewParms.isPuddle ? "the puddle view begins"
+		: backEnd.viewParms.probeFace ? "a probe face begins" : backEnd.viewParms.isPortal ? "a mirror or portal view begins"
+		: ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ? "a view without the level begins" : "the view of the level begins" );
 	// the view mirrored at the floor of the puddles goes into targets of its own, which the wet places read
 	const qboolean puddle = backEnd.viewParms.isPuddle;
 	if ( puddle && !VK_BeginPuddle() ) {
@@ -1873,13 +2141,18 @@ static const void *RB_DrawSurfs( const void *data ) {
 #else
 	// (the sparks bounce off it: v_gpuSparks wants it too; and glass that has views of what lies behind it, to tell
 	// what stands in front of it)
-	rb_softLater = (qboolean)( levelView && ( v_softParticles->integer || v_gpuSparks->integer || backEnd.viewParms.numGlassViews )
+	// (a view behind glass of the level has what the view of the level does over its solid surfaces too: it is drawn
+	// in the middle of that one, RB_DrawDeferredViews)
+	const qboolean fullView = (qboolean)( levelView || backEnd.viewParms.glassView );
+
+	rb_softLater = (qboolean)( fullView && ( v_softParticles->integer || v_gpuSparks->integer || backEnd.viewParms.numGlassViews )
 		&& vk.depthReadable && !probeFace && !puddle );
 	vk.softReady = qfalse;
 	vk.frontReady = qfalse;
 	vk.solidReady = qfalse;
 	vk.glassReady = qfalse;
-	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || rb_softLater ) );
+	vk.thickReady = qfalse;
+	rb_wetLater = (qboolean)( fullView && ( r_numWet || r_numPaint || VK_RT_Wanted() || rb_softLater ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)
 	rb_deferDlights = (qboolean)( levelView && VK_RT_Wanted() );
 	rb_sweepSurfs = cmd->drawSurfs;
@@ -1909,6 +2182,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 #ifndef RD_VISION_GLES
 	rb_layering = qfalse;
 	rb_fxPass = 0;
+	// (views behind glass that were kept and not drawn, the view of the level had nothing to draw: their commands are
+	// of this frame alone. A mirror or puddle view that comes between them and the view of the level leaves them.)
+	if ( !rb_nested && levelView ) {
+		rb_numDeferred = 0;
+	}
 #endif
 	rb_prepassWanted = qfalse;
 	VK_LevelFragments( qfalse );
@@ -1922,6 +2200,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_deferDlights = qfalse;
 #ifndef RD_VISION_GLES
 	if ( glassView ) {
+		if ( r_numRipples ) {
+			VK_RippleDraw( RIPPLE_IN_FRONT );
+		}
+		VK_SmokeDraw( SMOKE_IN_FRONT );
 		RB_GlassViewBlades();
 		VK_GpuMark( "glass views" );
 		VK_EndGlassView();
@@ -1933,8 +2215,14 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// the rings on the water of the level, over its transparent surfaces and under the clear water of the cgame
 	if ( levelView && r_numRipples ) {
 		VK_GpuMark( "level" );
-		VK_RippleDraw();
+		VK_RippleDraw( RIPPLE_IN_FRONT );
 		VK_GpuMark( "water rings" );
+	}
+	// the smoke in front of the thick glass, over everything transparent (the part behind it was drawn before the glass)
+	if ( levelView ) {
+		VK_GpuMark( "level" );
+		VK_SmokeDraw( SMOKE_IN_FRONT );
+		VK_GpuMark( "smoke" );
 	}
 	// The saber blades (shaders/saber.glsl), added onto the view of the level once all of it is drawn. They were added
 	// before what is transparent: water or glass behind a blade was then drawn over it, and a stage that multiplies

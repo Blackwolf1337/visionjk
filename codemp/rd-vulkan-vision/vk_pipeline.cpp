@@ -206,7 +206,8 @@ static void VK_CreateLayouts( void ) {
 	memset( frame, 0, sizeof( frame ) );
 	for ( uint32_t i = 0; i < 4; i++ ) {
 		frame[i].binding = i;
-		frame[i].descriptorType = i ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		// (the globals at an offset given when the set is bound: a version for each pass that changes them, VK_GlobalsCommit)
+		frame[i].descriptorType = i ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 		frame[i].descriptorCount = 1;
 		frame[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		if ( vk.tessellation ) {
@@ -246,7 +247,7 @@ static void VK_CreateLayouts( void ) {
 	info.pBindings = &post;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.postSetLayout ) );
 
-	sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	sizes[0].descriptorCount = VK_FRAMES;
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
@@ -258,9 +259,9 @@ static void VK_CreateLayouts( void ) {
 	// and the smoke of the level as a volume and the noise of its billows (vk_smoke.cpp), and the distance of the
 	// glass for v_glassDebug (vk.glassSet). (One short, the first frame of a level ended the game: the error of the
 	// set that was not to be had, 2026-11-26.)
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 21;
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 24;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 22;
+	pool.maxSets = VK_FRAMES + 25;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -340,6 +341,7 @@ static void VK_CreateLayouts( void ) {
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.postSampler ) );
 	VK_WriteSet( vk.postSet, vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vk.color.readSet = vk.postSet;
 }
 
 static VkBlendFactor VK_SrcBlend( uint32_t stateBits ) {

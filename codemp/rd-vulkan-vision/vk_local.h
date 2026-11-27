@@ -78,7 +78,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal
 #define VK_SMOKE_LIGHTS		4		// moving lights that light the smoke
 #define VK_SMOKE_BLOB_ROWS	3
-#define VK_SMOKE_VEC4S		( VK_WET_HEADER + 1 + SMOKE_MAX_BLOBS * VK_SMOKE_BLOB_ROWS + SMOKE_MAX_HOLES * 2 + VK_SMOKE_LIGHTS * 2 + 1 )	// shaders/smoke.frag: the view, the counts, three rows a blob, two a hole and a light, how many pixels of the frame one of its picture stands for
+#define VK_SMOKE_VEC4S		( VK_WET_HEADER + 1 + SMOKE_MAX_BLOBS * VK_SMOKE_BLOB_ROWS + SMOKE_MAX_HOLES * 2 + VK_SMOKE_LIGHTS * 2 + 3 )	// shaders/smoke.frag: the view, the counts, three rows a blob, two a hole and a light, how many pixels of the frame one of its picture stands for
 #define VK_RIPPLE_SURFACES	4		// heights of water a view has rings on
 #define VK_RIPPLE_ROWS		5
 #define VK_RIPPLE_VEC4S		( VK_WET_HEADER + 1 + VK_RIPPLE_SURFACES + WET_MAX_SURFACE * VK_RIPPLE_ROWS )	// shaders/ripple.frag: the view, the counts, a row a surface, five a ring
@@ -295,6 +295,8 @@ typedef struct vkFrame_s : vkDeviceFrame_t {
 	vkProbe_t		probe[VK_MAX_FLARES];
 	int				numProbes;
 	int				numProbesCopied;	// that many have their copy in the commands of the frame
+	int				globalsUsed;		// versions of the globals of this frame (VK_GlobalsCommit)
+	uint32_t		globalsOffset;		//	and where the one is that what is recorded now reads
 } vkFrame_t;
 
 #define VK_MAX_STAT_SHADERS	64
@@ -405,6 +407,8 @@ extern int		rb_fxPass;
 extern int		rb_viewSerial;		// vk_backend.cpp: counts the views that are drawn
 extern int		rb_surfaceDlights;	// vk_backend.cpp: the moving lights of the surface being added (R_GhoulSurfaceDone)
 extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
+extern qboolean	rb_glassPrepass;	// vk_backend.cpp: the run of the depth of the glass (RB_GlassPrepass)
+extern int		rb_glassRound;		// vk_backend.cpp RB_DrawGlassRounds: 1 the thick glass behind other glass, 2 the nearest, 0 all
 extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
 qboolean	RB_ShaderPrepassed( const shader_t *shader );
 void		RB_MarkPrepassed( const shader_t *shader );
@@ -516,7 +520,12 @@ void		VK_ResumeScene( void );
 // vk_smoke.cpp: smoke as a volume (ext.SetSmoke)
 void		VK_SmokeInit( void );
 void		VK_SmokeShutdown( void );
-void		VK_SmokeDraw( void );
+#define SMOKE_BEHIND_GLASS	1	// VK_SmokeDraw: the part behind the thick glass, before the glass copies the frame
+#define SMOKE_IN_FRONT		2	//	the part in front of it, after everything transparent
+void		VK_SmokeDraw( int part );
+void		VK_KeepThickGlass( void );
+qboolean	VK_KeepDepth( void );
+void		VK_PutBackDepth( void );
 // v_glassDebug: the layers thick glass is drawn in, in colours (vk_glass.cpp)
 void		VK_GlassDebugInit( void );
 void		VK_GlassDebugShutdown( void );
@@ -524,12 +533,15 @@ void		VK_GlassDebugDraw( void );
 // the rings on the water of the level (vk_ripple.cpp)
 void		VK_RippleInit( void );
 void		VK_RippleShutdown( void );
-void		VK_RippleDraw( void );
+#define RIPPLE_BEHIND_GLASS	1	// VK_RippleDraw: the rings seen through thick glass, before it takes its copy of the frame
+#define RIPPLE_IN_FRONT		2	//	the others, after everything transparent
+void		VK_RippleDraw( int part );
 void		RE_SetSmoke( const smokeVolume_t *smoke );
 qboolean	RE_EmitSparks( const sparkBurst_t *burst );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse, qboolean early = qfalse );
 // which blades of the frame stand behind thick glass and are drawn before it (vk_backend.cpp RB_GlassLayers)
 void		VK_SetEarlyBlades( const byte *early, int count );
+void		VK_GetEarlyBlades( byte *early );
 void		VK_Bloom( void );		// (one of the steps after the view of the level, see VK_BeginPostSteps)
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
@@ -638,6 +650,14 @@ void		VK_EndTarget( void );
 void		VK_MakeFrame( void );
 // the buffers of the frame and the texture table are what the draws read: at the start of a frame, and after VK_AddTarget()
 void		VK_BindFrameSets( void );
+// The numbers of the frame (vkGlobals_t) a draw or a pass reads are those that were current when it was recorded,
+// not those at the end of the frame: a pass that changes them takes VK_GlobalsEdit (a copy on the CPU: never read the
+// mapped memory of the device), writes, and VK_GlobalsCommit makes that the version of what is recorded from then on.
+// VK_GlobalsAll writes a part of the copy into every version of the frame (the light styles, known at its end).
+#define VK_GLOBALS_VERSIONS	64
+vkGlobals_t	*VK_GlobalsEdit( void );
+void		VK_GlobalsCommit( void );
+void		VK_GlobalsAll( size_t offset, size_t bytes );
 // viewport and scissor of the draws that follow, the scissor cut to the frame
 void		VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth, float maxDepth );
 // a rectangle of the target that is drawn into, cut to the frame: depth to 1 and stencil to 0, or the color
@@ -664,6 +684,8 @@ const byte	*VK_ReadFrame( int x, int y, int width, int height );
 // v_gpuTimes: a timestamp in the commands of the frame, the time since the mark before goes to name (a string that
 // stays: the names are kept as pointers until the frame is read back). Nothing on a device without timestamps.
 void		VK_GpuMark( const char *name );
+// a place of the commands a lost device says it reached (NVIDIA), name a string that stays (vk_cmd.cpp, vk_main.cpp VK_Fatal)
+void		VK_Checkpoint( const char *name );
 qboolean	VK_GpuFirstMark( void );
 void		VK_LevelFragments( qboolean begin );
 qboolean	VK_PauseLevelFragments( void );
@@ -720,7 +742,6 @@ void		VK_AddTarget( vkTarget_t *source, vkAdd_t how );
 // all of source into dest, which is at least as large, to its upper left corner. No target is begun.
 void		VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest );
 void		VK_CopyTargetRect( vkTarget_t *source, vkTarget_t *dest, const int *area );
-void		VK_PutBackFrame( void );
 #ifndef RD_VISION_GLES
 void		VK_CopyTargetArea( vkTarget_t *source, vkTarget_t *dest, int margin );
 #endif

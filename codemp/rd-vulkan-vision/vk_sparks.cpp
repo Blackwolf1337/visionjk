@@ -194,7 +194,7 @@ void VK_SparksSimulate( void ) {
 	}
 	VkCommandBuffer	cmd = vk.frame->cmd;
 	float			( *rows )[4] = (float ( * )[4])sp.frame[vk.frameIndex].mapped;
-	const qboolean	depth = (qboolean)( sp.viewValid && vk.softShown >= 0 && vk.softDepth.image && vk.softSet );
+	const qboolean	depth = (qboolean)( sp.viewValid && vk.softShown >= 0 && vk.softDepth.image && vk.softDepth.readSet );
 	VkMemoryBarrier	barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 
 	memcpy( rows, sp.view, sizeof( sp.view ) );
@@ -239,7 +239,7 @@ void VK_SparksSimulate( void ) {
 		} push = { sp.ringAddress, sp.frameAddress[vk.frameIndex], VK_SPARKS, ( now & 0x3fffff ) * 0.001f, { 0, 0 } };
 
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, sp.pipeline );
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, sp.layout, 0, 1, &vk.softSet, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, sp.layout, 0, 1, &vk.softDepth.readSet, 0, NULL );
 		qvkCmdPushConstants( cmd, sp.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), &push );
 		qvkCmdDispatch( cmd, VK_SPARKS / 256, 1, 1 );
 	}

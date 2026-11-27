@@ -921,6 +921,14 @@ vec3 g_glassShade, g_glassAdded;
 // what lies behind the glass at the place uv of its copy of the frame
 vec3 GlassColor( Draw d, vec2 uv ) {
 #ifndef VK_GLES
+	// (v_glassDebug 4: the view behind the glass alone, wherever it was drawn, to see what it has)
+	if ( globals.glass[0].w > 0.5 && g_glassView >= 0 ) {
+		vec4 part = globals.glass[2 + g_glassView * 3];
+
+		if ( uv.x > part.x && uv.y > part.y && uv.x < part.z && uv.y < part.w ) {
+			return texture( u_textures[nonuniformEXT( uint( globals.glass[3 + g_glassView * 3].x ) - 1u )], uv ).rgb;
+		}
+	}
 	if ( GlassBehind( d, uv ) ) {
 		return texture( u_textures[nonuniformEXT( uint( globals.glass[3 + g_glassView * 3].x ) - 1u )], uv ).rgb * g_glassShade + g_glassAdded;
 	}
@@ -1132,6 +1140,23 @@ vec4 GlassStage( Draw d ) {
 	}
 	float roughness = d.pbr.x, ior = max( d.pbr.z, 1.0 ), transmission = d.pbr2.x, thickness = d.pbr2.y;
 	float nv = max( dot( n, toEye ), 1e-4 );
+#ifndef VK_GLES
+	// The two rounds of the thick glass (vk_backend.cpp RB_DrawGlassRounds): first the panes that lie behind other glass
+	// and face the eye (water behind a light shaft made glass), then, with a copy of the frame that has them, the
+	// nearest glass, the face the eye sees (VK_GlassMask). Drawn far to near alone, the nearer glass came first where
+	// its middle was farther, and its depth hid what lay behind it. (Not the back of a pane: seen through its front it
+	// would bend the picture twice.)
+	if ( d.pbr3.y > 0.5 ) {
+		float nearest = texelFetch( TEX4( d ), ivec2( gl_FragCoord.xy ), 0 ).r;
+		// (not behind the nearest thing: glass of a model is not in that picture and may stand in front of it)
+		bool front = v_depth < nearest + 1.0 + v_depth * 0.015;
+		bool facing = dot( v_normal, v_normal ) < 0.25 || dot( v_normal, toEye ) > 0.0;
+
+		if ( d.pbr3.y < 1.5 ? ( front || !facing ) : !front ) {
+			discard;
+		}
+	}
+#endif
 
 	// the screen behind, bent
 	float dist = thickness > 0.0 ? thickness : 4.0;

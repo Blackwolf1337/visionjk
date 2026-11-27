@@ -258,6 +258,24 @@ void VK_EndTarget( void ) {
 void VK_BindFrameSets( void ) {
 }
 
+// The globals of a frame have one version here: the passes that write them for themselves are not on this device
+// (vk_cmd.cpp has the versions).
+vkGlobals_t *VK_GlobalsEdit( void ) {
+	static vkGlobals_t none;
+
+	return vk.frame ? (vkGlobals_t *)vk.frame->globals.mapped : &none;
+}
+
+void VK_GlobalsCommit( void ) {
+}
+
+// (no places of a lost device on this device)
+void VK_Checkpoint( const char *name ) {
+}
+
+void VK_GlobalsAll( size_t offset, size_t bytes ) {
+}
+
 // A rectangle as OpenGL counts it (y from the lower edge of the frame) as the targets have it (rows from the top),
 // cut to the frame. qfalse: nothing of it is in the frame.
 static qboolean GLES_RowsFromTop( int x, int y, int width, int height, int *out ) {

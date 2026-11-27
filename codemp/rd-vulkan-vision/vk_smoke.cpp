@@ -248,25 +248,34 @@ void RE_SetSmoke( const smokeVolume_t *smoke ) {
 ===============
 VK_SmokeDraw
 
-In the view of the level itself, after its solid surfaces and the light passes: the smoke over the part of the view
-its blobs cover.
+The smoke over the part of the view its blobs cover, in two parts (2026-11-27; it was one pass over the solid level,
+before anything transparent, and water and sprites in front of it were drawn over it, their picture):
+- SMOKE_BEHIND_GLASS: what lies behind the thick glass of the view, from the glass to the solid level (vk.glassDepth to
+  vk.softDepth), right before the glass copies the frame: the glass shows it bent with everything else behind it.
+- SMOKE_IN_FRONT: from the eye to the thick glass or the solid level (vk.thickDepth, vk.softDepth), after everything
+  transparent: over water, sprites and glass.
+Without the distances (no soft sprites, no view with thick glass) the second part goes to the depth of the scene.
 ===============
 */
-void VK_SmokeDraw( void ) {
+void VK_SmokeDraw( int part ) {
+#ifndef RD_VISION_GLES
+	VK_Checkpoint( part == SMOKE_BEHIND_GLASS ? "the smoke behind the glass" : "the smoke in front" );
+#endif
 	float			rows[VK_WET_HEADER][4];
 	int				viewport[4];
 	float			x0 = 1.0f, y0 = 1.0f, x1 = -1.0f, y1 = -1.0f;
 	const float		*eye = backEnd.viewParms.ori.origin;
 
-	if ( !vk.frame || !sm.pipeline || !vk.depthReadable || !vk.volume.image || !vk.volumeSet || sm.frame != tr.frameCount
+	if ( !vk.frame || !sm.pipeline || !vk.depthReadable || !vk.volume.image || !vk.volume.readSet || sm.frame != tr.frameCount
 		|| sm.volume.numBlobs <= 0 ) {
 		return;
 	}
-	if ( backEnd.viewParms.isPortal || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
+	// (the view of the level, and a view behind its glass, vk_backend.cpp RB_DrawDeferredViews)
+	if ( ( backEnd.viewParms.isPortal && !backEnd.viewParms.glassView ) || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
 		|| ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		return;
 	}
-	vkGlobals_t	*globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	vkGlobals_t	*globals = VK_GlobalsEdit();
 	float		( *r )[4] = &globals->smoke[VK_WET_HEADER];
 	int			lights = 0;
 
@@ -339,7 +348,23 @@ void VK_SmokeDraw( void ) {
 	r[0][1] = (float)sm.volume.numHoles;
 	r[0][2] = sm.volume.time;
 	r[0][3] = (float)lights;
-	globals->smoke[VK_SMOKE_VEC4S - 1][0] = (float)VK_SMOKE_SCALE;
+	globals->smoke[VK_SMOKE_VEC4S - 3][0] = (float)VK_SMOKE_SCALE;
+	// a view behind glass: the rays begin at its plane, what is in front of it is in the view of the level
+	if ( backEnd.viewParms.glassView ) {
+		VectorCopy( backEnd.viewParms.portalPlane.normal, globals->smoke[VK_SMOKE_VEC4S - 2] );
+		globals->smoke[VK_SMOKE_VEC4S - 2][3] = backEnd.viewParms.portalPlane.dist;
+	} else {
+		VectorSet4( globals->smoke[VK_SMOKE_VEC4S - 2], 0.0f, 0.0f, 0.0f, 0.0f );
+	}
+	// where the rays end and begin (smoke.frag row 358): the distances of the solid level, of the thick glass
+	const qboolean	behind = (qboolean)( part == SMOKE_BEHIND_GLASS );
+	const qboolean	solid = (qboolean)( vk.frontReady || vk.solidReady );
+	vkTarget_t		*end = behind ? &vk.softDepth : ( vk.thickReady ? &vk.thickDepth : ( solid ? &vk.softDepth : NULL ) );
+
+	if ( behind && ( !solid || !vk.glassReady ) ) {
+		return;
+	}
+	VectorSet4( globals->smoke[VK_SMOKE_VEC4S - 1], end ? 1.0f : 0.0f, behind ? 1.0f : 0.0f, 0.0f, 0.0f );
 
 	// the part of the target: rows[8] is the rect of the view in its pixels, y down
 	const float	px0 = rows[8][0] + ( x0 * 0.5f + 0.5f ) * rows[8][2], px1 = rows[8][0] + ( x1 * 0.5f + 0.5f ) * rows[8][2];
@@ -349,8 +374,10 @@ void VK_SmokeDraw( void ) {
 	if ( area[2] <= 0 || area[3] <= 0 ) {
 		return;
 	}
-	const VkDescriptorSet	sets[3] = { vk.frame->set, sm.noiseSet, vk.depthSet };
-	const VkDescriptorSet	upSets[3] = { vk.frame->set, vk.volumeSet, vk.depthSet };
+	VK_GlobalsCommit();
+	const VkDescriptorSet	sets[4] = { vk.frame->set, sm.noiseSet, end ? end->readSet : vk.depth.readSet,
+		behind ? vk.glassDepth.readSet : vk.depth.readSet };
+	const VkDescriptorSet	upSets[3] = { vk.frame->set, vk.volume.readSet, vk.depth.readSet };
 	VkCommandBuffer			cmd = vk.frame->cmd;
 	VkViewport				small = { 0.0f, 0.0f, (float)vk.volume.width, (float)vk.volume.height, 0.0f, 1.0f };
 	VkRect2D				scissor;
@@ -362,7 +389,7 @@ void VK_SmokeDraw( void ) {
 	VK_BeginTarget( &vk.volume, NULL, 1, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sm.pipeline );
 	vk.boundPipeline = sm.pipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 1, &vk.frame->globalsOffset );
 	qvkCmdSetViewport( cmd, 0, 1, &small );
 	scissor.offset.x = area[0] / VK_SMOKE_SCALE;
 	scissor.offset.y = area[1] / VK_SMOKE_SCALE;
@@ -377,7 +404,7 @@ void VK_SmokeDraw( void ) {
 	VK_BeginOverLevel( cmd, area, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sm.upPipeline );
 	vk.boundPipeline = sm.upPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, upSets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, upSets, 1, &vk.frame->globalsOffset );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	scissor.offset.x = area[0];
 	scissor.offset.y = area[1];
