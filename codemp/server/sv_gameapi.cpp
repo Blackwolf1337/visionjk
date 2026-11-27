@@ -3132,9 +3132,10 @@ void SV_BindGame( void ) {
 		gi.ext.SendDatagram						= SV_GameSendDatagram;
 		gi.ext.Cvar_Flags						= Cvar_Flags;
 		gi.ext.Cvar_UnusedList					= Cvar_UnusedList;
+		gi.ext.TraceHoles						= SV_TraceHoles;
 
 		// VisionJK: how far ext goes, for the module (g_public.h)
-		Cvar_Get( "vs_gameImportExt", "2", CVAR_ROM, "How many of the imports of the game module that are not from OpenJK this engine has" );
+		Cvar_Get( "vs_gameImportExt", "3", CVAR_ROM, "How many of the imports of the game module that are not from OpenJK this engine has" );
 
 		GetGameAPI = (GetGameAPI_t)gvm->GetModuleAPI;
 		ret = GetGameAPI( GAME_API_VERSION, &gi );

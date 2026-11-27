@@ -558,6 +558,26 @@ void R_SetupFrustum (void) {
 	VectorScale( tr.viewParms.ori.axis[0], xs, tr.viewParms.frustum[3].normal );
 	VectorMA( tr.viewParms.frustum[3].normal, -xc, tr.viewParms.ori.axis[2], tr.viewParms.frustum[3].normal );
 
+	// VisionJK: a view of its own (behind thick glass, R_GlassViews; through a portal, R_PortalViews) is drawn for a
+	// part of the main view only: the planes through the borders of that part (right, left, lower, upper, as the ones
+	// above). A view through a portal has the eye of the main view moved without a change of its projection, so the
+	// same part of the screen is the same part of its view.
+	if ( tr.viewParms.subView ) {
+		const float	*part = tr.viewParms.subBounds;
+		const float	tanX = tan( tr.viewParms.fovX / 180 * M_PI * 0.5f ), tanY = tan( tr.viewParms.fovY / 180 * M_PI * 0.5f );
+		vec3_t		back;
+
+		VectorMA( tr.viewParms.ori.axis[1], part[2] * tanX, tr.viewParms.ori.axis[0], tr.viewParms.frustum[0].normal );
+		VectorNegate( tr.viewParms.ori.axis[1], back );
+		VectorMA( back, -part[0] * tanX, tr.viewParms.ori.axis[0], tr.viewParms.frustum[1].normal );
+		VectorMA( tr.viewParms.ori.axis[2], -part[1] * tanY, tr.viewParms.ori.axis[0], tr.viewParms.frustum[2].normal );
+		VectorNegate( tr.viewParms.ori.axis[2], back );
+		VectorMA( back, part[3] * tanY, tr.viewParms.ori.axis[0], tr.viewParms.frustum[3].normal );
+		for ( i = 0; i < 4; i++ ) {
+			VectorNormalize( tr.viewParms.frustum[i].normal );
+		}
+	}
+
 	for (i=0 ; i<4 ; i++) {
 		tr.viewParms.frustum[i].type = PLANE_NON_AXIAL;
 		tr.viewParms.frustum[i].dist = DotProduct (tr.viewParms.ori.origin, tr.viewParms.frustum[i].normal);
@@ -1291,11 +1311,26 @@ R_SortDrawSurfs
 R_SortGlass
 
 VisionJK: the surfaces whose material is glass (VK_GlassDraw) shows the scene drawn before them and are drawn
-without blending, so they go far to near, together, where the first of them was in the order of the shaders: the
-glass behind glass shows through the nearer. Only they move; the order of everything else stays as it was.
+without blending, so they go far to near, together: the glass behind glass shows through the nearer. Only they move;
+the order of everything else stays as it was.
+
+Glass writes its depth, so of the other transparent things (the sprites of shots, sparks, smoke) those drawn after a
+pane are not drawn behind it, and those drawn before it are in its picture, also the ones in front of it, which it
+then bends where it should not. Nothing sorts them by pixel, so the place of the glass picks the smaller fault:
+- A pane without a thickness (a window, the material keyword at 0) goes to the end of the list, after everything else
+  transparent: what lies behind it shows (their word 2026-11-26, "wieso sehe ich keine lichtschwerter und co hinter dem
+  glas"), and it moves nothing to the side, so what lies in front is as it was.
+- Glass with a thickness (a block, water; any above 0, their word 2026-11-26: a little of it doubled the player as
+  well) stays where the first glass was in the order of the shaders, before the sprites: it
+  moves what it shows by many pixels, so what lies in front must be drawn over it untouched; what is transparent and
+  lies behind it is not seen.
+Without v_pbr a pane is blended as its shader says and all of them stay where they were.
 =================
 */
 #define MAX_SORTED_GLASS	1024
+#define GLASS_THIN			0.0f	// units of thickness up to which glass is a pane (the material keyword, 0: a pane)
+
+extern cvar_t	*v_pbr;		// vk_shade.cpp
 
 static qboolean R_IsGlass( const shader_t *shader ) {
 	const shader_t *state = shader->remappedShader ? shader->remappedShader : shader;
@@ -1348,10 +1383,25 @@ static void R_DrawSurfCenter( const drawSurf_t *drawSurf, int entityNum, vec3_t 
 	}
 }
 
+// all its glass is a thin pane
+qboolean R_IsThinGlass( const shader_t *shader ) {
+	const shader_t *state = shader->remappedShader ? shader->remappedShader : shader;
+
+	for ( int i = 0; i < state->numUnfoggedPasses; i++ ) {
+		if ( state->stages[i].active && state->stages[i].mat && state->stages[i].mat->transmission > 0.0f
+			&& state->stages[i].mat->thickness > GLASS_THIN ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 static void R_SortGlass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	static drawSurf_t	glass[MAX_SORTED_GLASS];
 	static float		distance[MAX_SORTED_GLASS];
-	int					numGlass = 0, first = -1, out;
+	static qboolean		thin[MAX_SORTED_GLASS];
+	const qboolean		drawnAsGlass = (qboolean)( v_pbr && v_pbr->integer );
+	int					numGlass = 0, numThick = 0, first = -1, others, out;
 
 	for ( int i = 0; i < numDrawSurfs && numGlass < MAX_SORTED_GLASS; i++ ) {
 		shader_t *shader;
@@ -1373,28 +1423,585 @@ static void R_SortGlass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		while ( at > 0 && distance[at - 1] < d ) {
 			glass[at] = glass[at - 1];
 			distance[at] = distance[at - 1];
+			thin[at] = thin[at - 1];
 			at--;
 		}
 		glass[at] = drawSurfs[i];
 		distance[at] = d;
+		thin[at] = (qboolean)( drawnAsGlass && R_IsThinGlass( shader ) );
+		if ( !thin[at] ) {
+			numThick++;
+		}
 		numGlass++;
 		// taken out: marked by a surface of NULL until the list is put together again
 		drawSurfs[i].surface = NULL;
 	}
-	if ( numGlass < 2 ) {
-		if ( numGlass == 1 ) {
-			drawSurfs[first] = glass[0];
-		}
+	if ( !numGlass ) {
 		return;
 	}
-	// the others after the first glass close up, from the end backwards, and the glass goes in at the first place
-	out = numDrawSurfs - 1;
-	for ( int i = numDrawSurfs - 1; i >= first; i-- ) {
+	// the others close up from the first glass on, then make room there for the thick glass; the thin goes in after them
+	others = first;
+	for ( int i = first; i < numDrawSurfs; i++ ) {
 		if ( drawSurfs[i].surface ) {
-			drawSurfs[out--] = drawSurfs[i];
+			drawSurfs[others++] = drawSurfs[i];
 		}
 	}
-	memcpy( &drawSurfs[first], glass, sizeof( glass[0] ) * numGlass );
+	others -= first;
+	memmove( &drawSurfs[first + numThick], &drawSurfs[first], sizeof( drawSurfs[0] ) * others );
+	out = first;
+	for ( int i = 0; i < numGlass; i++ ) {
+		if ( !thin[i] ) {
+			drawSurfs[out++] = glass[i];
+		}
+	}
+	out = first + numThick + others;
+	for ( int i = 0; i < numGlass; i++ ) {
+		if ( thin[i] ) {
+			drawSurfs[out++] = glass[i];
+		}
+	}
+}
+
+/*
+========================
+R_GlassViews
+
+VisionJK: glass shows what lies behind it from a copy of the frame, read to the side (generic.frag GlassStage). The
+copy is one flat picture: what stands in front of the glass is in it, and what that hides is not. Every way of
+making that up in the shader showed (a second player, patches, a squeezed picture round his outline), and drawing
+the models in front after the glass took their shadows and the smoke in front of them (2026-11-26 and 27). Other
+engines either live with that fringe (Unity, Godot, Unreal say so) or draw what lies behind the surface once more,
+cut at it, into a picture of its own (Source: the refraction of its water and of its glass). That is done here, as
+the puddles do it (R_PuddleView), for the part of the view where it is needed alone:
+
+For a plane of thick, flat glass of the level that has a model in front of one of its panes (the pane goes through
+it or close by it, or lies beyond it as the eye looks), the level is drawn once more with the same eye, cut at the
+plane (the portal plane), for the part of the view those models cover. The glass reads that picture wherever its copy of the frame shows something in front of it. Up to
+GLASS_VIEWS planes a view, those first whose glass the models stand nearest to; a plane close behind one that has a
+view takes that one's (the two sides of one pane).
+========================
+*/
+#define GLASS_VIEW_PLANES	32
+#define GLASS_VIEW_FACES	128
+#define GLASS_VIEW_REACH	0.2f	// how far glass reads to the side, of half the height of the view (GLASS_MOST of generic.frag and the blur of frosted glass)
+#define GLASS_VIEW_RADIUS	48.0f	// of a model, round its origin: what it covers of the view
+#define GLASS_VIEW_FRONT	24.0f	//	and how far its origin may lie behind a plane with a part of it still in front
+#define GLASS_VIEW_SAME		20.0f	// planes that lie no further apart share a view
+
+typedef struct {
+	vec4_t		plane;		// xyz normal away from the eye, w distance
+	float		eye;		// how far the eye is from it
+	float		part[4];	// what the models in front of its glass cover of the view, with what the glass reads to the side
+	float		score;		// how much its glass has to show of what the models hide
+	qboolean	wanted;
+} glassPlane_t;
+
+static void R_GrowBounds( float *bounds, const float *add ) {
+	bounds[0] = Q_min( bounds[0], add[0] );
+	bounds[1] = Q_min( bounds[1], add[1] );
+	bounds[2] = Q_max( bounds[2], add[2] );
+	bounds[3] = Q_max( bounds[3], add[3] );
+}
+
+// one pane of that glass: its box, and what it covers of the view
+typedef struct {
+	int		plane;
+	vec3_t	mins, maxs;
+	float	bounds[4];
+} glassFace_t;
+
+static qboolean R_InGlassFace( const glassFace_t *face, const vec3_t point, float margin ) {
+	for ( int k = 0; k < 3; k++ ) {
+		if ( point[k] < face->mins[k] - margin || point[k] > face->maxs[k] + margin ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
+static void R_GlassViews( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	static glassPlane_t	planes[GLASS_VIEW_PLANES];
+	static glassFace_t	faces[GLASS_VIEW_FACES];
+	const float			*eye = tr.viewParms.ori.origin;
+	const float			tanX = tan( tr.viewParms.fovX / 180 * M_PI * 0.5f ), tanY = tan( tr.viewParms.fovY / 180 * M_PI * 0.5f );
+	const float			reachX = GLASS_VIEW_REACH * tr.viewParms.viewportHeight / Q_max( tr.viewParms.viewportWidth, 1 );
+	int					numPlanes = 0, numFaces = 0, numViews = 0;
+	int					chosen[GLASS_VIEWS];
+	viewParms_t			oldParms;
+
+	tr.viewParms.numGlassViews = 0;
+	if ( tr.viewParms.isPortal || tr.viewParms.probeFace || ( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )
+		|| r_noportals->integer || !VK_GlassViews() ) {
+		return;
+	}
+	// the panes of the thick glass of the level and their planes: the list has what is transparent at its end
+	for ( int i = numDrawSurfs - 1; i >= 0 && numFaces < GLASS_VIEW_FACES; i-- ) {
+		shader_t	*shader;
+		int			entityNum, fogNum, dlighted;
+
+		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
+		if ( shader->sort <= SS_OPAQUE ) {
+			break;
+		}
+		if ( entityNum != REFENTITYNUM_WORLD || *drawSurfs[i].surface != SF_FACE || !R_IsGlass( shader ) || R_IsThinGlass( shader ) ) {
+			continue;
+		}
+		const srfSurfaceFace_t *face = (const srfSurfaceFace_t *)drawSurfs[i].surface;
+
+		if ( face->numPoints < 3 ) {
+			continue;
+		}
+		const float side = DotProduct( eye, face->plane.normal ) - face->plane.dist;
+
+		if ( fabsf( side ) < 1.0f ) {
+			continue;
+		}
+		const float	turn = side > 0.0f ? -1.0f : 1.0f;
+		vec4_t		plane;
+		int			found = -1;
+
+		VectorScale( face->plane.normal, turn, plane );
+		plane[3] = face->plane.dist * turn;
+		for ( int k = 0; k < numPlanes; k++ ) {
+			if ( DotProduct( plane, planes[k].plane ) > 0.999f && fabsf( plane[3] - planes[k].plane[3] ) < 1.0f ) {
+				found = k;
+				break;
+			}
+		}
+		if ( found < 0 ) {
+			if ( numPlanes == GLASS_VIEW_PLANES ) {
+				continue;
+			}
+			found = numPlanes++;
+			VectorCopy4( plane, planes[found].plane );
+			planes[found].eye = fabsf( side );
+			planes[found].score = 0.0f;
+			planes[found].wanted = qfalse;
+			planes[found].part[0] = planes[found].part[1] = 1.0f;
+			planes[found].part[2] = planes[found].part[3] = -1.0f;
+		}
+		// its box, and what it covers of the view (a point beside or behind the eye: as far to its side as the view goes)
+		glassFace_t *pane = &faces[numFaces++];
+
+		pane->plane = found;
+		ClearBounds( pane->mins, pane->maxs );
+		pane->bounds[0] = pane->bounds[1] = 1.0f;
+		pane->bounds[2] = pane->bounds[3] = -1.0f;
+		for ( int k = 0; k < face->numPoints; k++ ) {
+			vec3_t	to;
+			float	at[4];
+
+			AddPointToBounds( face->points[k], pane->mins, pane->maxs );
+			VectorSubtract( face->points[k], eye, to );
+			const float ahead = Q_max( DotProduct( to, tr.viewParms.ori.axis[0] ), 4.0f );
+
+			at[0] = at[2] = Com_Clamp( -1.0f, 1.0f, -DotProduct( to, tr.viewParms.ori.axis[1] ) / ( ahead * tanX ) );
+			at[1] = at[3] = Com_Clamp( -1.0f, 1.0f, DotProduct( to, tr.viewParms.ori.axis[2] ) / ( ahead * tanY ) );
+			R_GrowBounds( pane->bounds, at );
+		}
+	}
+	if ( !numFaces ) {
+		return;
+	}
+	// the models that stand in front of a pane, and what they cover of the view where its glass reads
+	for ( int e = 0; e < tr.refdef.num_entities; e++ ) {
+		const trRefEntity_t	*ent = &tr.refdef.entities[e];
+		float				covers[4];
+		vec3_t				to;
+
+		// (not what the list draws after the glass anyway, which is in no copy of the frame, nor the own body the view
+		// does not show)
+		if ( ent->e.reType != RT_MODEL
+			|| ( ent->e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA | RF_AFTERGLOW | RF_THIRD_PERSON ) ) ) {
+			continue;
+		}
+		const qboolean weapon = (qboolean)( ( ent->e.renderfx & ( RF_DEPTHHACK | RF_FIRST_PERSON ) ) != 0 );
+
+		if ( weapon ) {
+			// the view weapon: in front of everything, in the lower part of the picture
+			VectorSet4( covers, -1.0f, -1.0f, 1.0f, 0.3f );
+		} else {
+			// (a brush model, a door, is a piece of the level: its origin says nothing of where it is)
+			if ( !ent->e.ghoul2 && ent->e.hModel ) {
+				const model_t *model = R_GetModelByHandle( ent->e.hModel );
+
+				if ( model && model->type == MOD_BRUSH ) {
+					continue;
+				}
+			}
+			if ( !VK_ViewBallBounds( &tr.viewParms, ent->e.origin, GLASS_VIEW_RADIUS, covers ) ) {
+				continue;
+			}
+		}
+		VectorSubtract( ent->e.origin, eye, to );
+		for ( int k = 0; k < numFaces; k++ ) {
+			const glassFace_t	*pane = &faces[k];
+			glassPlane_t		*plane = &planes[pane->plane];
+			float				part[4];
+			// how far in front of the plane the eye and the model are
+			const float			eyeFront = -( DotProduct( eye, plane->plane ) - plane->plane[3] );
+			const float			front = weapon ? eyeFront : -( DotProduct( ent->e.origin, plane->plane ) - plane->plane[3] );
+
+			if ( !weapon ) {
+				qboolean before = qfalse;
+
+				if ( front <= -GLASS_VIEW_FRONT ) {
+					continue;	// behind the plane
+				}
+				// the pane goes through the model or runs close by it
+				if ( front < GLASS_VIEW_RADIUS ) {
+					vec3_t on;
+
+					VectorMA( ent->e.origin, front, plane->plane, on );
+					before = R_InGlassFace( pane, on, GLASS_VIEW_RADIUS );
+				}
+				// or the line from the eye through the model meets it beyond the model (what the glass reads to the
+				// side, a part of the view, counts with the pane)
+				if ( !before && front > 0.0f && eyeFront - front > 1e-3f ) {
+					const float	t = eyeFront / ( eyeFront - front );
+					vec3_t		at;
+
+					VectorMA( eye, t, to, at );
+					before = R_InGlassFace( pane, at, GLASS_VIEW_RADIUS + 0.15f * t * VectorLength( to ) );
+				}
+				if ( !before ) {
+					continue;
+				}
+			}
+			part[0] = Q_max( covers[0], pane->bounds[0] - reachX );
+			part[1] = Q_max( covers[1], pane->bounds[1] - GLASS_VIEW_REACH );
+			part[2] = Q_min( covers[2], pane->bounds[2] + reachX );
+			part[3] = Q_min( covers[3], pane->bounds[3] + GLASS_VIEW_REACH );
+			if ( part[0] >= part[2] || part[1] >= part[3] ) {
+				continue;
+			}
+			R_GrowBounds( plane->part, part );
+			plane->wanted = qtrue;
+			// (the nearer the model stands to the glass the more that glass shows of what it hides)
+			plane->score += weapon ? 0.01f : 1.0f / ( 16.0f + Q_max( front, 0.0f ) );
+		}
+	}
+	// the planes that have the most to show, of those that want one
+	while ( numViews < GLASS_VIEWS ) {
+		int best = -1;
+
+		for ( int k = 0; k < numPlanes; k++ ) {
+			if ( planes[k].wanted && ( best < 0 || planes[k].score > planes[best].score ) ) {
+				best = k;
+			}
+		}
+		if ( best < 0 ) {
+			break;
+		}
+		// (of the two sides of one pane the one nearer to the eye: the other reads its picture)
+		for ( int k = 0; k < numPlanes; k++ ) {
+			const float apart = planes[k].plane[3] - planes[best].plane[3];
+
+			if ( planes[k].wanted && DotProduct( planes[k].plane, planes[best].plane ) > 0.99f && apart < 0.0f && apart > -GLASS_VIEW_SAME ) {
+				best = k;
+			}
+		}
+		planes[best].wanted = qfalse;
+		chosen[numViews++] = best;
+		// (what lies close behind it reads its picture, and adds what it needs of the view to it)
+		for ( int k = 0; k < numPlanes; k++ ) {
+			const float apart = planes[k].plane[3] - planes[best].plane[3];
+
+			if ( planes[k].wanted && DotProduct( planes[k].plane, planes[best].plane ) > 0.99f && apart >= 0.0f && apart < GLASS_VIEW_SAME ) {
+				planes[k].wanted = qfalse;
+				R_GrowBounds( planes[best].part, planes[k].part );
+			}
+		}
+	}
+	// v_glassDebug 3: what was found, once a second
+	if ( VK_GlassDebug() == 3 ) {
+		static int printed;
+
+		if ( tr.refdef.time < printed || tr.refdef.time > printed + 1000 ) {
+			printed = tr.refdef.time;
+			for ( int k = 0; k < numPlanes; k++ ) {
+				int view = -1;
+
+				for ( int i = 0; i < numViews; i++ ) {
+					if ( chosen[i] == k ) {
+						view = i;
+					}
+				}
+				ri.Printf( PRINT_ALL, "glass plane %d: normal %.2f %.2f %.2f dist %.0f, eye %.0f away, score %.3f, view %d\n",
+					k, planes[k].plane[0], planes[k].plane[1], planes[k].plane[2], planes[k].plane[3], planes[k].eye,
+					planes[k].score, view );
+			}
+		}
+	}
+	if ( !numViews ) {
+		return;
+	}
+	oldParms = tr.viewParms;
+	for ( int i = 0; i < numViews; i++ ) {
+		const glassPlane_t	*plane = &planes[chosen[i]];
+		viewParms_t			newParms = oldParms;
+
+		newParms.isPortal = qtrue;
+		newParms.subView = i + 1;
+		// (a little behind the plane: the glass in it is no part of what lies behind it)
+		VectorCopy( plane->plane, newParms.portalPlane.normal );
+		newParms.portalPlane.dist = plane->plane[3] + 0.5f;
+		for ( int k = 0; k < 4; k++ ) {
+			newParms.subBounds[k] = plane->part[k];
+		}
+		VectorCopy4( plane->plane, oldParms.glassPlanes[i] );
+		for ( int k = 0; k < 4; k++ ) {
+			oldParms.glassParts[i][k] = plane->part[k];
+		}
+		R_RenderView( &newParms );
+	}
+	oldParms.numGlassViews = numViews;
+	tr.viewParms = oldParms;
+}
+
+/*
+========================
+R_PortalViews
+
+VisionJK: the portals of the portal gun (ext.AddPortalToScene, cgame/portal/cg_portal_draw.c). Through an open portal
+the eye sees what lies in front of its partner, as if the two openings were one: the level is drawn once more for the
+part of the view the opening covers, with the eye moved from the portal to its partner (turned half round about the
+up of the opening, as game/portal/bg_portal.c BG_PortalPoint moves what goes through) and cut at the plane of the
+partner, so its wall and what lies behind it are not in the way. rd-vulkan-vision draws it as it draws the views behind
+glass, in the middle of the view of the level (VK_BeginSubView), and keeps it in a picture of its own, which the opening
+reads (vk_portal.cpp).
+
+A view through a portal does the same for the portals it sees, up to v_portalDepth deep: two portals facing each
+other show each other again and again, a level smaller each time. A portal seen in such a view is seen through the
+opening of the portal of that view alone, so the part of the view its own view is drawn for is no more than both. The
+views of a frame are no more than v_portalViews (the pictures there are), taken the nearest first: those a view sees
+before any of them sees its own, and none once the list of surfaces of the frame has no room for another view. Each
+picture is recorded with the view it was made for (portalViewRecord_t); an opening whose view did not fit shows its
+swirl, as a closed one does.
+
+Each view is made inside the one it was made for, before that one is put into the list of the frame, so its command
+comes first: by the time the backend draws the openings of a view, the views through them are drawn (RB_DrawDeferredViews).
+========================
+*/
+#define PORTAL_NEAR		16.0f	// an eye closer than this to the face of an opening sees through all of the view
+
+typedef struct {
+	const scenePortal_t	*portal;
+	const scenePortal_t	*exit;
+	float				bounds[4];
+	float				distance;
+} portalCandidate_t;
+
+// what the opening covers of the view, bounds as VK_BallBounds counts. qfalse: none of it.
+static qboolean R_PortalBounds( const portalView_t *p, float *bounds ) {
+	const float	*eye = tr.viewParms.ori.origin;
+	const float	tanX = tan( tr.viewParms.fovX / 180 * M_PI * 0.5f ), tanY = tan( tr.viewParms.fovY / 180 * M_PI * 0.5f );
+	vec3_t		to;
+
+	VectorSubtract( p->origin, eye, to );
+	if ( DotProduct( to, p->axis[0] ) > -PORTAL_NEAR ) {
+		VectorSet4( bounds, -1.0f, -1.0f, 1.0f, 1.0f );
+		return qtrue;
+	}
+	bounds[0] = bounds[1] = 1.0f;
+	bounds[2] = bounds[3] = -1.0f;
+	for ( int k = 0; k < 4; k++ ) {
+		vec3_t	corner;
+		float	at[4];
+
+		VectorMA( p->origin, ( k & 1 ) ? p->halfWidth : -p->halfWidth, p->axis[1], corner );
+		VectorMA( corner, ( k & 2 ) ? p->halfHeight : -p->halfHeight, p->axis[2], corner );
+		VectorSubtract( corner, eye, to );
+		const float ahead = DotProduct( to, tr.viewParms.ori.axis[0] );
+
+		// (a corner at or behind the eye: the opening may reach to any border of the view)
+		if ( ahead < 1.0f ) {
+			VectorSet4( bounds, -1.0f, -1.0f, 1.0f, 1.0f );
+			return qtrue;
+		}
+		at[0] = at[2] = -DotProduct( to, tr.viewParms.ori.axis[1] ) / ( ahead * tanX );
+		at[1] = at[3] = DotProduct( to, tr.viewParms.ori.axis[2] ) / ( ahead * tanY );
+		R_GrowBounds( bounds, at );
+	}
+	for ( int k = 0; k < 4; k++ ) {
+		bounds[k] = Com_Clamp( -1.0f, 1.0f, bounds[k] );
+	}
+	return (qboolean)( bounds[0] < bounds[2] && bounds[1] < bounds[3] );
+}
+
+static void R_PortalViews( int numDrawSurfs ) {
+	portalCandidate_t	candidates[MAX_SCENE_PORTALS];
+	int					slotOf[MAX_SCENE_PORTALS];
+	int					numCandidates = 0, numViews, pictures;
+	const int			depth = tr.viewParms.portalView ? tr.viewParms.portalDepth : 0;
+	const int			parent = tr.viewParms.portalView ? tr.viewParms.subView - 1 - GLASS_VIEWS : -1;
+	viewParms_t			oldParms;
+	float				clip[16];
+
+	// the view of the level, or a view through a portal while it is not too deep (not a mirror, a puddle, a face of a
+	// probe or a view behind glass)
+	if ( tr.viewParms.probeFace || ( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) || r_noportals->integer
+		|| !tr.refdef.numPortals || !tr.refdef.portalViews ) {
+		return;
+	}
+	if ( tr.viewParms.isPortal && ( !tr.viewParms.portalView || depth >= VK_PortalDepth() ) ) {
+		return;
+	}
+	static qboolean	debugNow;
+	static int		debugTime;
+
+	pictures = VK_PortalPictures();
+	if ( !depth ) {
+		tr.portalViewsUsed = 0;
+		// (v_portalDebug 1: once a second, for the view of the level and all the views in it)
+		debugNow = (qboolean)( VK_PortalDebug() == 1 && ( tr.refdef.time < debugTime || tr.refdef.time > debugTime + 1000 ) );
+		if ( debugNow ) {
+			debugTime = tr.refdef.time;
+		}
+	}
+	if ( tr.portalViewsUsed >= pictures ) {
+		return;
+	}
+	// the open portals the view can see into: the eye in front of the opening, the opening in the view (and in front of
+	// the plane a view through a portal is cut at), its leaf among those the view sees (asked before any of their views
+	// is drawn, which mark leaves of their own)
+	for ( int i = 0; i < tr.refdef.numPortals; i++ ) {
+		const scenePortal_t	*p = &tr.refdef.portals[i];
+		const scenePortal_t	*exit = NULL;
+		portalCandidate_t	*c;
+		vec3_t				front;
+
+		if ( !p->view.open ) {
+			continue;
+		}
+		// the partner is the portal whose origin and axis are the exit of this one
+		for ( int k = 0; k < tr.refdef.numPortals && !exit; k++ ) {
+			const portalView_t *q = &tr.refdef.portals[k].view;
+
+			if ( k != i && VectorCompare( q->origin, p->view.exitOrigin ) && DotProduct( q->axis[0], p->view.exitAxis[0] ) > 0.999f ) {
+				exit = &tr.refdef.portals[k];
+			}
+		}
+		const float side = DotProduct( tr.viewParms.ori.origin, p->view.axis[0] ) - DotProduct( p->view.origin, p->view.axis[0] );
+
+		if ( side < 0.25f
+			|| R_CullPointAndRadius( p->view.origin, sqrtf( Square( p->view.halfWidth ) + Square( p->view.halfHeight ) ) ) == CULL_OUT ) {
+			continue;
+		}
+		if ( tr.viewParms.portalView && DotProduct( p->view.origin, tr.viewParms.portalPlane.normal ) < tr.viewParms.portalPlane.dist ) {
+			continue;
+		}
+		VectorMA( p->view.origin, 2.0f, p->view.axis[0], front );
+		if ( !R_PointMarked( front ) ) {
+			continue;
+		}
+		c = &candidates[numCandidates];
+		if ( !R_PortalBounds( &p->view, c->bounds ) ) {
+			continue;
+		}
+		// (seen through the opening of this view alone)
+		if ( tr.viewParms.portalView ) {
+			c->bounds[0] = Q_max( c->bounds[0], tr.viewParms.subBounds[0] );
+			c->bounds[1] = Q_max( c->bounds[1], tr.viewParms.subBounds[1] );
+			c->bounds[2] = Q_min( c->bounds[2], tr.viewParms.subBounds[2] );
+			c->bounds[3] = Q_min( c->bounds[3], tr.viewParms.subBounds[3] );
+			if ( c->bounds[0] >= c->bounds[2] || c->bounds[1] >= c->bounds[3] ) {
+				continue;
+			}
+		}
+		c->portal = p;
+		c->exit = exit;
+		c->distance = Distance( tr.viewParms.ori.origin, p->view.origin );
+		numCandidates++;
+	}
+	// the nearest first
+	for ( int i = 1; i < numCandidates; i++ ) {
+		const portalCandidate_t c = candidates[i];
+		int k = i;
+
+		while ( k > 0 && candidates[k - 1].distance > c.distance ) {
+			candidates[k] = candidates[k - 1];
+			k--;
+		}
+		candidates[k] = c;
+	}
+	// their pictures, taken before any of them is drawn: the views this one sees come before those they see in turn
+	numViews = Q_min( numCandidates, pictures - tr.portalViewsUsed );
+	for ( int i = 0; i < numViews; i++ ) {
+		portalViewRecord_t *record = &tr.refdef.portalViews[tr.portalViewsUsed];
+
+		slotOf[i] = tr.portalViewsUsed++;
+		record->sceneNum = tr.frameSceneNum;
+		record->parent = parent;
+		record->portalId = candidates[i].portal->view.id;
+		record->depth = depth + 1;
+	}
+	// (the matrix of this view to the clip space: the opening reads the picture through it)
+	myGlMultMatrix( tr.viewParms.world.modelMatrix, tr.viewParms.projectionMatrix, clip );
+	oldParms = tr.viewParms;
+	for ( int i = 0; i < numViews; i++ ) {
+		const portalView_t	*p = &candidates[i].portal->view;
+		viewParms_t			newParms = oldParms;
+		orientation_t		surface, camera;
+
+		// (each view takes about as many surfaces as the one it is made for: past the end of the list they would wrap
+		// round onto it. The pictures not drawn keep a record no view fills, their openings show the swirl.)
+		if ( tr.refdef.numDrawSurfs + numDrawSurfs + 1024 >= MAX_DRAWSURFS ) {
+			tr.refdef.portalViews[slotOf[i]].sceneNum = -1;
+			continue;
+		}
+		newParms.isPortal = qtrue;
+		newParms.isMirror = qfalse;
+		newParms.subView = GLASS_VIEWS + slotOf[i] + 1;
+		newParms.portalView = qtrue;
+		newParms.portalDepth = depth + 1;
+		newParms.numGlassViews = 0;	// (those are of the view of the level, at its eye)
+		newParms.portalId = p->id;
+		newParms.portalExit = candidates[i].exit ? candidates[i].exit->view.id : -1;
+		memcpy( newParms.portalClip, clip, sizeof( clip ) );
+		VectorSet4( newParms.portalRect, (float)oldParms.viewportX, (float)( glConfig.vidHeight - ( oldParms.viewportY + oldParms.viewportHeight ) ),
+			(float)oldParms.viewportWidth, (float)oldParms.viewportHeight );
+		for ( int k = 0; k < 4; k++ ) {
+			newParms.subBounds[k] = candidates[i].bounds[k];
+		}
+		// the eye moved from the portal to its partner: along the axes of the one as along the axes of the other with
+		// forward and left turned round
+		VectorCopy( p->origin, surface.origin );
+		VectorCopy( p->axis[0], surface.axis[0] );
+		VectorCopy( p->axis[1], surface.axis[1] );
+		VectorCopy( p->axis[2], surface.axis[2] );
+		VectorCopy( p->exitOrigin, camera.origin );
+		VectorNegate( p->exitAxis[0], camera.axis[0] );
+		VectorNegate( p->exitAxis[1], camera.axis[1] );
+		VectorCopy( p->exitAxis[2], camera.axis[2] );
+		R_MirrorPoint( oldParms.ori.origin, &surface, &camera, newParms.ori.origin );
+		R_MirrorVector( oldParms.ori.axis[0], &surface, &camera, newParms.ori.axis[0] );
+		R_MirrorVector( oldParms.ori.axis[1], &surface, &camera, newParms.ori.axis[1] );
+		R_MirrorVector( oldParms.ori.axis[2], &surface, &camera, newParms.ori.axis[2] );
+		// Cut a little in front of the face of the partner: its wall is no part of what is seen. (Cut behind it, to show
+		// the part of a player that walked into the opening, the floor under the wall came along as a dark band at the
+		// foot of the opening, their test 2026-11-27: that part is the copy of the player, vk_shade.cpp keeps it.)
+		VectorCopy( p->exitAxis[0], newParms.portalPlane.normal );
+		newParms.portalPlane.dist = DotProduct( p->exitOrigin, p->exitAxis[0] ) + 0.5f;
+		// (the eye stands behind that wall: the leaves are those in front of it)
+		VectorMA( p->exitOrigin, 8.0f, p->exitAxis[0], newParms.pvsOrigin );
+		R_RenderView( &newParms );
+	}
+	tr.viewParms = oldParms;
+	// v_portalDebug 1: what each view found (the nested ones print before the view they are in)
+	if ( debugNow ) {
+		{
+			ri.Printf( PRINT_ALL, "portals %d, view depth %d (picture %d), open in view %d, views %d (pictures used %d of %d)\n",
+				tr.refdef.numPortals, depth, parent, numCandidates, numViews, tr.portalViewsUsed, pictures );
+			for ( int i = 0; i < numViews; i++ ) {
+				ri.Printf( PRINT_ALL, "  portal %d: %.0f away, picture %d, depth %d, parent %d, part %.2f %.2f %.2f %.2f, exit %d%s\n",
+					candidates[i].portal->view.id, candidates[i].distance, slotOf[i], depth + 1, parent, candidates[i].bounds[0],
+					candidates[i].bounds[1], candidates[i].bounds[2], candidates[i].bounds[3],
+					candidates[i].exit ? candidates[i].exit->view.id : -1,
+					tr.refdef.portalViews[slotOf[i]].sceneNum == tr.frameSceneNum ? "" : " (no room in the list)" );
+			}
+		}
+	}
 }
 
 void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
@@ -1422,6 +2029,8 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	R_RadixSort( drawSurfs, numDrawSurfs );
 	R_SortGlass( drawSurfs, numDrawSurfs );
 
+	R_GlassViews( drawSurfs, numDrawSurfs );
+	R_PortalViews( numDrawSurfs );
 	R_PuddleView();
 
 	// check for any pass through drawing, which
@@ -1500,7 +2109,7 @@ void R_AddEntitySurfaces (void) {
 			// self blood sprites, talk balloons, etc should not be drawn in the primary
 			// view.  We can't just do this check for all entities, because md3
 			// entities may still want to cast shadows from them
-			if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal) {
+			if ( (ent->e.renderfx & RF_THIRD_PERSON) && R_VIEW_HIDES_OWN() ) {
 				continue;
 			}
 			shader = R_GetShaderByHandle( ent->e.customShader );
@@ -1533,7 +2142,7 @@ Ghoul2 Insert Start
 					}
   					break;
 				case MOD_BAD:		// null model axis
-					if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
+					if ( (ent->e.renderfx & RF_THIRD_PERSON) && R_VIEW_HIDES_OWN() )
 					{
 						break;
 					}

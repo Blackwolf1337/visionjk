@@ -2073,6 +2073,7 @@ qboolean	CG_SnowballViewBall( void );			//	and in the view in first person, in p
 qboolean	CG_WaterStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right, qboolean heavy );
 void		CG_WaterLand( centity_t *cent, float strength );	// a jump or a landing into standing water
 void		CG_WaterImpact( const vec3_t at, float strength );	// a shot into standing water
+void		CG_WaterCrown( const vec3_t at, float strength );	// droplets and their sound, into the water of the level
 float		CG_WaterWheel( const vec3_t at, const vec3_t normal, const vec3_t velocity, qboolean effects );	// RC car
 void		CG_WaterTrack( const vec3_t from, const vec3_t to, const vec3_t normal, float width, float wet );
 qboolean	CG_WaterWetDrawn( void );				// the renderer draws wet places (ext.R_AddWet)
@@ -2307,6 +2308,7 @@ void CG_Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec
 void CG_G2Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
 					 int skipNumber, int mask );
 void CG_PredictPlayerState( void );
+void CG_PortalCaps( void );
 void CG_LoadDeferredPlayers( void );
 void CG_ModelArrived_f( void );
 

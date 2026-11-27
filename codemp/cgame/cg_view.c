@@ -34,7 +34,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_explosion.h"
 #include "cgame/level/cg_doors.h"
 #include "cgame/level/cg_gust.h"
+#include "cgame/level/cg_ripples.h"
 #include "cgame/level/cg_smoke.h"
+#include "cgame/portal/cg_portal_draw.h"
+#include "cgame/portal/cg_portals.h"
 #include "cgame/level/cg_motes.h"
 #include "cgame/weapons/cg_airring.h"
 #include "cgame/weapons/cg_wallfx.h"
@@ -493,7 +496,8 @@ static void CG_UpdateThirdPersonTargetDamp(void)
 	// Now we trace to see if the new location is cool or not.
 
 	// First thing we do is trace from the first person viewpoint out to the new target location.
-	CG_Trace(&trace, cameraFocusLoc, cameramins, cameramaxs, cameraCurTarget, cg.snap->ps.clientNum, MASK_CAMERACLIP);
+	// VisionJK: through the holes of the portal gun (a head right at the face of a portal is in the opening)
+	CG_PortalViewTrace(&trace, cameraFocusLoc, cameramins, cameramaxs, cameraCurTarget, cg.snap->ps.clientNum, MASK_CAMERACLIP);
 	if (trace.fraction < 1.0)
 	{
 		VectorCopy(trace.endpos, cameraCurTarget);
@@ -581,7 +585,12 @@ static void CG_UpdateThirdPersonCameraDamp(void)
 	}
 
 	// Now we trace from the new target location to the new view location, to make sure there is nothing in the way.
-	CG_Trace(&trace, cameraCurTarget, cameramins, cameramaxs, cameraCurLoc, cg.snap->ps.clientNum, MASK_CAMERACLIP);
+	// VisionJK: unless the way goes through an opening of the portal gun: it goes on behind it (CG_PortalView)
+	if ( CG_PortalCameraThrough( cameraCurTarget, cameraCurLoc, cameramins, cameramaxs, MASK_CAMERACLIP ) ) {
+		trace.fraction = 1.0f;
+	} else {
+		CG_PortalViewTrace(&trace, cameraCurTarget, cameramins, cameramaxs, cameraCurLoc, cg.snap->ps.clientNum, MASK_CAMERACLIP);
+	}
 
 	if (trace.fraction < 1.0)
 	{
@@ -1637,6 +1646,9 @@ static int CG_CalcViewValues( void ) {
 		CG_EmplacedView(cg_entities[cg.snap->ps.emplacedIndex].currentState.angles);
 	}
 
+	// VisionJK: the third person camera goes through a portal of the portal gun with the player (portal/cg_portal_view.c)
+	CG_PortalCamera( cameraCurLoc, cameraCurTarget );
+
 	if ( !manningTurret )
 	{
 		if ( cg.predictedPlayerState.m_iVehicleNum //in a vehicle
@@ -1665,6 +1677,17 @@ static int CG_CalcViewValues( void ) {
 	}
 
 	CG_JPCameraRange();
+
+	// VisionJK: the eye already through a portal of the portal gun goes on on the other side (portal/cg_portal_view.c):
+	// in third person the way from the head to the camera, in first person from the origin to the eye
+	if ( !manningTurret ) {
+		if ( cg.renderingThirdPerson ) {
+			CG_PortalView( cameraCurTarget, cg.refdef.vieworg, cameramins, cameramaxs, MASK_CAMERACLIP );
+		} else {
+			CG_PortalView( cg.predictedPlayerState.origin, cg.refdef.vieworg, NULL, NULL, 0 );
+		}
+		CG_PortalNearGuard();
+	}
 
 	// position eye relative to origin
 	AnglesToAxis( cg.refdef.viewangles, cg.refdef.viewaxis );
@@ -2742,6 +2765,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// build the render lists
 	if ( !cg.hyperspace ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
+		// the portals of the portal gun, drawn by the renderer (portal/cg_portal_draw.c)
+		CG_PortalsScene();
 		CG_AddMarks();
 		CG_SaberScarsAdd();
 		CG_SaberClashAdd();
@@ -2753,6 +2778,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_MotesFrame();
 		// heavy doors that open (level/cg_doors.c)
 		CG_DoorsFrame();
+		// rings on the water of the level (level/cg_ripples.c)
+		CG_RipplesFrame();
 		// smoke that hangs in the room and moves with pushes, blasts and blades (level/cg_smoke.c)
 		CG_SmokeFrame();
 		CG_AirRingsScene();

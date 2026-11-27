@@ -3339,7 +3339,7 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 	RootMatrix(ghoul2,currentTime, ent->e.modelScale,rootMatrix);
 
    	// don't add third_person objects if not in a portal
-	personalModel = (qboolean)(hiddenCaster || ((ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal));
+	personalModel = (qboolean)(hiddenCaster || ((ent->e.renderfx & RF_THIRD_PERSON) && R_VIEW_HIDES_OWN()));
 
 	int modelList[256];
 	assert(ghoul2.size()<=255);

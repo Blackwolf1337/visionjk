@@ -386,6 +386,10 @@ typedef struct refexport_s {
 		// The smoke of the scene of this frame as a volume (smokeVolume_t), between R_ClearScene and R_RenderScene;
 		// NULL or no blobs: none. NULL as a function: the renderer has none.
 		void				(*SetSmoke)								( const smokeVolume_t *smoke );
+		// A portal of the portal gun (portalView_t) for the scene of this frame, between ClearScene and RenderScene:
+		// drawn with the view through it from its partner while it is open, else with its rim and a swirl. NULL: the
+		// renderer has none.
+		void				(*AddPortalToScene)						( const portalView_t *portal );
 	} ext;
 
 } refexport_t;

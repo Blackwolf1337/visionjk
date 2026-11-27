@@ -126,7 +126,10 @@ void VK_BeginFrame( void ) {
 	frame->numBones = 0;
 	VK_ModelsBeginFrame();
 
-	globals = (vkGlobals_t *)frame->globals.mapped;
+	vk.frame = frame;
+	// the first version of the globals of the frame (VK_GlobalsCommit)
+	frame->globalsUsed = 0;
+	globals = VK_GlobalsEdit();
 	memset( globals, 0, sizeof( *globals ) );
 	globals->gamma[0] = 1.0f / r_gamma->value;
 	globals->gamma[1] = (float)( 1 << tr.overbrightBits );
@@ -139,9 +142,10 @@ void VK_BeginFrame( void ) {
 	if ( vk.ssrReady && v_ssr->integer ) {
 		memcpy( globals->ssr, vk.ssrRows, sizeof( globals->ssr ) );
 	}
+	// the view of the light mask the light passes read until this frame makes its own (vk_rt.cpp)
+	VK_RT_FrameRows( globals );
 #endif
-
-	vk.frame = frame;
+	VK_GlobalsCommit();
 #ifndef RD_VISION_GLES
 	// v_gpuSparks: a step of the sparks before anything is drawn (outside a render pass)
 	VK_SparksSimulate();
@@ -171,12 +175,13 @@ void VK_EndFrame( void ) {
 	if ( !frame ) {
 		return;
 	}
-	// the light styles as the cgame left them for this frame
-	vkGlobals_t *globals = (vkGlobals_t *)frame->globals.mapped;
+	// the light styles as the cgame left them for this frame, in every version of the globals of the frame
+	vkGlobals_t *globals = VK_GlobalsEdit();
 
 	for ( int i = 0; i < MAX_LIGHT_STYLES; i++ ) {
 		VectorSet4( globals->styles[i], styleColors[i][0] / 256.0f, styleColors[i][1] / 256.0f, styleColors[i][2] / 256.0f, 0.0f );
 	}
+	VK_GlobalsAll( offsetof( vkGlobals_t, styles ), sizeof( globals->styles ) );
 	VK_EndTarget();
 	vk.rendering = qfalse;
 	VK_PresentFrame( gamma );
@@ -498,7 +503,11 @@ part of the picture something reaches: the smoke (vk_smoke.cpp), a moving light 
 ===============
 */
 qboolean VK_BallBounds( const vec3_t origin, float radius, float *bounds ) {
-	const viewParms_t	*view = &backEnd.viewParms;
+	return VK_ViewBallBounds( &backEnd.viewParms, origin, radius, bounds );
+}
+
+// the same of a view the front end is making (R_GlassViews)
+qboolean VK_ViewBallBounds( const viewParms_t *view, const vec3_t origin, float radius, float *bounds ) {
 	const float			tanX = tanf( DEG2RAD( view->fovX ) * 0.5f ), tanY = tanf( DEG2RAD( view->fovY ) * 0.5f );
 	vec3_t				to;
 	float				lo[2], hi[2];

@@ -1220,6 +1220,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.LevelViewRay						= RE_LevelViewRay;
 #ifndef RD_VISION_GLES
 	re.ext.SetSmoke							= RE_SetSmoke;
+	re.ext.AddPortalToScene					= RE_AddPortalToScene;
 #endif
 	re.ext.UiTexture						= RE_UiTexture;
 	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;

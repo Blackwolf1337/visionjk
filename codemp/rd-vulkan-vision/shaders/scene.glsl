@@ -21,6 +21,13 @@ float SceneDistance( vec2 pixel ) {
 	ivec2 size = textureSize( u_depth, 0 );
 	float depth = texelFetch( u_depth, clamp( ivec2( pixel ), ivec2( 0 ), size - 1 ), 0 ).r;
 
+#ifdef SCENE_IS_DISTANCE
+	// (a pass that was given the distance of the solid level in place of the depth, vk_post.cpp VK_SoftDepth: what
+	// is transparent and writes its depth, glass, is not in it)
+	if ( SCENE_IS_DISTANCE ) {
+		return depth;
+	}
+#endif
 	// (both are below zero: x / ( depth - 1 ) and a bit)
 	return W[6].w / min( depth + W[7].w, -1e-7 );
 }

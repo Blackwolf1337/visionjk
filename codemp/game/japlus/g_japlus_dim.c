@@ -166,8 +166,9 @@ void G_TempUnlink( int clientNum ) {
 	}
 }
 
-void JP_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask,
-	int capsule, int traceFlags, int useLod ) {
+// JP_Trace and JP_TraceHoles: with holes (VisionJK, the portal gun) the trace goes to gameImport_t.ext.TraceHoles
+static void JP_TraceWith( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum,
+	int contentMask, int capsule, int traceFlags, int useLod, const traceHole_t *holes, int numHoles ) {
 	int saved[MAX_CLIENTS], count = 0, i;
 	const qboolean active = passEntityNum >= 0 && passEntityNum < MAX_CLIENTS && JP_NonInterferenceRules();
 
@@ -181,8 +182,21 @@ void JP_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const ve
 		}
 	}
 
-	trap->Trace( results, start, mins, maxs, end, passEntityNum, contentMask, capsule, traceFlags, useLod );
+	if ( numHoles > 0 && trap->ext.TraceHoles )
+		trap->ext.TraceHoles( results, start, mins, maxs, end, passEntityNum, contentMask, capsule, holes, numHoles );
+	else
+		trap->Trace( results, start, mins, maxs, end, passEntityNum, contentMask, capsule, traceFlags, useLod );
 
 	for ( i = 0; i < count; i++ )
 		g_entities[jpUnlinked[passEntityNum][i]].r.contents = saved[i];
+}
+
+void JP_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask,
+	int capsule, int traceFlags, int useLod ) {
+	JP_TraceWith( results, start, mins, maxs, end, passEntityNum, contentMask, capsule, traceFlags, useLod, NULL, 0 );
+}
+
+void JP_TraceHoles( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum,
+	int contentMask, const traceHole_t *holes, int numHoles ) {
+	JP_TraceWith( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 0, holes, numHoles );
 }

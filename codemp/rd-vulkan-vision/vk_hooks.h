@@ -49,6 +49,16 @@ qboolean VK_PuddleMirror( void );
 // the size of the targets of that view each way, for a frame of frame pixels: half of it (vk_texture.cpp)
 static inline int VK_PuddleSize( int frame ) { return ( frame + 1 ) / 2; }
 void VK_NoteDrawSurfs( int numDrawSurfs );
+// whether thick glass gets views of what lies behind it (R_GlassViews of tr_main.cpp; vk_backend.cpp), and what a ball
+// covers of a view the front end is making, as VK_BallBounds says it of the one that is drawn (vk_frame.cpp)
+qboolean VK_GlassViews( void );
+int VK_GlassDebug( void );		// v_glassDebug
+qboolean VK_ViewBallBounds( const struct viewParms_s *view, const vec3_t origin, float radius, float *bounds );
+// how many views through the portals of the portal gun a frame can have, their pictures (v_portalViews; R_PortalViews
+// of tr_main.cpp, vk_backend.cpp), how deep they nest (v_portalDepth, 1 to PORTAL_DEPTH), and v_portalDebug
+int VK_PortalPictures( void );
+int VK_PortalDepth( void );
+int VK_PortalDebug( void );
 // ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
 qboolean RE_GpuProfile( gpuProfile_t *out );
 // vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the shadow of the player at origin came from, their colours and

@@ -2075,6 +2075,8 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_SurfacePick					= CL_SurfacePick;
 		cgi.ext.R_LampsNear						= re->ext.LampsNear;
 		cgi.ext.R_SetSmoke						= re->ext.SetSmoke;
+		cgi.ext.CM_TraceHoles					= CM_BoxTraceHoles;
+		cgi.ext.R_AddPortal						= re->ext.AddPortalToScene;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

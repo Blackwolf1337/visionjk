@@ -1658,6 +1658,15 @@ void RB_SurfaceEntity( surfaceType_t *surfType ) {
 				memcpy(&backEnd.currentEntity->e, &backEnd.refdef.miniEntities[start+i], sizeof(backEnd.refdef.miniEntities[start+i]));
 
 				assert(backEnd.currentEntity->e.renderfx >= 0);
+				{
+					// VisionJK: the bits behind thick glass are drawn before it, the others after (vk_backend.cpp)
+					extern int rb_fxPass;
+					qboolean RB_FxWanted( const vec3_t origin );
+
+					if ( rb_fxPass && !RB_FxWanted( backEnd.currentEntity->e.origin ) ) {
+						continue;
+					}
+				}
 
 				RB_SurfaceEntity(surfType);
 			}

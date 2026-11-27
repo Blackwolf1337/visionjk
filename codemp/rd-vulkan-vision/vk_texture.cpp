@@ -67,20 +67,31 @@ void VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect
 		0, NULL, 0, NULL, 1, &barrier );
 }
 
+// what of an image of that format a barrier or a copy names
+VkImageAspectFlags VK_TargetAspect( VkFormat format ) {
+	switch ( format ) {
+	case VK_FORMAT_D16_UNORM_S8_UINT:
+	case VK_FORMAT_D24_UNORM_S8_UINT:
+	case VK_FORMAT_D32_SFLOAT_S8_UINT:
+		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	case VK_FORMAT_D16_UNORM:
+	case VK_FORMAT_X8_D24_UNORM_PACK32:
+	case VK_FORMAT_D32_SFLOAT:
+		return VK_IMAGE_ASPECT_DEPTH_BIT;
+	default:
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+}
+
 void VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to ) {
-	VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
-		? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT ) : VK_IMAGE_ASPECT_COLOR_BIT;
+	// (by its format: the depth of the views of their own, vk.subDepth, is copied to and from the depth of the frame)
+	const VkImageAspectFlags aspect = VK_TargetAspect( target->format );
 
 	// about to be read: with several samples a pixel the frame, its depth and its glow are made of them first, if
 	// something was drawn since they were (vk_cmd.cpp)
 	if ( to == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || to == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
 		|| to == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ) {
 		VK_FrameRead( cmd, target );
-	}
-
-	// a depth without stencil (the atlas of the shadow maps, vk_rt.cpp)
-	if ( target->format == VK_FORMAT_D32_SFLOAT || target->format == VK_FORMAT_D16_UNORM ) {
-		aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
 
 	VK_SetLayout( cmd, target->image, aspect, target->layout, to );
@@ -131,6 +142,9 @@ void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format
 }
 
 void VK_DestroyTarget( vkTarget_t *target ) {
+	if ( target->readView ) {
+		qvkDestroyImageView( vk.device, target->readView, NULL );
+	}
 	if ( target->image ) {
 		qvkDestroyImageView( vk.device, target->view, NULL );
 		qvkDestroyImage( vk.device, target->image, NULL );
@@ -506,6 +520,24 @@ static VkImageView VK_DepthOnlyView( const vkTarget_t *depth ) {
 	return result;
 }
 
+// A copy of the frame for a shader to read. OpenGL copies a frame buffer that has no alpha, and such a texture reads as
+// 1 there. The frame here has an alpha channel with what the blends left in it, so the copy is looked at without it.
+static void VK_CreateFrameCopy( vkTarget_t *target ) {
+	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+
+	VK_CreateTarget( target, vk.width, vk.height, vk.color.format,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	qvkDestroyImageView( vk.device, target->view, NULL );
+	view.image = target->image;
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = target->format;
+	view.components.a = VK_COMPONENT_SWIZZLE_ONE;
+	view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view.subresourceRange.levelCount = 1;
+	view.subresourceRange.layerCount = 1;
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &target->view ) );
+}
+
 void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -525,25 +557,52 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_CreateTarget( &vk.softDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	vk.softShown = -1;
 	vk.softReady = qfalse;
+	VK_CreateTarget( &vk.glassDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.thickDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.thickReady = qfalse;
+	vk.glassShown = -1;
+	vk.glassReady = qfalse;
+	VK_CreateTarget( &vk.worldDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.worldShown = -1;
+	vk.worldReady = qfalse;
+	VK_PostSetOnce( &vk.glassSet );
+	VK_WriteSet( vk.glassSet, vk.postSampler, vk.glassDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vk.glassDepth.readSet = vk.glassSet;
+	VK_PostSetOnce( &vk.thickSet );
+	VK_WriteSet( vk.thickSet, vk.postSampler, vk.thickDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vk.thickDepth.readSet = vk.thickSet;
+	// the pictures of the views of their own (VK_EndSubView): copies of a part of the frame, as vk.screen is one. Those
+	// behind thick glass always, those through portals as many as v_portalViews asks (each the size of the window).
+	const int portalPictures = vk.depthReadable ? Com_Clampi( 0, PORTAL_VIEWS, v_portalViews ? v_portalViews->integer : 0 ) : 0;
+
+	for ( int i = 0; i < GLASS_VIEWS + portalPictures; i++ ) {
+		VK_CreateFrameCopy( &vk.behind[i] );
+		vk.behindShown[i] = -1;
+		vk.behindFrame[i] = -1;
+		vk.behindId[i] = -1;
+	}
+	vk.limitOn = qfalse;
+	// the targets of a view of its own (vk_post.cpp VK_BeginSubView), as the frame has them (vk_main.cpp)
+	if ( vk.depthReadable ) {
+		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		VK_CreateTarget( &vk.sub, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+			| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+		VK_CreateTarget( &vk.subDepth, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+			| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthAspect, VK_SAMPLE_COUNT_1_BIT );
+		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+			VK_CreateTarget( &vk.subMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+			VK_CreateTarget( &vk.subDepthMS, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+				| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, depthAspect, vk.samples );
+		}
+	}
 	VK_PostSetOnce( &vk.softSet );
 	VK_WriteSet( vk.softSet, vk.postSampler, vk.softDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	{
-		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
-		// alpha channel with what the blends left in it, so the copy is looked at without it.
-		VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-
-		qvkDestroyImageView( vk.device, vk.screen.view, NULL );
-		view.image = vk.screen.image;
-		view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		view.format = vk.screen.format;
-		view.components.a = VK_COMPONENT_SWIZZLE_ONE;
-		view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		view.subresourceRange.levelCount = 1;
-		view.subresourceRange.layerCount = 1;
-		VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.screen.view ) );
-	}
+	vk.softDepth.readSet = vk.softSet;
+	VK_CreateFrameCopy( &vk.screen );
 	VK_CreateTarget( &vk.blur[0], blurWidth, blurHeight, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	for ( int i = 0; i < 2; i++ ) {
@@ -564,12 +623,24 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	for ( int i = 0; i < 7; i++ ) {
 		VK_PostSetOnce( sets[i] );
 		VK_WritePostSet( *sets[i], targets[i]->view );
+		targets[i]->readSet = *sets[i];
 	}
 	VK_PostSetOnce( &vk.volumeSet );
 	VK_WritePostSet( vk.volumeSet, vk.volume.view );
+	vk.volume.readSet = vk.volumeSet;
 	// the copy of the frame the scope reads, filtered as the other ones (its view has an alpha of 1)
 	VK_PostSetOnce( &vk.screenSet );
 	VK_WritePostSet( vk.screenSet, vk.screen.view );
+	vk.screen.readSet = vk.screenSet;
+	if ( vk.sub.image ) {
+		VK_PostSetOnce( &vk.subSet );
+		VK_WriteSet( vk.subSet, vk.postSampler, vk.sub.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		vk.sub.readSet = vk.subSet;
+		vk.subDepth.readView = VK_DepthOnlyView( &vk.subDepth );
+		VK_PostSetOnce( &vk.subDepthSet );
+		VK_WriteSet( vk.subDepthSet, vk.postSampler, vk.subDepth.readView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+		vk.subDepth.readSet = vk.subDepthSet;
+	}
 
 	// v_wetMirror: the view mirrored at the floor of the puddles, with the formats and the samples of the frame, so
 	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all. Half the size of the
@@ -591,6 +662,13 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		}
 		VK_PostSetOnce( &vk.reflectSet );
 		VK_WritePostSet( vk.reflectSet, vk.reflect.view );
+		vk.reflect.readSet = vk.reflectSet;
+		if ( vk.depthReadable ) {
+			vk.reflectDepth.readView = VK_DepthOnlyView( &vk.reflectDepth );
+			VK_PostSetOnce( &vk.reflectDepthSet );
+			VK_WriteSet( vk.reflectDepthSet, vk.postSampler, vk.reflectDepth.readView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+			vk.reflectDepth.readSet = vk.reflectDepthSet;
+		}
 	}
 	vk.reflectFrame = -1;
 
@@ -613,9 +691,13 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
 	// pixel (not every device filters a depth format) while nothing draws into it.
 	if ( vk.depthReadable ) {
-		vk.depthView = VK_DepthOnlyView( &vk.depth );
+		if ( vk.depth.readView ) {
+			qvkDestroyImageView( vk.device, vk.depth.readView, NULL );
+		}
+		vk.depth.readView = VK_DepthOnlyView( &vk.depth );
 		VK_PostSetOnce( &vk.depthSet );
-		VK_WriteSet( vk.depthSet, vk.postSampler, vk.depthView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+		VK_WriteSet( vk.depthSet, vk.postSampler, vk.depth.readView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+		vk.depth.readSet = vk.depthSet;
 	}
 }
 
@@ -672,8 +754,10 @@ void VK_CreateSmaaTargets( void ) {
 	// pixel alone; the search texture is read pixel for pixel, as SMAA.hlsl has it with its point sampler
 	VK_PostSetOnce( &vk.smaaEdgesSet );
 	VK_WritePostSet( vk.smaaEdgesSet, vk.smaaEdges.view );
+	vk.smaaEdges.readSet = vk.smaaEdgesSet;
 	VK_PostSetOnce( &vk.smaaWeightsSet );
 	VK_WritePostSet( vk.smaaWeightsSet, vk.smaaWeights.view );
+	vk.smaaWeights.readSet = vk.smaaWeightsSet;
 	VK_PostSetOnce( &vk.smaaColorSet );
 	VK_WritePostSet( vk.smaaColorSet, multi ? vk.color.view : vk.smaaColor.view );
 	VK_SmaaLookup( &vk.smaaArea, &vk.smaaAreaSet, vk.linearSampler, AREATEX_WIDTH, AREATEX_HEIGHT, VK_FORMAT_R8G8_UNORM, areaTexBytes,
@@ -687,6 +771,21 @@ void VK_DestroyPostTargets( void ) {
 	vk.ssrReady = qfalse;
 	VK_DestroyTarget( &vk.softDepth );
 	vk.softReady = qfalse;
+	VK_DestroyTarget( &vk.glassDepth );
+	VK_DestroyTarget( &vk.thickDepth );
+	vk.thickReady = qfalse;
+	vk.glassReady = qfalse;
+	VK_DestroyTarget( &vk.worldDepth );
+	vk.worldReady = qfalse;
+	for ( int i = 0; i < SUB_VIEWS; i++ ) {
+		VK_DestroyTarget( &vk.behind[i] );
+		vk.behindFrame[i] = -1;
+		vk.behindId[i] = -1;
+	}
+	VK_DestroyTarget( &vk.sub );
+	VK_DestroyTarget( &vk.subMS );
+	VK_DestroyTarget( &vk.subDepth );
+	VK_DestroyTarget( &vk.subDepthMS );
 	VK_DestroyTarget( &vk.volume );
 	VK_DestroyTarget( &vk.probeColor );
 	VK_DestroyTarget( &vk.probeColorMS );
@@ -711,10 +810,8 @@ void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.soft[1] );
 	VK_DestroyTarget( &vk.smoke[0] );
 	VK_DestroyTarget( &vk.smoke[1] );
-	if ( vk.depthView ) {
-		qvkDestroyImageView( vk.device, vk.depthView, NULL );
-		vk.depthView = VK_NULL_HANDLE;
-	}
+	// (the view of the depth alone goes with the depth, VK_DestroyTarget; only the set stays for the next one)
+	vk.depth.readSet = VK_NULL_HANDLE;
 	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
 }
 

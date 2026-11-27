@@ -473,6 +473,7 @@ int SV_PointContents( const vec3_t p, int passEntityNum );
 
 
 void SV_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod );
+void SV_TraceHoles( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, const traceHole_t *holes, int numHoles );
 
 //
 // sv_ids.cpp: the intrusion detection. The order is the one of its table of names and weights.

@@ -860,6 +860,10 @@ void G_RunMissile( gentity_t *ent ) {
 			passent = ent->r.ownerNum;
 		}
 	}
+	// VisionJK: out of a portal of the portal gun it may come back at who shot it (portal/g_portal.c)
+	if ( ent->portalPassed && passent == ent->r.ownerNum ) {
+		passent = ent->s.number;
+	}
 	// trace a line from the previous position to the current position
 	if (d_projectileGhoul2Collision.integer)
 	{
@@ -884,6 +888,15 @@ void G_RunMissile( gentity_t *ent ) {
 	else
 	{
 		trap->Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, origin, passent, ent->clipmask, qfalse, 0, 0 );
+	}
+
+	// VisionJK: into a portal of the portal gun, out of the other one and on from there (portal/g_portal.c). Not the
+	// grappling hook (its rope would cross the level) and not a thrown saber (sabers stay out of portals for now).
+	if ( !ent->isSaberEntity && ( !ent->classname || ( strcmp( ent->classname, "hook" ) && strcmp( ent->classname, "hook2" ) ) )
+		&& G_PortalTrajectory( ent, startPos, origin, &tr, passent, ent->clipmask,
+		d_projectileGhoul2Collision.integer ? G2TRFLAG_DOGHOULTRACE|G2TRFLAG_GETSURFINDEX|G2TRFLAG_THICK|G2TRFLAG_HITCORPSES : 0,
+		d_projectileGhoul2Collision.integer ? g_g2TraceLod.integer : 0 ) && passent == ent->r.ownerNum ) {
+		passent = ent->s.number;
 	}
 
 	if ( tr.startsolid || tr.allsolid ) {

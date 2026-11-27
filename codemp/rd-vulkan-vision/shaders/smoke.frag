@@ -36,17 +36,22 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[382];
 	vec4	lights[34];
 	vec4	ssr[7];
+	vec4	glass[10];		// the views of what lies behind thick glass (VK_GlassRows of vk_post.cpp, VK_GLASS_VEC4S)
 	vec4	blades[247];
-	vec4	smoke[357];
+	vec4	smoke[359];
 } globals;
 // the noise of the billows, a volume that repeats (vk_smoke.cpp Smoke_CreateNoise): red the billows, three octaves
 // that repeat after 4, 8 and 16 cells; green the lumps, 8 cells; blue and alpha bend the place the billows are read
 // at, 8 cells
 layout( set = 1, binding = 0 ) uniform sampler3D u_noise;
-layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
+layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel; or how far it is (row 358 x)
+layout( set = 3, binding = 0 ) uniform sampler2D u_begin;	// row 358 y: how far the rays begin (the smoke behind thick glass)
 
 #define S		globals.smoke
 #define W		globals.smoke
+// (row 358 x: u_depth holds how far the scene is, not its depth: the part of the smoke in front of the glass and the
+// part behind it are marched to distances of their own, vk_smoke.cpp VK_SmokeDraw)
+#define SCENE_IS_DISTANCE	( S[358].x > 0.5 )
 
 layout( location = 0 ) out vec4 o_color;
 
@@ -157,6 +162,24 @@ void main() {
 	vec3 dir = ray / rayLength;
 	float scene = SceneDistance( pixel ) * rayLength;
 	float from = 1e9, to = 0.0;
+	// a view behind glass (row 357): the ray begins where it passes the plane of the glass
+	float begin = 0.0;
+	vec4 cut = S[357];
+	if ( dot( cut.xyz, cut.xyz ) > 0.5 ) {
+		float facing = dot( cut.xyz, dir ), left = cut.w - dot( cut.xyz, eye );
+
+		begin = facing > 1e-5 ? max( left / facing, 0.0 ) : ( left > 0.0 ? scene : 0.0 );
+	}
+	// the part behind thick glass (row 358 y): from the glass on, where it is nearer than the scene
+	if ( S[358].y > 0.5 ) {
+		ivec2 last = textureSize( u_begin, 0 ) - 1;
+
+		begin = max( begin, texelFetch( u_begin, clamp( ivec2( pixel ), ivec2( 0 ), last ), 0 ).r * rayLength );
+		if ( begin >= scene - 1.0 ) {
+			o_color = vec4( 0.0 );
+			return;
+		}
+	}
 	int blobs = int( S[HEAD].x );
 
 	// The blobs this ray passes in front of the scene. When they are more than it counts, those that matter least go:
@@ -180,7 +203,7 @@ void main() {
 			continue;
 		}
 		float half_ = sqrt( r2 - off2 );
-		float enter = max( along - half_, 0.0 ), leave = min( along + half_, scene );
+		float enter = max( along - half_, begin ), leave = min( along + half_, scene );
 		if ( leave <= enter ) {
 			continue;
 		}

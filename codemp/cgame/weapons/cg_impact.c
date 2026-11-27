@@ -266,7 +266,13 @@ void CG_ImpactChips( const vec3_t at, const vec3_t normal, const impactChips_t *
 
 static void Impact_Show( impactKind_t kind, const vec3_t at, const vec3_t normal, float scale ) {
 	const impactLook_t	*look = &impactLooks[kind];
+	vec3_t				off;
 
+	// under water nothing sparks and no dust rises: the water takes the shot (level/cg_ripples.c)
+	VectorMA( at, 2.0f, normal, off );
+	if ( trap->CM_PointContents( off, 0 ) & ( CONTENTS_WATER | CONTENTS_SLIME ) ) {
+		return;
+	}
 	CG_GpuSparks( at, normal, look->sparks, look->count * scale );
 	if ( DistanceSquared( at, cg.refdef.vieworg ) > IMPACT_NEAR * IMPACT_NEAR ) {
 		return;

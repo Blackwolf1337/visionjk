@@ -132,6 +132,7 @@ static smokePuff_t	puffs[SMOKE_PUFFS];
 static qhandle_t	smokeShader;
 static vec3_t		trailAt[MAX_GENTITIES];		// where a rocket left its last puff
 static int			trailTime[MAX_GENTITIES];	// cg.time of it, 0: none yet
+static int			trailJump[MAX_GENTITIES];	// its EF_TELEPORT_BIT then
 static smokeBlade_t	blades[MAX_CLIENTS][MAX_SABERS][MAX_BLADES];
 static smokeCut_t	cuts[SMOKE_MAX_HOLES];
 static int			volumeChecked = -1;			// whether the engine has ext.R_SetSmoke
@@ -444,6 +445,13 @@ static void Smoke_Trails( void ) {
 				VectorCopy( cent->lerpOrigin, trailAt[es->number] );
 			}
 			trailTime[es->number] = cg.time;
+			trailJump[es->number] = es->eFlags & EF_TELEPORT_BIT;
+		}
+		// one that was moved at once, through a portal of the portal gun (game/portal/g_portal.c flips the bit): the
+		// trail goes on from where it is, not across the room between the two portals
+		if ( ( es->eFlags & EF_TELEPORT_BIT ) != trailJump[es->number] ) {
+			trailJump[es->number] = es->eFlags & EF_TELEPORT_BIT;
+			VectorCopy( cent->lerpOrigin, trailAt[es->number] );
 		}
 		// a puff every TRAIL_STEP units of the way since the last one
 		while ( ( moved = Distance( cent->lerpOrigin, trailAt[es->number] ) ) >= TRAIL_STEP ) {

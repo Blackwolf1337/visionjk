@@ -41,6 +41,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/level/cg_doors.h"
 #include "cgame/level/cg_gust.h"
 #include "cgame/level/cg_motes.h"
+#include "cgame/level/cg_ripples.h"
 #include "cgame/level/cg_smoke.h"
 #include "cgame/weapons/cg_boltlight.h"
 #include "cgame/weapons/cg_explosion.h"
@@ -2729,6 +2730,7 @@ Ghoul2 Insert End
 	CG_MinesRegister();
 
 	CG_RegisterCvars();
+	CG_PortalCaps();
 
 	CG_InitConsoleCommands();
 
@@ -2823,6 +2825,7 @@ Ghoul2 Insert End
 	CG_GustInit();
 	CG_MotesInit();
 	CG_DoorsInit();
+	CG_RipplesInit();
 	CG_SmokeInit();
 	CG_BoltSoundInit();
 	CG_ViewWeaponInit();

@@ -88,7 +88,14 @@ uint32_t VK_CurrentTransform( void ) {
 		}
 		t.model[15] = 1.0f;
 		VectorCopy( backEnd.ori.viewOrigin, t.viewOrigin );
-		if ( backEnd.viewParms.isPortal && !backEnd.projection2D ) {
+		// (the copy of a body moved through a portal of the portal gun, cgame/portal/cg_portal_draw.c, is cut a little
+		// behind the face of the partner, PORTAL_FACE_RELIEF: in the view through that portal it keeps that, as it is
+		// what the opening shows where it lies over the body that walks into it; the level is cut at the face)
+		const qboolean portalCopy = (qboolean)( ent && ent->cut && backEnd.viewParms.portalView
+			&& DotProduct( ent->cutPlane, backEnd.viewParms.portalPlane.normal ) > 0.999f
+			&& ent->cutPlane[3] < backEnd.viewParms.portalPlane.dist );
+
+		if ( backEnd.viewParms.isPortal && !backEnd.projection2D && !portalCopy ) {
 			// glClipPlane of rd-vanilla: clip anything behind the portal surface
 			VectorCopy( backEnd.viewParms.portalPlane.normal, t.clipPlane );
 			t.clipPlane[3] = backEnd.viewParms.portalPlane.dist;
@@ -906,6 +913,26 @@ static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkD
 	}
 	draw->pbr[0] = mat->roughness;
 	draw->pbr[1] = 0.0f;
+	// the distance of the solid level where the view has it (VK_SoftDepth): the glass does not show what stands in
+	// front of it as if it lay behind it (generic.frag GlassInFront)
+	if ( ( vk.worldReady && tr.worldDepthImage ) || ( vk.frontReady && tr.softDepthImage ) ) {
+		// (of the level alone where the view has that, VK_WorldDepth: its models move with what lies behind them)
+		draw->tex3 = ( vk.worldReady && tr.worldDepthImage ) ? tr.worldDepthImage->texnum : tr.softDepthImage->texnum;
+		draw->pbr[1] = 1.0f;
+		// and the picture of the faces of the glass the eye sees (VK_GlassMask): a pane of the level stays inside its own
+		if ( vk.glassReady && tr.glassDepthImage ) {
+			draw->tex4 = tr.glassDepthImage->texnum;
+			draw->pbr[1] = 2.0f;
+		}
+	}
+	// The view of the level that has views of what lies behind its thick glass (R_GlassViews, globals.glass): the
+	// distance of everything solid, its models too (vk.softDepth), beside that of the level alone (vk.worldDepth, so
+	// only with the depth pre-pass). Where a model stands in front of the glass, the glass reads the view of what lies
+	// behind its plane, not its copy of the frame (generic.frag GlassBehind; the entries of the two in the texture
+	// table are in globals.glass, VK_GlassRows: the draw has no place left for them).
+	draw->pbr3[0] = ( vk.frontReady && vk.worldReady && backEnd.viewParms.numGlassViews && !backEnd.viewParms.isPortal ) ? 1.0f : 0.0f;
+	// which round of the thick glass this is (vk_backend.cpp RB_DrawGlassRounds), told apart by the faces the eye sees
+	draw->pbr3[1] = draw->pbr[1] > 1.5f ? (float)rb_glassRound : 0.0f;
 	draw->pbr[2] = mat->ior;
 	draw->pbr[3] = (float)v_pbr->integer;
 	draw->pbr2[0] = mat->transmission;
@@ -922,8 +949,9 @@ static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkD
 	VectorCopy( mat->absorption, draw->material );
 	draw->material[3] = 0.0f;
 	VK_PbrProbes( draw );
-	// not blended: what it shows of the scene is in its colour. Its depth is written, so what is drawn after it and
-	// lies behind it is not drawn over it (R_SortGlass draws glass far to near, before the other transparent things)
+	// not blended: what it shows of the scene is in its colour. Its depth is written, so the glass drawn after it
+	// that lies behind it is not drawn over it (R_SortGlass draws glass far to near; a thin pane after the other
+	// transparent things, which it shows, thick glass before them)
 	*stateBits = GLS_DEPTHMASK_TRUE;
 	return qtrue;
 #endif
@@ -1576,7 +1604,10 @@ void RB_StageIteratorGeneric( void ) {
 
 			VK_InitDraw( &draw, transform, bones );
 			VK_DrawTess( &draw, VKP_DEPTH, GLS_DEPTHMASK_TRUE, cullMode, qfalse );
-			RB_MarkPrepassed( shader );
+			// (not the glass: its depth is put back after its faces are taken, vk_post.cpp VK_KeepDepth)
+			if ( !rb_glassPrepass ) {
+				RB_MarkPrepassed( shader );
+			}
 		}
 		return;
 	}

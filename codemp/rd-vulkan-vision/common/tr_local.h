@@ -716,6 +716,10 @@ typedef struct trRefdef_s {
 	int			numGrassPushes;			// VisionJK: ext.AddGrassPushToScene, vk_world.cpp VK_BindGrass
 	grassPush_t	*grassPushes;
 
+	int			numPortals;				// VisionJK: the portals of the portal gun (ext.AddPortalToScene, R_PortalViews)
+	struct scenePortal_s	*portals;
+	struct portalViewRecord_s	*portalViews;	// VisionJK: what the pictures of the views through them hold, PORTAL_VIEWS of them
+
 	int			numPolys;
 	struct srfPoly_s	*polys;
 
@@ -746,6 +750,19 @@ typedef struct fog_s {
 } fog_t;
 
 #define MAX_PROBES		32			// VisionJK: reflection probes of a level (R_CreateProbes)
+#define GLASS_VIEWS		3			// VisionJK: views of what lies behind thick glass a view of the level can have (R_GlassViews)
+#define PORTAL_VIEWS	6			// VisionJK: views through the portals of the portal gun a frame can have, nested ones too (R_PortalViews)
+#define PORTAL_DEPTH	3			// VisionJK: how deep views through portals nest: a portal seen through a portal seen through a portal
+// VisionJK: the views of their own a view of the level has drawn in its middle, each kept in a picture of its own
+// (vk.behind): first those behind glass, then those through portals
+#define SUB_VIEWS		( GLASS_VIEWS + PORTAL_VIEWS )
+#define MAX_SCENE_PORTALS	16		// VisionJK: portals of the portal gun a scene takes (ext.AddPortalToScene)
+// own body, talk balloon: not in the view of the level itself, nor in one of what lies behind its glass (the same eye).
+// A view through a portal of the portal gun shows them from the second step on (a portal seen through a portal): in
+// the first one the eye stands right at the exit, and the body that goes into the other portal stuck out in front of
+// it there (their word 2026-11-27)
+#define R_VIEW_HIDES_OWN()	( !tr.viewParms.isPortal || ( tr.viewParms.subView && !tr.viewParms.portalView ) \
+	|| ( tr.viewParms.portalView && tr.viewParms.portalDepth < 2 ) )
 #define PROBE_SIZE		128			//	pixels a face of one each way
 
 typedef struct viewParms_s {
@@ -757,6 +774,29 @@ typedef struct viewParms_s {
 	qboolean	isPuddle;			// VisionJK: the mirror at the floor of the puddles of RE_AddWet (R_PuddleView)
 	int			probeFace;			// VisionJK: 1 to 6 for a face of a reflection probe (R_ProbeViews), 0 else
 	int			probeIndex;			//	and which probe
+	// VisionJK: a view of its own drawn in the middle of the view of the level and kept in a picture (vk.behind): what
+	// lies behind a plane of thick glass, drawn once more for the glass to read where something stands in front of it
+	// (R_GlassViews), or what is seen through a portal of the portal gun (R_PortalViews, portalView). subView is 1 to
+	// SUB_VIEWS, the picture it is kept in + 1 (glass 1 to GLASS_VIEWS, portals after them); the part of the main view
+	// it is drawn for in subBounds (-1 to 1 across and up, as VK_BallBounds counts).
+	int			subView;
+	float		subBounds[4];
+	// A view through a portal: the portal it shows (its id, portalView_t) and the one it looks out of (the partner,
+	// whose own opening lies on the plane the view is cut at and is not drawn in it), and how the view it was made for
+	// (its parent: the view of the level, or a view through another portal) puts a point of the world onto the frame:
+	// its matrix to the clip space and its rect in pixels from the upper left (left, top, width, height). The opening
+	// reads its picture through them (vk_portal.cpp). portalDepth: 0 the view of the level, 1 a view through a portal
+	// it sees, 2 through a portal seen in that one, up to PORTAL_DEPTH.
+	qboolean	portalView;
+	int			portalId, portalExit;
+	int			portalDepth;
+	float		portalClip[16];
+	float		portalRect[4];
+	// The view of the level the views behind glass were made for: how many, their planes (xyz normal away from the eye,
+	// w distance) and parts.
+	int			numGlassViews;
+	vec4_t		glassPlanes[GLASS_VIEWS];
+	float		glassParts[GLASS_VIEWS][4];
 	int			frameSceneNum;		// copied from tr.frameSceneNum
 	int			frameCount;			// copied from tr.frameCount
 	cplane_t	portalPlane;		// clip anything behind this if mirroring
@@ -1185,6 +1225,9 @@ typedef struct trGlobals_s {
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
 	image_t					*ssrImage;			// VisionJK: the slot of the texture table that shows the picture of v_ssr (vk_post.cpp)
 	image_t					*softDepthImage;	// VisionJK: and the one that shows the distance of v_softParticles
+	image_t					*glassDepthImage;	// VisionJK: how far the nearest of glass and solid is, for glass (VK_GlassMask)
+	image_t					*behindImage[SUB_VIEWS];	// VisionJK: the slots of the pictures of the views of their own (R_GlassViews, R_PortalViews, VK_EndSubView)
+	image_t					*worldDepthImage;	// VisionJK: how far the solid level alone is, without its models, for glass (VK_WorldDepth)
 	image_t					*rtLightImage[2];	// VisionJK: slots of the texture table that show the masks of the shadows from the moving lights (vk_rt.cpp)
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
@@ -1228,6 +1271,9 @@ typedef struct trGlobals_s {
 	image_t					*probeImage;
 	int						probeNext;
 	qboolean				probesReady;
+	// VisionJK: how many of the pictures of the views through portals the view of the level of this scene and the views
+	// in it took so far (R_PortalViews)
+	int						portalViewsUsed;
 
 	trRefEntity_t			*currentEntity;
 	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
@@ -1448,6 +1494,9 @@ extern	liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];	// what RE_AddLiquid was 
 extern	int				r_numLiquids;
 extern	wetSpot_t		r_wet[WET_MAX_SPOTS];		// what RE_AddWet was given this frame
 extern	int				r_numWet;
+qboolean		R_IsThinGlass( const shader_t *shader );	// tr_main.cpp: all the glass of a shader is a thin pane (R_SortGlass)
+extern	wetSpot_t		r_ripples[WET_MAX_SURFACE];	//	and of those the rings on the water of the level (WET_SURFACE)
+extern	int				r_numRipples;
 extern	paintDecal_t	r_paint[PAINT_MAX_DECALS];	// what RE_AddPaint was given this frame
 extern	int				r_numPaint;
 
@@ -1756,6 +1805,7 @@ WORLD MAP
 void R_AddBrushModelSurfaces( trRefEntity_t *e );
 void R_AddWorldSurfaces( void );
 qboolean R_inPVS( const vec3_t p1, const vec3_t p2, byte *mask );
+qboolean R_PointMarked( const vec3_t p );
 
 
 /*
@@ -1856,6 +1906,7 @@ void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float
 void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
 void RE_AddGrassPushToScene( const vec3_t origin, float radius, float force );
 void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );
+void RE_AddPortalToScene( const portalView_t *portal );
 // VisionJK: bones placed by the cgame (G2_API.cpp, ext.G2_BoneNumber and ext.G2_SetBonesWorld)
 int G2API_VJK_BoneNumber( void *ghoul2, int modelIndex, const char *boneName, int *parent );
 qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin,
@@ -2110,9 +2161,27 @@ typedef struct drawTris2DCommand_s {
 
 // all of the information needed by the back end must be
 // contained in a backEndData_t.
+// VisionJK: a portal of the portal gun in the scene (ext.AddPortalToScene), as the cgame gave it
+typedef struct scenePortal_s {
+	portalView_t	view;
+} scenePortal_t;
+
+// VisionJK: what each picture of a view through a portal holds in the scene (R_PortalViews): the view through which
+// portal, made for which view. An opening drawn in a view (vk_portal.cpp) shows the picture made for that view through
+// that portal, if there is one; a picture belongs to one place in the tree of views, not to a portal.
+typedef struct portalViewRecord_s {
+	int				sceneNum;		// tr.frameSceneNum of the scene it was made in, the record is of that scene alone
+	int				parent;			// -1: made for the view of the level (and its views behind glass, at the same eye),
+									//	else the picture of the view through a portal it was made for
+	int				portalId;
+	int				depth;			// viewParms_t portalDepth of the view
+} portalViewRecord_t;
+
 typedef struct backEndData_s {
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 	dlight_t	dlights[MAX_DLIGHTS];
+	scenePortal_t	portals[MAX_SCENE_PORTALS];
+	portalViewRecord_t	portalViews[PORTAL_VIEWS];
 	saberBlade_t	saberBlades[MAX_SABER_BLADES];
 	grassPush_t	grassPushes[MAX_GRASS_PUSHES * 4];
 	trRefEntity_t	entities[MAX_REFENTITIES];

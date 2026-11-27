@@ -280,6 +280,8 @@ qboolean	G_PlInSameDim( const gentity_t *a, const gentity_t *b );
 qboolean	G_canInterferWith( int a, int b );
 void		G_TempUnlink( int clientNum );
 void		JP_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask, int capsule, int traceFlags, int useLod );
+// VisionJK: JP_Trace with holes in the world, the moves of a player through the portals of the portal gun (g_active.c)
+void		JP_TraceHoles( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask, const traceHole_t *holes, int numHoles );
 qboolean	JP_Untargetable( const gentity_t *ent );
 qboolean	JP_DamageBlocked( gentity_t *targ, gentity_t *attacker );
 

@@ -1193,6 +1193,7 @@ static const jpCommand_t jpAdminCommands[] = {
 	{ "amtest",			Cmd_amtest_f,		qfalse },
 	{ "amweather",		Cmd_amweather_f,	qfalse },
 	{ "amfirerate",		Cmd_amfirerate_f,	qtrue },
+	{ "amportalgun",	Cmd_amportalgun_f,	qtrue },
 	{ "amforceteam",	Cmd_amforceteam_f,	qtrue },
 	{ "amkillvote",		Cmd_amkillvote_f,	qtrue },
 	{ "amlockteam",		Cmd_amlockteam_f,	qtrue },

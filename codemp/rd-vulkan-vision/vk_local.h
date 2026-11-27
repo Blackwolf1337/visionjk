@@ -78,8 +78,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal
 #define VK_SMOKE_LIGHTS		4		// moving lights that light the smoke
 #define VK_SMOKE_BLOB_ROWS	3
-#define VK_SMOKE_VEC4S		( VK_WET_HEADER + 1 + SMOKE_MAX_BLOBS * VK_SMOKE_BLOB_ROWS + SMOKE_MAX_HOLES * 2 + VK_SMOKE_LIGHTS * 2 + 1 )	// shaders/smoke.frag: the view, the counts, three rows a blob, two a hole and a light, how many pixels of the frame one of its picture stands for
+#define VK_SMOKE_VEC4S		( VK_WET_HEADER + 1 + SMOKE_MAX_BLOBS * VK_SMOKE_BLOB_ROWS + SMOKE_MAX_HOLES * 2 + VK_SMOKE_LIGHTS * 2 + 3 )	// shaders/smoke.frag: the view, the counts, three rows a blob, two a hole and a light, how many pixels of the frame one of its picture stands for
+#define VK_RIPPLE_SURFACES	4		// heights of water a view has rings on
+#define VK_RIPPLE_ROWS		5
+#define VK_RIPPLE_VEC4S		( VK_WET_HEADER + 1 + VK_RIPPLE_SURFACES + WET_MAX_SURFACE * VK_RIPPLE_ROWS )	// shaders/ripple.frag: the view, the counts, a row a surface, five a ring
+#define VK_GLASS_VEC4S		( 1 + GLASS_VIEWS * 3 )		// generic.frag GlassBehind: how many, then three rows a view (VK_GlassRows)
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
+#define VK_PORTAL_ROWS		10		// shaders/portal.frag: ten rows a portal
+#define VK_PORTAL_VEC4S		( VK_WET_HEADER + 1 + MAX_SCENE_PORTALS * VK_PORTAL_ROWS )	// the view, the counts, the portals (VK_PortalDraw)
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
@@ -91,8 +97,12 @@ typedef struct vkGlobals_s {	// once per frame
 	float		rt[VK_RT_VEC4S][4];			// what the passes that trace rays were given (vk_rt.cpp)
 	float		lights[VK_LIGHT_VEC4S][4];	// light to judge materials by, see VK_LightRows()
 	float		ssr[7][4];					// v_ssr: the picture of the level of the frame before, see VK_SsrPrep()
+	float		glass[VK_GLASS_VEC4S][4];	// the views of what lies behind thick glass, see VK_GlassRows()
 	float		blades[VK_BLADE_VEC4S][4];	// the saber blades drawn in 3D, see VK_SaberBlades()
 	float		smoke[VK_SMOKE_VEC4S][4];	// the smoke as a volume, see VK_SmokeDraw()
+	float		ripple[VK_RIPPLE_VEC4S][4];	// the rings on the water of the level, see VK_RippleDraw()
+	float		glassDebug[VK_WET_HEADER + 1][4];	// v_glassDebug: the view as VK_ViewRows() gives it, then x what is shown, see VK_GlassDebugDraw()
+	float		portal[VK_PORTAL_VEC4S][4];	// the openings of the portals of the portal gun, see VK_PortalDraw()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -288,6 +298,8 @@ typedef struct vkFrame_s : vkDeviceFrame_t {
 	vkProbe_t		probe[VK_MAX_FLARES];
 	int				numProbes;
 	int				numProbesCopied;	// that many have their copy in the commands of the frame
+	int				globalsUsed;		// versions of the globals of this frame (VK_GlobalsCommit)
+	uint32_t		globalsOffset;		//	and where the one is that what is recorded now reads
 } vkFrame_t;
 
 #define VK_MAX_STAT_SHADERS	64
@@ -391,9 +403,15 @@ extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
 extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
 extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
+// vk_backend.cpp: a bit of an effect at origin is drawn by the run of the list that is on (what lies behind thick glass
+// is drawn before it, the rest after)
+qboolean	RB_FxWanted( const vec3_t origin );
+extern int		rb_fxPass;
 extern int		rb_viewSerial;		// vk_backend.cpp: counts the views that are drawn
 extern int		rb_surfaceDlights;	// vk_backend.cpp: the moving lights of the surface being added (R_GhoulSurfaceDone)
 extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
+extern qboolean	rb_glassPrepass;	// vk_backend.cpp: the run of the depth of the glass (RB_GlassPrepass)
+extern int		rb_glassRound;		// vk_backend.cpp RB_DrawGlassRounds: 1 the thick glass behind other glass, 2 the nearest, 0 all
 extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
 qboolean	RB_ShaderPrepassed( const shader_t *shader );
 void		RB_MarkPrepassed( const shader_t *shader );
@@ -402,6 +420,9 @@ extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
 extern cvar_t	*v_softParticles;	// vk_post.cpp
 extern cvar_t	*v_litParticles;	// vk_post.cpp
+extern cvar_t	*v_portalViews;		// vk_post.cpp: how many portals show the view through them (R_PortalViews)
+extern cvar_t	*v_portalDebug;		// vk_post.cpp
+extern cvar_t	*v_portalDepth;		// vk_post.cpp: how deep views through portals nest
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -490,6 +511,8 @@ void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
 void		VK_SoftDepth( void );
+void		VK_GlassMask( void );
+void		VK_WorldDepth( void );
 
 // vk_sparks.cpp (v_gpuSparks)
 extern cvar_t	*v_gpuSparks;
@@ -503,22 +526,51 @@ void		VK_ResumeScene( void );
 // vk_smoke.cpp: smoke as a volume (ext.SetSmoke)
 void		VK_SmokeInit( void );
 void		VK_SmokeShutdown( void );
-void		VK_SmokeDraw( void );
+#define SMOKE_BEHIND_GLASS	1	// VK_SmokeDraw: the part behind the thick glass, before the glass copies the frame
+#define SMOKE_IN_FRONT		2	//	the part in front of it, after everything transparent
+void		VK_SmokeDraw( int part );
+void		VK_KeepThickGlass( void );
+qboolean	VK_KeepDepth( void );
+void		VK_PutBackDepth( void );
+// v_glassDebug: the layers thick glass is drawn in, in colours (vk_glass.cpp)
+void		VK_GlassDebugInit( void );
+void		VK_GlassDebugShutdown( void );
+void		VK_GlassDebugDraw( void );
+// the rings on the water of the level (vk_ripple.cpp)
+void		VK_RippleInit( void );
+void		VK_RippleShutdown( void );
+#define RIPPLE_BEHIND_GLASS	1	// VK_RippleDraw: the rings seen through thick glass, before it takes its copy of the frame
+#define RIPPLE_IN_FRONT		2	//	the others, after everything transparent
+void		VK_RippleDraw( int part );
+// the openings of the portals of the portal gun with the views through them (vk_portal.cpp)
+void		VK_PortalInit( void );
+void		VK_PortalShutdown( void );
+void		VK_PortalDraw( void );
 void		RE_SetSmoke( const smokeVolume_t *smoke );
 qboolean	RE_EmitSparks( const sparkBurst_t *burst );
-void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
+void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse, qboolean early = qfalse );
+// which blades of the frame stand behind thick glass and are drawn before it (vk_backend.cpp RB_GlassLayers)
+void		VK_SetEarlyBlades( const byte *early, int count );
+void		VK_GetEarlyBlades( byte *early );
 void		VK_Bloom( void );		// (one of the steps after the view of the level, see VK_BeginPostSteps)
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
 void		VK_ScreenFx( const screenEffect_t *fx );
 void		VK_CaptureFrame( void );
 void		VK_DrawLiquids( void );
+// the light of the level at a point, the light of a lamp lit room where the level has no grid
+void		VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir );
 qboolean	VK_HasWet( void );
 void		VK_DrawWet( void );
 // the first nine rows of the passes over the view of the level (shaders/scene.glsl, ball.glsl), and the view as
 // VK_ViewportAndScissor() takes it
 void		VK_ViewRows( float ( *rows )[4], int *viewport );
 qboolean	VK_BeginPuddle( void );
+// a view of its own (behind thick glass, R_GlassViews; through a portal, R_PortalViews): into the frame, for its part
+// of it, and kept in its picture
+qboolean	VK_BeginSubView( void );
+void		VK_EndSubView( void );
+void		VK_GlassRows( void );
 void		VK_EndPuddle( void );
 qboolean	VK_BeginProbe( void );
 void		VK_EndProbe( int face, int probe, int numProbes );
@@ -609,6 +661,14 @@ void		VK_EndTarget( void );
 void		VK_MakeFrame( void );
 // the buffers of the frame and the texture table are what the draws read: at the start of a frame, and after VK_AddTarget()
 void		VK_BindFrameSets( void );
+// The numbers of the frame (vkGlobals_t) a draw or a pass reads are those that were current when it was recorded,
+// not those at the end of the frame: a pass that changes them takes VK_GlobalsEdit (a copy on the CPU: never read the
+// mapped memory of the device), writes, and VK_GlobalsCommit makes that the version of what is recorded from then on.
+// VK_GlobalsAll writes a part of the copy into every version of the frame (the light styles, known at its end).
+#define VK_GLOBALS_VERSIONS	64
+vkGlobals_t	*VK_GlobalsEdit( void );
+void		VK_GlobalsCommit( void );
+void		VK_GlobalsAll( size_t offset, size_t bytes );
 // viewport and scissor of the draws that follow, the scissor cut to the frame
 void		VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth, float maxDepth );
 // a rectangle of the target that is drawn into, cut to the frame: depth to 1 and stencil to 0, or the color
@@ -635,8 +695,11 @@ const byte	*VK_ReadFrame( int x, int y, int width, int height );
 // v_gpuTimes: a timestamp in the commands of the frame, the time since the mark before goes to name (a string that
 // stays: the names are kept as pointers until the frame is read back). Nothing on a device without timestamps.
 void		VK_GpuMark( const char *name );
+// a place of the commands a lost device says it reached (NVIDIA), name a string that stays (vk_cmd.cpp, vk_main.cpp VK_Fatal)
+void		VK_Checkpoint( const char *name );
 qboolean	VK_GpuFirstMark( void );
 void		VK_LevelFragments( qboolean begin );
+qboolean	VK_PauseLevelFragments( void );
 void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.
@@ -681,12 +744,15 @@ void		VK_TonemapPass( const float *parm );
 void		VK_SsrPrepPass( const float *parm );
 // v_softParticles: the distance of the solid level into vk.softDepth (shaders/softdepth.frag), parm as VK_SsrPrepPass
 void		VK_SoftDepthPass( const float *parm );
+void		VK_GlassDepthPass( const float *parm );	// the same into vk.glassDepth
+void		VK_WorldDepthPass( const float *parm );	// and into vk.worldDepth
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;
 void		VK_AddTarget( vkTarget_t *source, vkAdd_t how );
 // all of source into dest, which is at least as large, to its upper left corner. No target is begun.
 void		VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest );
+void		VK_CopyTargetRect( vkTarget_t *source, vkTarget_t *dest, const int *area );
 #ifndef RD_VISION_GLES
 void		VK_CopyTargetArea( vkTarget_t *source, vkTarget_t *dest, int margin );
 #endif

@@ -594,6 +594,11 @@ typedef struct pmove_s {
 	//rww - bg entitystate access method
 	bgEntity_t	*baseEnt; //base address of the entity array (g_entities or cg_entities)
 	int			entSize; //size of the struct (gentity_t or centity_t) so things can be dynamic
+
+	// VisionJK: the portals of the portal gun this player walks through (game/portal/bg_portal.h), NULL for one who
+	// does not (VS_CAPS_PORTAL and V_CAPS_PORTAL); the trace callback of his moves has holes where they are open
+	const struct bgPortal_s	*portals;
+	int			numPortals;
 } pmove_t;
 
 
@@ -1774,6 +1779,11 @@ void BG_G2WalkerHeadAngles( void *ghoul2, int time, const vec3_t angles );
 // prediction of a legacy client and a legacy server both expect. The game and the cgame each have their own.
 #define VS_CAPS_WALKER		1024
 #define V_CAPS_WALKER		16
+// VisionJK: the portal gun (portal/bg_portal.h) goes through its portals without a jump only on a server whose engine
+// cuts the holes into the traces of the moves (vs_caps bit 4) and for a player whose cgame predicts it (v_caps bit 5);
+// anybody else is put through by the server when he touches an opening, as a stock teleporter does
+#define VS_CAPS_PORTAL		16
+#define V_CAPS_PORTAL		32
 qboolean BG_WalkerSteps( int pilot );
 // VisionJK: how many times as fast the weapons of this player fire (/amfirerate of an admin for himself; 1 as they always
 // did). The game and the cgame each have their own: the game keeps it in his jpClient_t, his cgame hears it from the

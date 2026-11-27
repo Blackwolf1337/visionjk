@@ -172,6 +172,16 @@ typedef struct sphere_s {
 	vec3_t		offset;
 } sphere_t;
 
+// VisionJK: a hole of a trace with holes (traceHole_t, q_shared.h) as CM_Trace works it out for the trace at hand:
+// the box is inside the hole for the fractions from tin to tout (none where tout < tin), and plane is the side of the
+// hole it meets at tout, backoff how much of a fraction it stops short of that side
+typedef struct cmTraceHole_s {
+	vec3_t		forward;	// axis 0 of the hole, out of the wall
+	float		tin, tout;
+	float		backoff;
+	cplane_t	plane;
+} cmTraceHole_t;
+
 typedef struct traceWork_s { //rwwRMG - modified
 	vec3_t		start;
 	vec3_t		end;
@@ -197,6 +207,10 @@ typedef struct traceWork_s { //rwwRMG - modified
 	cplane_t		*clipplane;
 	bool			startout;
 	bool			getout;
+
+	// VisionJK: the holes of a trace with holes (CM_BoxTraceHoles), 0 for any other trace
+	const cmTraceHole_t	*holes;
+	int				numHoles;
 
 } traceWork_t;
 

@@ -81,6 +81,12 @@ typedef struct vkTarget_s {		// something to render into
 	VkFormat		format;
 	VkImageLayout	layout;
 	int				width, height;
+	// What shows it to a pass (a set of the layout of vk.postSet), and for a depth target the view of its depth alone
+	// that set holds. The set is made once and kept in a variable of its own (the pool has no room for new ones each
+	// time the targets are made anew); it is given to the target when the target is made, and it goes with the target
+	// when targets trade places (the puddle view), so a pass that reads vk.depth.readSet reads the depth being drawn.
+	VkDescriptorSet	readSet;
+	VkImageView		readView;
 } vkTarget_t;
 
 typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the device, see vkImage_t
@@ -90,6 +96,7 @@ typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the
 } vkDeviceImage_t;
 
 #define VK_GPU_MARKS		48			// timestamps in one frame
+#define VK_FRAGMENT_PARTS	2			// queries the count of the fragments of the level may be spread over
 
 typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkCommandBuffer	cmd;
@@ -104,9 +111,11 @@ typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkQueryPool		timestamps;
 	const char		*markNames[VK_GPU_MARKS];	// what ends at that mark, [0] is the start of the frame
 	int				numMarks;
-	// and how often the fragment shader ran while the level was drawn (VK_LevelFragments)
+	// and how often the fragment shader ran while the level was drawn (VK_LevelFragments), in up to
+	// VK_FRAGMENT_PARTS queries
 	VkQueryPool		fragments;
 	qboolean		fragmentsActive, fragmentsUsed;
+	int				fragmentsParts;		// queries of it that hold a part of the count (a pass in between pauses it)
 } vkDeviceFrame_t;
 
 // ------------------------------------------------------------------------------------------------------------
@@ -167,13 +176,14 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
 	qboolean					depthReadable;		// the device lets its format be read in a shader
 	qboolean					rayTracing;			// acceleration structures and ray queries are on (vk_rt.cpp)
+	qboolean					checkpoints;		// VK_NV_device_diagnostic_checkpoints: a lost device says where it was (VK_Checkpoint)
 	qboolean					deviceAddress;		// buffers have device addresses (the skinning of the players for their shadows, vk_rt.cpp)
-	VkImageView					depthView;			// of the depth alone, without the stencil
 	VkDescriptorSet				depthSet;
 	// v_wetMirror: the view mirrored at the floor of the puddles (VK_BeginPuddle), traded with color, colorMS, depth
 	// and depthMS while it is drawn; the wet places read reflect through reflectSet
 	vkTarget_t					reflect, reflectMS, reflectDepth, reflectDepthMS;
 	VkDescriptorSet				reflectSet;
+	VkDescriptorSet				reflectDepthSet;	// its depth, for the passes that read the depth of the view drawn
 	int							reflectFrame;		// frameCount of the view that was drawn last
 	float						reflectHeight;		// the height of its floor
 	// the faces of the reflection probes of the level (VK_BeginProbe, VK_EndProbe): drawn into probeColor and
@@ -238,13 +248,60 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				softSet;			// it as a post set (the bounces of the sparks, vk_sparks.cpp)
 	VkShaderModule				softDepthShader;
 	VkPipeline					softDepthPipeline;
-	qboolean					softReady;			// drawn for the view that is being drawn
+	qboolean					softReady;			// drawn for the view that is being drawn, for its soft sprites
+	qboolean					frontReady;			//	and it holds the distance of everything solid of that view (glass asks it what stands in front)
+	// The same with the glass of the view in it, taken after its depth alone is drawn (vk_backend.cpp RB_GlassPrepass,
+	// vk_post.cpp VK_GlassMask): the face of each pane the eye sees. A pane moves the picture it shows inside that
+	// face and not at its border (generic.frag GlassRoom).
+	vkTarget_t					glassDepth;
+	// a copy of it as the first glass of the view, the thick glass, made it: how far the smoke in front of the glass
+	// goes (vk_smoke.cpp VK_SmokeDraw)
+	vkTarget_t					thickDepth;
+	VkDescriptorSet				thickSet;
+	qboolean					thickReady;
+	VkDescriptorSet				glassSet;			// it as a post set (v_glassDebug)
+	qboolean					glassReady;
+	int							glassShown;
+	// And the solid level alone, taken right after its depth pre-pass, before any model is drawn (vk_post.cpp
+	// VK_WorldDepth): by it glass tells how far what it shows is. With the models in it a player behind a pane was
+	// moved further than the wall behind him, and the place he left showed as a pale shape of him.
+	vkTarget_t					worldDepth;
+	qboolean					worldReady;
+	int							worldShown;
+	// The pictures of the views of their own (viewParms_t subView), each drawn into the frame in the middle of the view
+	// of the level and kept here (VK_BeginSubView). First GLASS_VIEWS of what lies behind a plane of thick glass, where
+	// something stands in front of it, cut at the plane (R_GlassViews of tr_main.cpp): glass reads it where its copy of
+	// the frame shows what stands in front of it. Then up to PORTAL_VIEWS of what is seen through a portal of the portal
+	// gun, nested ones too (R_PortalViews, v_portalViews of them are made): its opening reads it (vk_portal.cpp).
+	vkTarget_t					behind[SUB_VIEWS];
+	// The targets a view of its own is drawn into, in the size, the formats and the samples of the frame: they trade
+	// places with color, depth and their samples while it is drawn (VK_BeginSubView), in the middle of the view of the
+	// level, after its shadows were traced.
+	vkTarget_t					sub, subMS, subDepth, subDepthMS;
+	VkDescriptorSet				subSet, subDepthSet;
+	int							behindShown[SUB_VIEWS];	// the entry of the texture table that shows each, -1: none yet
+	int							behindFrame[SUB_VIEWS];	// the frame each was drawn in
+	// of a view through a portal, what VK_EndSubView kept with its picture: the portal it shows (its id), how the view
+	// it was made for (the view of the level or a view through another portal) puts a point onto the frame
+	// (viewParms_t portalClip, portalRect), and the part of the frame that was copied (left, top, right, bottom in pixels)
+	int							behindId[SUB_VIEWS];
+	float						behindClip[SUB_VIEWS][16];
+	float						behindRect[SUB_VIEWS][4];
+	int							behindArea[SUB_VIEWS][4];
+	// while such a view is drawn nothing is drawn outside its part of the frame: left, top, right, bottom in pixels
+	qboolean					limitOn;
+	int							limit[4];
+	qboolean					solidReady;			// it holds the solid level of the view whose list was drawn last: for the
+													// passes at the end of that view that must not stop at glass, which
+													// writes its depth (the saber blades, the rings on water)
 	int							softShown;			// the slot of the texture table it was written into, -1: none
 	VkPipeline					ssrPrepPipeline;
 	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)
 	VkPipeline					saberPipeline;
 	VkShaderModule				saberPortalShader;	// the same in a mirror or portal
 	VkPipeline					saberPortalPipeline;
+	VkShaderModule				saberEarlyShader;	// the blades behind thick glass, before it is drawn
+	VkPipeline					saberEarlyPipeline;
 	VkShaderModule				saberGlowShader;	// and into the buffer of r_DynamicGlow
 	VkPipeline					saberGlowPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
@@ -294,6 +351,10 @@ typedef struct vkDeviceState_s {	// see vkState_t
 
 // vk_main.cpp
 void		VK_Fatal( const char *what, VkResult result );
+// The last places of the commands a lost device had reached (NVIDIA, VK_NV_device_diagnostic_checkpoints): VK_Checkpoint
+// marks them with a name (a string that stays, the device keeps the pointer), VK_Fatal prints the last ones.
+extern PFN_vkCmdSetCheckpointNV		qvkCmdSetCheckpointNV;
+extern PFN_vkGetQueueCheckpointDataNV	qvkGetQueueCheckpointDataNV;
 qboolean	VK_SwapIntervalChanged( void );
 void		VK_CreateSwapchain( void );
 void		VK_DestroySwapchain( void );
@@ -313,6 +374,7 @@ void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat forma
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
+VkImageAspectFlags	VK_TargetAspect( VkFormat format );
 // target is about to be read: the frame, its depth or its glow is made of its samples if it is stale (vk_cmd.cpp)
 void		VK_FrameRead( VkCommandBuffer cmd, vkTarget_t *target );
 void		VK_ShowImage( int slot, VkImageView view, qboolean mipmapped );
@@ -342,7 +404,9 @@ qboolean	VK_RT_Ready( void );
 qboolean	VK_RT_Rays( void );
 // the channel of the mask of the shadows from the moving lights for dl (1 to 4, 0: none) and its slot in the texture table
 int			VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot );
+void		VK_RT_FrameRows( struct vkGlobals_s *globals );
 void		VK_RT_Pass( void );
+void		VK_RT_SubPass( void );
 void		VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface );
 void		VK_RT_ModelsChanged( void );
 void		VK_RT_SunChanged( void );

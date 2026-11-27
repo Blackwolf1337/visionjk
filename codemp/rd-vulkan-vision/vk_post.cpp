@@ -41,6 +41,9 @@ cvar_t	*v_exposure;
 cvar_t	*v_ssr;
 cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
+cvar_t	*v_portalViews;
+cvar_t	*v_portalDebug;
+cvar_t	*v_portalDepth;
 
 // after a pass of its own in the middle of a view: the sets of the frame, the state and the viewport of the scene again
 void VK_ResumeScene( void ) {
@@ -66,6 +69,16 @@ void VK_InitPost( void ) {
 		"Smoke, dust and fire of the effects fade out where they meet walls and the floor and right in front of the eye, instead of cutting into them with a hard edge. Vulkan only. 0: off. Above 1: the units over which they fade (1: 10)" );
 	v_litParticles = ri.Cvar_Get( "v_litParticles", "1", CVAR_ARCHIVE_ND,
 		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor, and glow around a blade. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
+	v_portalViews = ri.Cvar_Get( "v_portalViews", "6", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"How many views through the portals of the portal gun a frame draws, the nearest first and those seen inside "
+		"another portal too (0 to 6); each keeps a picture the size of the window. 0: only their rims and swirls. Vulkan "
+		"only, takes effect after vid_restart" );
+	v_portalDepth = ri.Cvar_Get( "v_portalDepth", "3", CVAR_ARCHIVE_ND,
+		"How deep the views through the portals of the portal gun nest (1 to 3): 1 a portal shows what is behind it, 2 also "
+		"a portal seen through it, 3 one seen through that. Each costs a view of its own (v_portalViews of them in all)" );
+	v_portalDebug = ri.Cvar_Get( "v_portalDebug", "0", 0,
+		"The portals of the portal gun. 1: which got a view through them, printed once a second. 2: their openings show the "
+		"part of the frame their view was drawn for as a frame of their colour" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
 }
@@ -81,12 +94,16 @@ sprites drawn after it in this view read it (generic.frag SoftFade, the draws vk
 */
 void VK_SoftDepth( void ) {
 #ifndef RD_VISION_GLES
+	VK_Checkpoint( "the distance for soft sprites" );
 	float	rows[VK_WET_HEADER][4];
 	float	parm[4];
 	int		viewport[4];
 
 	vk.softReady = qfalse;
-	if ( !vk.frame || !v_softParticles->integer || !vk.depthReadable || !vk.softDepth.image || !tr.softDepthImage ) {
+	vk.frontReady = qfalse;
+	// (for the soft sprites, or for glass that has views of what lies behind it, generic.frag GlassBehind)
+	if ( !vk.frame || ( !v_softParticles->integer && !backEnd.viewParms.numGlassViews ) || !vk.depthReadable || !vk.softDepth.image
+		|| !tr.softDepthImage ) {
 		return;
 	}
 	VK_ViewRows( rows, viewport );
@@ -100,11 +117,201 @@ void VK_SoftDepth( void ) {
 		VK_ShowTarget( (int)tr.softDepthImage->texnum, &vk.softDepth );
 		vk.softShown = (int)tr.softDepthImage->texnum;
 	}
-	vk.softReady = qtrue;
+	vk.softReady = (qboolean)( v_softParticles->integer != 0 );
+	vk.frontReady = qtrue;
 
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	// the shaders that draw geometry have other sets and other state
 	VK_ResumeScene();
+#endif
+}
+
+// the faces of the first glass of the view, the thick glass (VK_GlassMask), kept for the smoke in front of it, which comes
+// after vk.glassDepth was made again for the thin panes (vk_smoke.cpp VK_SmokeDraw)
+void VK_KeepThickGlass( void ) {
+#ifndef RD_VISION_GLES
+	if ( !vk.frame || !vk.glassReady || !vk.thickDepth.image ) {
+		return;
+	}
+	VK_EndTarget();
+	VK_CopyTarget( &vk.glassDepth, &vk.thickDepth );
+	// (the copy hands its source back for drawing; the smoke and the rings behind the glass and v_glassDebug read it)
+	VK_TargetLayout( vk.frame->cmd, &vk.glassDepth, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vk.thickReady = qtrue;
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_ResumeScene();
+#endif
+}
+
+/*
+===============
+VK_KeepDepth / VK_PutBackDepth
+
+Round the depth of the thick glass (vk_backend.cpp RB_GlassPrepass, read by VK_GlassMask for the faces the eye sees):
+the depth of the frame as the solid level left it is kept in that of the views of their own (vk.subDepth, free once
+the views of what lies behind glass are drawn) and put back after the mask. With the depth of all the glass in it,
+each pane was drawn only where it is the nearest (its depth was there already, so it was tested for being equal to
+it), and glass behind glass was gone: water behind a light shaft made glass (their word 2026-11-27, "mach das mit dem
+wasser hinter der säule"). Glass is drawn far to near (tr_main.cpp R_SortGlass) and writes its depth as it goes.
+===============
+*/
+static void VK_CopyDepth( vkTarget_t *source, vkTarget_t *dest ) {
+	VkCommandBuffer	cmd = vk.frame->cmd;
+	VkImageCopy		region;
+
+	memset( &region, 0, sizeof( region ) );
+	region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_TargetAspect( source->format );
+	region.srcSubresource.layerCount = region.dstSubresource.layerCount = 1;
+	region.extent.width = (uint32_t)source->width;
+	region.extent.height = (uint32_t)source->height;
+	region.extent.depth = 1;
+	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	VK_TargetLayout( cmd, dest, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	qvkCmdCopyImage( cmd, source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dest->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+	VK_TargetLayout( cmd, dest, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+}
+
+// the depth the passes draw into: of the samples with several a pixel
+static void VK_DepthPair( vkTarget_t **frame, vkTarget_t **kept ) {
+	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
+
+	*frame = multi ? &vk.depthMS : &vk.depth;
+	*kept = multi ? &vk.subDepthMS : &vk.subDepth;
+}
+
+qboolean VK_KeepDepth( void ) {
+#ifndef RD_VISION_GLES
+	vkTarget_t	*frame, *kept;
+
+	VK_DepthPair( &frame, &kept );
+	if ( !vk.frame || !kept->image || !frame->image ) {
+		return qfalse;
+	}
+	const qboolean counting = VK_PauseLevelFragments();
+
+	VK_EndTarget();
+	VK_CopyDepth( frame, kept );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_ResumeScene();
+	if ( counting ) {
+		VK_LevelFragments( qtrue );
+	}
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
+void VK_PutBackDepth( void ) {
+#ifndef RD_VISION_GLES
+	vkTarget_t	*frame, *kept;
+
+	VK_DepthPair( &frame, &kept );
+	const qboolean counting = VK_PauseLevelFragments();
+
+	VK_EndTarget();
+	VK_CopyDepth( kept, frame );
+	// (the depth of a pixel, made of its samples, is made again when it is read next)
+	if ( frame == &vk.depthMS ) {
+		vk.depthStale = qtrue;
+	}
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_ResumeScene();
+	if ( counting ) {
+		VK_LevelFragments( qtrue );
+	}
+#endif
+}
+
+/*
+===============
+VK_GlassMask
+
+Called once the depth of the glass that is drawn next lies in the depth of the view (vk_backend.cpp RB_GlassPrepass):
+how far the nearest thing is at each pixel, glass or solid, into vk.glassDepth, shown in the texture table
+(tr.glassDepthImage). A pane finds its own visible face in it: where the nearest thing is as far as its surface
+(generic.frag GlassOwn).
+===============
+*/
+void VK_GlassMask( void ) {
+#ifndef RD_VISION_GLES
+	VK_Checkpoint( "the faces of the glass" );
+	float	rows[VK_WET_HEADER][4];
+	float	parm[4];
+	int		viewport[4];
+
+	vk.glassReady = qfalse;
+	if ( !vk.frame || !vk.depthReadable || !vk.glassDepth.image || !tr.glassDepthImage ) {
+		return;
+	}
+	VK_ViewRows( rows, viewport );
+	parm[0] = rows[6][3];
+	parm[1] = rows[7][3];
+	parm[2] = parm[3] = 0.0f;
+	// (the count of the fragments of the level runs in its render pass: stopped while that is left)
+	const qboolean counting = VK_PauseLevelFragments();
+
+	VK_EndTarget();
+	VK_GlassDepthPass( parm );
+	if ( vk.glassShown != (int)tr.glassDepthImage->texnum ) {
+		VK_ShowTarget( (int)tr.glassDepthImage->texnum, &vk.glassDepth );
+		vk.glassShown = (int)tr.glassDepthImage->texnum;
+	}
+	vk.glassReady = qtrue;
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	// the shaders that draw geometry have other sets and other state
+	VK_ResumeScene();
+	if ( counting ) {
+		VK_LevelFragments( qtrue );
+	}
+#endif
+}
+
+/*
+===============
+VK_WorldDepth
+
+Called right after the depth pre-pass of a view that has thick glass (vk_backend.cpp), when the depth holds the solid
+level and nothing else: how far it is at each pixel, into vk.worldDepth, shown in the texture table
+(tr.worldDepthImage). Glass moves what it shows by how far that is (generic.frag GlassSource), and takes the distance
+from here: a model behind the pane then moves with the level behind it. With its own distance it moved further, and
+the place it left had to be filled with picture from beside it, which showed as a pale shape of the model next to the
+model (test level vjk_glass, 2026-11-27).
+===============
+*/
+void VK_WorldDepth( void ) {
+#ifndef RD_VISION_GLES
+	VK_Checkpoint( "the distance of the level alone" );
+	float	rows[VK_WET_HEADER][4];
+	float	parm[4];
+	int		viewport[4];
+
+	vk.worldReady = qfalse;
+	if ( !vk.frame || !vk.depthReadable || !vk.worldDepth.image || !tr.worldDepthImage ) {
+		return;
+	}
+	VK_ViewRows( rows, viewport );
+	parm[0] = rows[6][3];
+	parm[1] = rows[7][3];
+	parm[2] = parm[3] = 0.0f;
+	const qboolean counting = VK_PauseLevelFragments();
+
+	VK_EndTarget();
+	VK_WorldDepthPass( parm );
+	if ( vk.worldShown != (int)tr.worldDepthImage->texnum ) {
+		VK_ShowTarget( (int)tr.worldDepthImage->texnum, &vk.worldDepth );
+		vk.worldShown = (int)tr.worldDepthImage->texnum;
+	}
+	vk.worldReady = qtrue;
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	// the shaders that draw geometry have other sets and other state
+	VK_ResumeScene();
+	if ( counting ) {
+		VK_LevelFragments( qtrue );
+	}
 #endif
 }
 
@@ -441,18 +648,38 @@ static void VK_BladeArea( const saberBlade_t *blade, const float ( *rows )[4], c
 VK_SaberBlades
 
 The saber blades of the scene (ext.AddSaberBladeToScene) in 3D, added onto the frame (shaders/saber.glsl): their
-numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them after its
-solid surfaces and before what is transparent (RB_DrawWet), portal qtrue a mirror or portal in it at its end; of
+numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them at its
+end, over what is transparent too (vk_backend.cpp), portal qtrue a mirror or portal in it at its end; of
 those only the first of a frame, the globals have room for one more view. glow qtrue: into the buffer of r_DynamicGlow
 of the view of the level (shaders/saberglow.frag), for the soft halo the flat blades get from their glow stages.
 ===============
 */
-void VK_SaberBlades( qboolean portal, qboolean glow ) {
+// The blades that stand behind thick glass (vk_backend.cpp RB_GlassLayers): the view of the level draws them before
+// that glass, in a pass of their own (early), so the pane shows them moved as it shows the hand that holds them; drawn
+// at the end they stood in their true place beside it. They are left out of the pass at the end and of the glow, which
+// would add its halo in the true place. Kept from one view of the level to the next: a mirror of the same frame writes
+// the same rows.
+static byte	vk_bladeEarly[MAX_SABER_BLADES];
+
+// what VK_SetEarlyBlades was given (a view drawn in the middle of another one sets its own and gives these back)
+void VK_GetEarlyBlades( byte *early ) {
+	memcpy( early, vk_bladeEarly, sizeof( vk_bladeEarly ) );
+}
+
+void VK_SetEarlyBlades( const byte *early, int count ) {
+	memset( vk_bladeEarly, 0, sizeof( vk_bladeEarly ) );
+	if ( early && count > 0 ) {
+		memcpy( vk_bladeEarly, early, Q_min( count, MAX_SABER_BLADES ) );
+	}
+}
+
+void VK_SaberBlades( qboolean portal, qboolean glow, qboolean early ) {
 #ifndef RD_VISION_GLES
+	VK_Checkpoint( "the saber blades" );
 	static int	portalFrame = -1;
 	const int	count = Q_min( backEnd.refdef.numSaberBlades, MAX_SABER_BLADES );
 	const int	hidden = portal ? RF_FIRST_PERSON : RF_THIRD_PERSON;
-	const VkPipeline pipeline = glow ? vk.saberGlowPipeline : ( portal ? vk.saberPortalPipeline : vk.saberPipeline );
+	const VkPipeline pipeline = glow ? vk.saberGlowPipeline : ( portal ? vk.saberPortalPipeline : ( early ? vk.saberEarlyPipeline : vk.saberPipeline ) );
 	float		rows[VK_WET_HEADER][4];
 	int			viewport[4];
 	int			shown = 0;
@@ -461,7 +688,8 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 		return;
 	}
 	for ( int i = 0; i < count; i++ ) {
-		if ( !( backEnd.refdef.saberBlades[i].renderfx & hidden ) ) {
+		// (of the level: the pass before the glass has the early ones, the pass at the end and the glow the others)
+		if ( !( backEnd.refdef.saberBlades[i].renderfx & hidden ) && ( portal || (qboolean)vk_bladeEarly[i] == early ) ) {
 			shown++;
 		}
 	}
@@ -471,11 +699,19 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 	if ( portal ) {
 		portalFrame = backEnd.viewParms.frameCount;
 	}
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	vkGlobals_t *globals = VK_GlobalsEdit();
 	VK_ViewRows( rows, viewport );
 	memcpy( portal ? globals->blades[VK_BLADE_PORTAL] : globals->blades[0], rows, sizeof( rows ) );
 	// (the blades the same for both views, in w of their colour the views each is in)
-	VectorSet4( globals->blades[VK_WET_HEADER], (float)count, 0.0f, 0.0f, 0.0f );
+	// The view of the level holds the blades against the solid level alone where it has its distance (vk.softDepth):
+	// glass writes its depth, and a blade behind a pane were hidden by it. (y is the level's alone: a mirror or portal
+	// of the same frame shares the rows.)
+	const qboolean solid = (qboolean)( !portal && !early && vk.solidReady && vk.softDepth.image );
+
+	globals->blades[VK_WET_HEADER][0] = (float)count;
+	if ( !portal && !early ) {
+		globals->blades[VK_WET_HEADER][1] = solid ? 1.0f : 0.0f;
+	}
 	for ( int i = 0; i < count; i++ ) {
 		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
 		float				( *r )[4] = &globals->blades[VK_WET_HEADER + 1 + i * VK_BLADE_ROWS];
@@ -489,7 +725,8 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 		VectorCopy( blade->oldEnd, r[3] );
 		r[3][3] = 0.0f;
 		VectorCopy( blade->rgb, r[4] );
-		r[4][3] = (float)( ( ( blade->renderfx & RF_THIRD_PERSON ) ? 0 : 1 ) | ( ( blade->renderfx & RF_FIRST_PERSON ) ? 0 : 2 ) );
+		// (1 the view of the level at its end, 4 the same before its thick glass, 2 a mirror or portal)
+		r[4][3] = (float)( ( ( blade->renderfx & RF_THIRD_PERSON ) ? 0 : ( vk_bladeEarly[i] ? 4 : 1 ) ) | ( ( blade->renderfx & RF_FIRST_PERSON ) ? 0 : 2 ) );
 	}
 
 	// The part of the view the blades, the places they swept and their glow cover, from the upper left (as rows[8]),
@@ -511,24 +748,38 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 			VectorSet4( rect, 1.0f, 1.0f, 0.0f, 0.0f );
 			continue;
 		}
+		// (its part of the view stays in its rows for the other pass of the level; this pass is not drawn over it)
+		if ( !portal && (qboolean)vk_bladeEarly[i] != early ) {
+			continue;
+		}
 		x0 = Q_min( x0, rect[0] );
 		y0 = Q_min( y0, rect[1] );
 		x1 = Q_max( x1, rect[2] );
 		y1 = Q_max( y1, rect[3] );
+	}
+	// (a view of what lies behind thick glass: its part of the frame)
+	if ( vk.limitOn ) {
+		x0 = Q_max( x0, (float)vk.limit[0] );
+		y0 = Q_max( y0, (float)vk.limit[1] );
+		x1 = Q_min( x1, (float)vk.limit[2] );
+		y1 = Q_min( y1, (float)vk.limit[3] );
 	}
 	const int area[4] = { (int)floorf( x0 ), (int)floorf( y0 ), (int)ceilf( x1 ) - (int)floorf( x0 ), (int)ceilf( y1 ) - (int)floorf( y0 ) };
 	if ( x0 >= x1 || y0 >= y1 || area[2] <= 0 || area[3] <= 0 ) {
 		return;		// nothing of them in the view
 	}
 
-	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.depthSet, vk.depthSet };
+	VK_GlobalsCommit();
+	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.depth.readSet, solid ? vk.softDepth.readSet : vk.depth.readSet };
 	VkCommandBuffer			cmd = vk.frame->cmd;
+	// (the early pass leaves the render pass of the level while its fragments are counted)
+	const qboolean			counting = early ? VK_PauseLevelFragments() : qfalse;
 
 	VK_EndTarget();
 	VK_BeginOverLevel( cmd, area, glow );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 	vk.boundPipeline = pipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 1, &vk.frame->globalsOffset );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	{
 		// (the scissor to the part, the viewport stays the view)
@@ -546,6 +797,9 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 	// the shaders that draw geometry have other sets and other state
 	VK_ResumeScene();
 	VK_InvalidateTransform();
+	if ( counting ) {
+		VK_LevelFragments( qtrue );
+	}
 #endif
 }
 
@@ -859,7 +1113,14 @@ void VK_CaptureFrame( void ) {
 	}
 	VK_LevelFragments( qfalse );
 	VK_EndTarget();
-	VK_CopyTarget( &vk.color, &vk.screen );
+	// (in a view of what lies behind thick glass: the part of the frame it is drawn for)
+	if ( vk.limitOn ) {
+		const int area[4] = { vk.limit[0], vk.limit[1], vk.limit[2] - vk.limit[0], vk.limit[3] - vk.limit[1] };
+
+		VK_CopyTargetRect( &vk.color, &vk.screen, area );
+	} else {
+		VK_CopyTarget( &vk.color, &vk.screen );
+	}
 
 	// the entry of tr.screenImage in the texture table shows the copy from now on
 	if ( vk.screenSlot != (int)tr.screenImage->texnum ) {
@@ -887,8 +1148,7 @@ steps where one piece meets the next.
 #define LIQUID_ABSORB	0.035f		// how much it darkens per unit of the way through it, red first
 #define LIQUID_WAVES	1.0f		// how strongly its surface ripples
 
-// the light of the level at a point, the light of a lamp lit room where the level has no grid
-static void VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir ) {
+void VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir ) {
 	if ( !tr.world || !R_LightForPoint( (float *)point, ambient, directed, dir ) ) {
 		VectorSet( ambient, 96.0f, 96.0f, 96.0f );
 		VectorSet( directed, 160.0f, 160.0f, 160.0f );
@@ -1064,6 +1324,7 @@ static qboolean VK_WetArea( const float ( *rows )[4], const vec3_t origin, const
 
 void VK_DrawWet( void ) {
 #ifndef RD_VISION_GLES
+	VK_Checkpoint( "the wet places" );
 	static float	wet[VK_WET_VEC4S][4];
 	static float	paint[VK_PAINT_VEC4S][4];
 	int				count = 0;
@@ -1255,6 +1516,152 @@ void VK_EndPuddle( void ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_InvalidateTransform();
+#endif
+}
+
+/*
+===============
+VK_BeginSubView
+
+A view of its own (what lies behind a plane of thick glass, R_GlassViews of tr_main.cpp; what is seen through a portal
+of the portal gun, R_PortalViews) is drawn into targets of its own that take the places of color, depth and their
+samples (vk.sub*), in the middle of the view of the level (vk_backend.cpp RB_DrawDeferredViews), and copied into its
+picture at the end (vk.behind). The passes that read the frame or the depth read its targets then (vkTarget_t readSet
+goes with them). Only its part of the frame is drawn (vk.limit). qfalse: it is not drawn.
+===============
+*/
+#ifndef RD_VISION_GLES
+// the part of the frame of the view that is drawn, bounds as VK_BallBounds counts: left, top, width, height in pixels
+static void VK_GlassArea( const float *bounds, int *area ) {
+	const viewParms_t	*view = &backEnd.viewParms;
+	const int			top = vk.height - ( view->viewportY + view->viewportHeight );
+	const int			left = Com_Clampi( 0, vk.width, view->viewportX + (int)floorf( ( bounds[0] * 0.5f + 0.5f ) * view->viewportWidth ) - 2 );
+	const int			right = Com_Clampi( 0, vk.width, view->viewportX + (int)ceilf( ( bounds[2] * 0.5f + 0.5f ) * view->viewportWidth ) + 2 );
+	const int			up = Com_Clampi( 0, vk.height, top + (int)floorf( ( 0.5f - bounds[3] * 0.5f ) * view->viewportHeight ) - 2 );
+	const int			down = Com_Clampi( 0, vk.height, top + (int)ceilf( ( 0.5f - bounds[1] * 0.5f ) * view->viewportHeight ) + 2 );
+
+	area[0] = left;
+	area[1] = up;
+	area[2] = Q_max( right - left, 0 );
+	area[3] = Q_max( down - up, 0 );
+}
+
+static void VK_SwapSubTargets( void ) {
+	vkTarget_t target;
+
+	// (what was drawn into the ones that go is read under another name from here on)
+	VK_MakeFrame();
+#define VK_SWAP( a, b )	( target = a, a = b, b = target )
+	VK_SWAP( vk.color, vk.sub );
+	VK_SWAP( vk.colorMS, vk.subMS );
+	VK_SWAP( vk.depth, vk.subDepth );
+	VK_SWAP( vk.depthMS, vk.subDepthMS );
+#undef VK_SWAP
+}
+#endif
+
+qboolean VK_BeginSubView( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	const int	index = backEnd.viewParms.subView - 1;
+	int			area[4];
+
+	if ( !vk.frame || index < 0 || index >= SUB_VIEWS || !vk.behind[index].image || !tr.behindImage[index] || !vk.sub.image ) {
+		return qfalse;
+	}
+	VK_GlassArea( backEnd.viewParms.subBounds, area );
+	if ( area[2] <= 0 || area[3] <= 0 ) {
+		return qfalse;
+	}
+	VK_Checkpoint( "a view of its own takes its targets" );
+	VK_EndTarget();
+	VK_SwapSubTargets();
+	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	vk.limit[0] = area[0];
+	vk.limit[1] = area[1];
+	vk.limit[2] = area[0] + area[2];
+	vk.limit[3] = area[1] + area[3];
+	vk.limitOn = qtrue;
+	return qtrue;
+#endif
+}
+
+void VK_EndSubView( void ) {
+#ifndef RD_VISION_GLES
+	const int	index = backEnd.viewParms.subView - 1;
+	const int	area[4] = { vk.limit[0], vk.limit[1], vk.limit[2] - vk.limit[0], vk.limit[3] - vk.limit[1] };
+
+	VK_Checkpoint( "a view of its own is copied" );
+	VK_EndTarget();
+	VK_CopyTargetRect( &vk.color, &vk.behind[index], area );
+	if ( vk.behindShown[index] != (int)tr.behindImage[index]->texnum ) {
+		vk.behindShown[index] = (int)tr.behindImage[index]->texnum;
+		VK_ShowTarget( vk.behindShown[index], &vk.behind[index] );
+	}
+	vk.behindFrame[index] = backEnd.viewParms.frameCount;
+	// (a view through a portal: what its opening needs to read it, vk_portal.cpp)
+	vk.behindId[index] = backEnd.viewParms.portalView ? backEnd.viewParms.portalId : -1;
+	memcpy( vk.behindClip[index], backEnd.viewParms.portalClip, sizeof( vk.behindClip[index] ) );
+	memcpy( vk.behindRect[index], backEnd.viewParms.portalRect, sizeof( vk.behindRect[index] ) );
+	vk.behindArea[index][0] = vk.limit[0];
+	vk.behindArea[index][1] = vk.limit[1];
+	vk.behindArea[index][2] = vk.limit[2];
+	vk.behindArea[index][3] = vk.limit[3];
+	// and the targets of the view it was drawn in
+	VK_SwapSubTargets();
+	vk.limitOn = qfalse;
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_ResumeScene();
+	VK_InvalidateTransform();
+#endif
+}
+
+/*
+===============
+VK_GlassRows
+
+The views of what lies behind thick glass that were drawn for the view of the level that begins (R_GlassViews), for
+the glass that reads them (generic.frag GlassBehind): globals.glass, 0 x: how many, y and z: the entries of the texture
+table + 1 that show how far everything solid is (vk.softDepth) and the level alone (vk.worldDepth); then three rows a view: its plane
+(xyz normal away from the eye, w distance), its part of the frame as places of the copy (left, top, right, bottom)
+and x the entry of its picture in the texture table + 1, 0: none.
+===============
+*/
+void VK_GlassRows( void ) {
+#ifndef RD_VISION_GLES
+	const viewParms_t	*view = &backEnd.viewParms;
+	vkGlobals_t			*globals;
+	int					count = 0;
+
+	if ( !vk.frame ) {
+		return;
+	}
+	globals = VK_GlobalsEdit();
+	memset( globals->glass, 0, sizeof( globals->glass ) );
+	for ( int i = 0; i < view->numGlassViews && i < GLASS_VIEWS; i++ ) {
+		float	( *rows )[4] = &globals->glass[1 + i * 3];
+		int		area[4];
+
+		count = i + 1;
+		if ( vk.behindFrame[i] != view->frameCount || vk.behindShown[i] < 0 ) {
+			continue;	// not drawn
+		}
+		VK_GlassArea( view->glassParts[i], area );
+		VectorCopy4( view->glassPlanes[i], rows[0] );
+		// (two pixels in from where it was drawn to)
+		VectorSet4( rows[1], ( area[0] + 2.0f ) / vk.width, ( area[1] + 2.0f ) / vk.height,
+			( area[0] + area[2] - 2.0f ) / vk.width, ( area[1] + area[3] - 2.0f ) / vk.height );
+		rows[2][0] = (float)( vk.behindShown[i] + 1 );
+	}
+	globals->glass[0][0] = (float)count;
+	globals->glass[0][1] = tr.softDepthImage ? (float)( tr.softDepthImage->texnum + 1 ) : 0.0f;
+	globals->glass[0][2] = tr.worldDepthImage ? (float)( tr.worldDepthImage->texnum + 1 ) : 0.0f;
+	// (v_glassDebug 4: the glass shows the view behind it everywhere in its part)
+	globals->glass[0][3] = VK_GlassDebug() == 4 ? 1.0f : 0.0f;
+	VK_GlobalsCommit();
 #endif
 }
 

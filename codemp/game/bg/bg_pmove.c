@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_public.h"
 #include "bg_local.h"
 #include "game/props/bg_props.h"
+#include "game/portal/bg_portal.h"
 #include "ghoul2/G2.h"
 
 #ifdef _GAME
@@ -10765,6 +10766,52 @@ static void PM_GrappleSuspendedMove( void ) {
 
 /*
 ================
+PM_PortalCross
+
+VisionJK: the portal gun (game/portal/bg_portal.h). The traces of this move had holes where the portals are open, so
+the player could go into one; once his origin is past the face of the wall inside the opening he comes out of the
+partner, his velocity and his view turned the way it faces. The same on the server and in the prediction of his
+client, so neither jumps. Where his box would be stuck at the other side he stays where he is.
+================
+*/
+static void PM_PortalCross( void ) {
+	if ( !pm->portals || pm->numPortals <= 0 || pm->ps->clientNum >= MAX_CLIENTS || pm->ps->m_iVehicleNum ) {
+		return;
+	}
+	if ( pm->ps->pm_type != PM_NORMAL && pm->ps->pm_type != PM_JETPACK && pm->ps->pm_type != PM_FLOAT ) {
+		return;
+	}
+	for ( int i = 0; i < pm->numPortals; i++ ) {
+		const bgPortal_t	*in = &pm->portals[i];
+		const bgPortal_t	*out = BG_PortalPartner( pm->portals, pm->numPortals, in );
+		vec3_t				exit, angles;
+		trace_t				tr;
+
+		if ( !out || !BG_PortalCrossed( in, pml.previous_origin, pm->ps->origin, pm->mins, pm->maxs ) ) {
+			continue;
+		}
+		BG_PortalExit( in, out, pm->ps->origin, pm->mins, pm->maxs, 0.0f, exit );
+		pm->trace( &tr, exit, pm->mins, pm->maxs, exit, pm->ps->clientNum, pm->tracemask );
+		if ( tr.startsolid || tr.allsolid ) {
+			continue;
+		}
+
+		VectorCopy( exit, pm->ps->origin );
+		BG_PortalVector( in, out, pm->ps->velocity, pm->ps->velocity );
+		BG_PortalViewAngles( in, out, pm->ps->viewangles, angles );
+		PM_SetPMViewAngle( pm->ps, angles, &pm->cmd );
+		// the others do not draw him on his way from the one to the other
+		pm->ps->eFlags ^= EF_TELEPORT_BIT;
+		pm->ps->groundEntityNum = ENTITYNUM_NONE;
+		pml.groundPlane = qfalse;
+		pml.walking = qfalse;
+		VectorCopy( exit, pml.previous_origin );
+		return;
+	}
+}
+
+/*
+================
 PmoveSingle
 
 ================
@@ -12014,6 +12061,8 @@ void PmoveSingle (pmove_t *pmove) {
 			}
 		}
 	}
+
+	PM_PortalCross();
 
 	if (!noAnimate)
 	{

@@ -886,6 +886,14 @@ typedef struct cgameImport_s {
 		// none. The smoke of the scene of this frame as a volume (smokeVolume_t), between R_ClearScene and
 		// R_RenderScene (cgame/level/cg_smoke.c).
 		void			(*R_SetSmoke)							( const smokeVolume_t *smoke );
+		// Only where the ROM cvar v_cgameTraceHoles is 1, an older engine ends this table before. CM_BoxTrace through
+		// the world with holes in it (traceHole_t, q_shared.h): the openings of the portals of the portal gun, for the
+		// prediction of a move through them (game/portal/bg_portal.h).
+		void			(*CM_TraceHoles)						( trace_t *results, const vec3_t start, const vec3_t end, const vec3_t mins, const vec3_t maxs, clipHandle_t model, int brushmask, int capsule, const traceHole_t *holes, int numHoles );
+		// Only where the ROM cvar v_cgamePortals is 1, an older engine ends this table before; NULL: the renderer has
+		// none. Between R_ClearScene and R_RenderScene: a portal of the portal gun (portalView_t, rd-common/tr_types.h),
+		// drawn with the view through it from its partner.
+		void			(*R_AddPortal)							( const portalView_t *portal );
 	} ext;
 } cgameImport_t;
 

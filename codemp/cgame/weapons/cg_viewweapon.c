@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cgame/cg_local.h"
 #include "cgame/weapons/cg_viewweapon.h"
+#include "cgame/portal/cg_portal_draw.h"
 
 #define KICK_RISE_MSEC		18.0f		// a kick comes this fast
 #define KICK_FALL_MSEC		110.0f		//	and goes back this slowly, so the shots of a repeater pile up a little
@@ -175,7 +176,7 @@ static float ViewWeapon_WallAhead( void ) {
 
 	VectorMA( cg.refdef.vieworg, WALL_REACH, cg.refdef.viewaxis[0], end );
 	CG_Trace( &tr, cg.refdef.vieworg, mins, maxs, end, cg.predictedPlayerState.clientNum, MASK_SOLID );
-	if ( tr.startsolid || tr.fraction >= 1.0f || fabsf( tr.plane.normal[2] ) > 0.7f ) {
+	if ( tr.startsolid || tr.fraction >= 1.0f || fabsf( tr.plane.normal[2] ) > 0.7f || CG_PortalOpeningAt( tr.endpos, mins, maxs ) ) {
 		return 0.0f;
 	}
 	return Com_Clamp( 0.0f, 1.0f, ( WALL_FAR - tr.fraction * WALL_REACH ) / ( WALL_FAR - WALL_NEAR ) );

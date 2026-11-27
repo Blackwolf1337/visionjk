@@ -224,6 +224,7 @@ static struct {
 	vkCaster_t					casters[VK_RT_MAX_CASTERS];
 	int							numCasters;
 	int							castersFrame;	// backEnd.viewParms.frameCount they belong to
+	int							tracedFrame;	//	and the frame whose view of the level traced their shadows (VK_RT_SubPass)
 	vkBuffer_t					localIndexes;	// the triangles of their surfaces, counted from the first vertex of each
 	uint32_t					localIndexesUsed;
 	std::unordered_map<const void *, uint32_t>	*localFirst;	// of an mdxmSurface_t in localIndexes
@@ -2209,6 +2210,21 @@ static void VK_RT_WholeTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
 	VkViewport	viewport = { 0.0f, 0.0f, (float)target->width, (float)target->height, 0.0f, 1.0f };
 	VkRect2D	scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
 
+	// (a view of what lies behind thick glass is drawn for its part of the frame, vk.limit: that part of a target of a
+	// smaller size, a pixel more each way)
+	if ( vk.limitOn && vk.width > 0 && vk.height > 0 ) {
+		const float	sx = (float)target->width / vk.width, sy = (float)target->height / vk.height;
+		const int	left = Com_Clampi( 0, target->width, (int)floorf( vk.limit[0] * sx ) - 1 );
+		const int	top = Com_Clampi( 0, target->height, (int)floorf( vk.limit[1] * sy ) - 1 );
+		const int	right = Com_Clampi( 0, target->width, (int)ceilf( vk.limit[2] * sx ) + 1 );
+		const int	bottom = Com_Clampi( 0, target->height, (int)ceilf( vk.limit[3] * sy ) + 1 );
+
+		scissor.offset.x = left;
+		scissor.offset.y = top;
+		scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
+		scissor.extent.height = (uint32_t)Q_max( bottom - top, 0 );
+	}
+
 	qvkCmdSetViewport( cmd, 0, 1, &viewport );
 	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
@@ -3399,7 +3415,10 @@ light passes wait for the shadows, rb_deferDlights), and the slot of the texture
 ===============
 */
 int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
-	if ( !rt.readValid || !VK_RT_Wanted() || !tr.rtLightImage[0] ) {
+	// (a view behind glass has the eye of the view of the level, so the mask is at the same pixels, but it holds what
+	// the view of the level sees there, the player in front of the glass: its lights go without; a view through a
+	// portal has another eye altogether)
+	if ( !rt.readValid || !VK_RT_Wanted() || !tr.rtLightImage[0] || backEnd.viewParms.subView ) {
 		return 0;
 	}
 	const int read = rt.lightWrite ^ 1;
@@ -3461,8 +3480,8 @@ static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobal
 		rt.readValid = qfalse;
 		return;
 	}
-	const VkDescriptorSet	lightSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
-	const VkDescriptorSet	resolveSets[4] = { vk.frame->set, rt.lightRawSet, vk.depthSet, rt.lightRawSet };
+	const VkDescriptorSet	lightSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depth.readSet };
+	const VkDescriptorSet	resolveSets[4] = { vk.frame->set, rt.lightRawSet, vk.depth.readSet, rt.lightRawSet };
 	vkTarget_t				*target = &rt.lightMask[rt.lightWrite];
 	const int				slot = (int)tr.rtLightImage[rt.lightWrite]->texnum;
 
@@ -3470,7 +3489,7 @@ static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobal
 	VK_BeginTarget( &rt.lightRaw, NULL, 1, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.smLightsPipeline );
 	vk.boundPipeline = rt.smLightsPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 1, &vk.frame->globalsOffset );
 	VK_RT_WholeTarget( cmd, &rt.lightRaw );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	VK_EndTarget();
@@ -3479,7 +3498,7 @@ static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobal
 	VK_BeginTarget( target, NULL, 1, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.lightResolvePipeline );
 	vk.boundPipeline = rt.lightResolvePipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, resolveSets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, resolveSets, 1, &vk.frame->globalsOffset );
 	VK_RT_WholeTarget( cmd, target );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	VK_EndTarget();
@@ -3495,9 +3514,85 @@ static void VK_RT_DrawLightMask( VkCommandBuffer cmd, float (*rows)[4], vkGlobal
 	rt.readValid = qtrue;
 	rt.lightWrite ^= 1;
 	// The light passes of the solid surfaces run after this (vk_backend.cpp rb_deferDlights) and read the mask
-	// of this frame: they need its view too. (The globals are read when the frame runs on the device, so this
-	// is what every draw of the frame sees.)
+	// of this frame: they need its view too, from now on (VK_GlobalsCommit).
 	memcpy( globals->rt[42], rt.readView, sizeof( rt.readView ) );
+	VK_GlobalsCommit();
+}
+
+// The first version of the globals of a frame (VK_BeginFrame): the view of the light mask the light passes read
+// until this frame makes its own, that of the mask made last (before, every draw of a frame saw the view of the
+// mask the frame made at its end, also those drawn before it).
+void VK_RT_FrameRows( vkGlobals_t *globals ) {
+	if ( rt.readValid ) {
+		memcpy( globals->rt[42], rt.readView, sizeof( rt.readView ) );
+	}
+}
+
+/*
+===============
+VK_RT_SubPass
+
+The shadows of the players for a view of its own drawn in the middle of the view of the level, after that one traced
+its own (vk_backend.cpp RB_DrawDeferredViews): the rays again from the points of its depth, against what the view of
+the level built, with nothing of the frames before (rows[20] w 0). Into the mask the next frame writes anyway (the one
+of the frame before was read already), and onto its targets. Not with the shadow maps.
+===============
+*/
+void VK_RT_SubPass( void ) {
+	if ( !vk.frame || rt.maps || !VK_RT_Wanted() || v_rtDebug->integer > 0 || !rt.numCasters
+		|| rt.castersFrame != backEnd.viewParms.frameCount || rt.tracedFrame != backEnd.viewParms.frameCount ) {
+		return;
+	}
+	VkCommandBuffer	cmd = vk.frame->cmd;
+	const int		mine = ( ( rt.frameNumber - 1 ) & 1 ) ^ 1;	// not the one the view of the level made
+
+	VK_Checkpoint( "the shadows of a view behind glass" );
+	int				viewport[4];
+	float			rows[VK_WET_HEADER][4];
+	vkGlobals_t		*globals = VK_GlobalsEdit();
+
+	// (the view is the one of the level: the same eye; nothing of a frame before)
+	VK_ViewRows( rows, viewport );
+	memcpy( globals->rt, rows, sizeof( rows ) );
+	globals->rt[20][3] = 0.0f;
+	VK_GlobalsCommit();
+
+	const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depth.readSet, rt.maskSets[mine ^ 1] };
+	const VkDescriptorSet	accumSets[4] = { vk.frame->set, rt.rawSet, vk.depth.readSet, rt.maskSets[mine ^ 1] };
+	const VkDescriptorSet	resolveSets[4] = { vk.frame->set, rt.maskSets[mine], vk.depth.readSet, rt.lightMaskSets[rt.lightWrite ^ 1] };
+
+	VK_EndTarget();
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+	VK_BeginTarget( &rt.raw, NULL, 1, qfalse );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.shadowPipeline );
+	vk.boundPipeline = rt.shadowPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 1, &vk.frame->globalsOffset );
+	VK_RT_WholeTarget( cmd, &rt.raw );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_EndTarget();
+	VK_TargetLayout( cmd, &rt.raw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_BeginTarget( &rt.mask[mine], NULL, 1, qfalse );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumPipeline );
+	vk.boundPipeline = rt.accumPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, accumSets, 1, &vk.frame->globalsOffset );
+	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_EndTarget();
+	VK_TargetLayout( cmd, &rt.mask[mine], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_BeginOverLevel( cmd );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.resolvePipeline );
+	vk.boundPipeline = rt.resolvePipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, resolveSets, 1, &vk.frame->globalsOffset );
+	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
+	VK_GpuMark( "rt trace" );
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_InvalidateTransform();
 }
 
 /*
@@ -3530,6 +3625,7 @@ void VK_RT_Pass( void ) {
 		return;
 	}
 	cmd = vk.frame->cmd;
+	VK_Checkpoint( "the ray traced shadows begin" );
 	VK_EndTarget();
 	// (with several samples a pixel the depth of the level is made of them here, for the passes that follow and read
 	// it, VK_FrameRead: a mark of its own, else the builds seem to cost it)
@@ -3647,16 +3743,17 @@ void VK_RT_Pass( void ) {
 		VK_SM_DrawAtlas( cmd, rows );
 		VK_GpuMark( "shadow maps" );
 	}
-	globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	globals = VK_GlobalsEdit();
 	memcpy( globals->rt, rows, sizeof( globals->rt ) );
+	VK_GlobalsCommit();
 
 	if ( v_rtDebug->integer > 0 && !rt.maps ) {
-		const VkDescriptorSet sets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
+		const VkDescriptorSet sets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depth.readSet };
 
 		VK_BeginOverLevel( cmd );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.debugPipeline );
 		vk.boundPipeline = rt.debugPipeline;
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, sets, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, sets, 1, &vk.frame->globalsOffset );
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );
@@ -3673,8 +3770,8 @@ void VK_RT_Pass( void ) {
 		}
 	} else {
 		const int				now = rt.frameNumber & 1;
-		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet, rt.maskSets[now ^ 1] };
-		const VkDescriptorSet	accumSets[4] = { vk.frame->set, rt.rawSet, vk.depthSet, rt.maskSets[now ^ 1] };
+		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depth.readSet, rt.maskSets[now ^ 1] };
+		const VkDescriptorSet	accumSets[4] = { vk.frame->set, rt.rawSet, vk.depth.readSet, rt.maskSets[now ^ 1] };
 
 		// the rays of this frame (rt.raw); they read the depth of the scene, which has to be in the layout for reading
 		// first (the validation layer: the set of the depth expects it)
@@ -3682,7 +3779,7 @@ void VK_RT_Pass( void ) {
 		VK_BeginTarget( &rt.raw, NULL, 1, qfalse );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.maps ? rt.smShadowPipeline : rt.shadowPipeline );
 		vk.boundPipeline = rt.maps ? rt.smShadowPipeline : rt.shadowPipeline;
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 1, &vk.frame->globalsOffset );
 		VK_RT_WholeTarget( cmd, &rt.raw );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
@@ -3692,13 +3789,14 @@ void VK_RT_Pass( void ) {
 		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumPipeline );
 		vk.boundPipeline = rt.accumPipeline;
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, accumSets, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, accumSets, 1, &vk.frame->globalsOffset );
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
 		VK_TargetLayout( cmd, &rt.mask[now], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
 		VK_RT_DrawLightMask( cmd, rows, globals );
+		rt.tracedFrame = backEnd.viewParms.frameCount;
 
 		memcpy( rt.previous, rows[0], sizeof( float ) * 16 );
 		VectorCopy( rows[4], rt.previous[4] );
@@ -3706,12 +3804,12 @@ void VK_RT_Pass( void ) {
 		rt.frameNumber++;
 
 		// softened onto the frame, with what the moving lights just made (VK_RT_DrawLightMask moved lightWrite on)
-		const VkDescriptorSet resolveSets[4] = { vk.frame->set, rt.maskSets[now], vk.depthSet, rt.lightMaskSets[rt.lightWrite ^ 1] };
+		const VkDescriptorSet resolveSets[4] = { vk.frame->set, rt.maskSets[now], vk.depth.readSet, rt.lightMaskSets[rt.lightWrite ^ 1] };
 
 		VK_BeginOverLevel( cmd );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.resolvePipeline );
 		vk.boundPipeline = rt.resolvePipeline;
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, resolveSets, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, resolveSets, 1, &vk.frame->globalsOffset );
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );

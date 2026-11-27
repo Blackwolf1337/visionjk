@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "game/props/bg_props.h"
 #include "game/props/bg_tools.h"
+#include "cgame/portal/cg_portal_draw.h"
 /*
 Ghoul2 Insert Start
 */
@@ -39,6 +40,7 @@ Ghoul2 Insert Start
 #include "cgame/weapons/cg_boltsound.h"
 #include "cgame/weapons/cg_boltlook.h"
 #include "cgame/weapons/cg_mines.h"
+#include "cgame/level/cg_ripples.h"
 /*
 Ghoul2 Insert end
 */
@@ -2507,6 +2509,8 @@ static void CG_Missile( centity_t *cent ) {
 	CG_ThermalFuse( cent );
 	CG_BoltWhiz( cent );
 	CG_MissileLooks( cent );
+	// through the surface of water it leaves a ring (level/cg_ripples.c)
+	CG_RippleMissile( cent );
 
 	if (s1->weapon == WP_SABER)
 	{
@@ -3533,8 +3537,12 @@ Ghoul2 Insert Start
 /*
 Ghoul2 Insert End
 */
+	// VisionJK: what stands in the opening of a portal of the portal gun is drawn on both sides of it
+	// (portal/cg_portal_draw.c)
+	CG_PortalEntityBegin( cent );
 	switch ( cent->currentState.eType ) {
 	default:
+		CG_PortalEntityEnd();
 		trap->Error( ERR_DROP, "Bad entity type: %i\n", cent->currentState.eType );
 		break;
 
@@ -3589,6 +3597,7 @@ Ghoul2 Insert End
 		CG_General( cent );
 		break;
 	}
+	CG_PortalEntityEnd();
 }
 
 void CG_ManualEntityRender(centity_t *cent)

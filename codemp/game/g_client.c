@@ -3830,6 +3830,8 @@ void ClientSpawn(gentity_t *ent) {
 		client->ps.stats[STAT_HOLDABLE_ITEMS] = 0;
 		client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
 	}
+	// VisionJK: the portal gun an admin gave him comes back with every spawn (portal/g_portal.c)
+	G_PortalGunSpawn( ent );
 
 // nmckenzie: DESERT_SIEGE... or well, siege generally.  This was over-writing the max value, which was NOT good for siege.
 	if ( inSiegeWithClass == qfalse )
@@ -4116,6 +4118,7 @@ void ClientDisconnect( int clientNum ) {
 	G_BoomboxClientGone( clientNum );
 	G_AuthClientGone( clientNum );
 	G_ToolClear( clientNum );
+	G_PortalClientGone( clientNum );
 
 	ent = g_entities + clientNum;
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {

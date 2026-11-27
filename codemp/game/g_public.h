@@ -1108,6 +1108,10 @@ typedef struct gameImport_s {
 		// The cvars no code has used for a while (cvar_cleanup), one "name\tvalue\tday\n" a line, day in days since
 		// 1970, 0 for never. Returns the length, cut at a whole line where buf has no more room.
 		int			(*Cvar_UnusedList)						( char *buf, int size );
+		// Only an engine that sets vs_gameImportExt to 3 or more has this. Trace (SV_Trace) with holes in the world
+		// (traceHole_t, q_shared.h): the openings of the portals of the portal gun, for the moves of the players
+		// who go through them (game/portal/bg_portal.h). The entities are clipped against as by Trace.
+		void		(*TraceHoles)							( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, const traceHole_t *holes, int numHoles );
 	} ext;
 } gameImport_t;
 

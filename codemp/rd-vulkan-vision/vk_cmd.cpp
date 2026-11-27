@@ -181,14 +181,19 @@ static void VK_GpuRead( vkFrame_t *frame ) {
 	uint64_t ticks[VK_GPU_MARKS];
 	const double msPerTick = (double)vk.properties.limits.timestampPeriod / 1000000.0;
 
-	if ( frame->fragments && frame->fragmentsUsed ) {
-		uint64_t count = 0;
+	if ( frame->fragments && frame->fragmentsUsed && frame->fragmentsParts > 0 ) {
+		uint64_t parts[VK_FRAGMENT_PARTS] = { 0 };
 
-		if ( qvkGetQueryPoolResults( vk.device, frame->fragments, 0, 1, sizeof( count ), &count, sizeof( count ), VK_QUERY_RESULT_64_BIT )
-			== VK_SUCCESS ) {
-			vk_gpuFragments += (double)count;
+		if ( qvkGetQueryPoolResults( vk.device, frame->fragments, 0, (uint32_t)frame->fragmentsParts, sizeof( parts ), parts,
+			sizeof( parts[0] ), VK_QUERY_RESULT_64_BIT ) == VK_SUCCESS ) {
+			double count = 0.0;
+
+			for ( int i = 0; i < frame->fragmentsParts; i++ ) {
+				count += (double)parts[i];
+			}
+			vk_gpuFragments += count;
 			vk_gpuFragmentFrames++;
-			vk_profFragments += (double)count;
+			vk_profFragments += count;
 			vk_profFragmentFrames++;
 		}
 	}
@@ -224,15 +229,37 @@ void VK_LevelFragments( qboolean begin ) {
 		return;
 	}
 	if ( begin ) {
-		if ( !frame->fragmentsActive && !frame->fragmentsUsed ) {
-			qvkCmdBeginQuery( frame->cmd, frame->fragments, 0, 0 );
+		if ( !frame->fragmentsActive && !frame->fragmentsUsed && frame->fragmentsParts < VK_FRAGMENT_PARTS ) {
+			qvkCmdBeginQuery( frame->cmd, frame->fragments, (uint32_t)frame->fragmentsParts, 0 );
 			frame->fragmentsActive = qtrue;
 		}
 	} else if ( frame->fragmentsActive ) {
-		qvkCmdEndQuery( frame->cmd, frame->fragments, 0 );
+		qvkCmdEndQuery( frame->cmd, frame->fragments, (uint32_t)frame->fragmentsParts );
+		frame->fragmentsParts++;
 		frame->fragmentsActive = qfalse;
 		frame->fragmentsUsed = qtrue;
 	}
+}
+
+/*
+===============
+VK_PauseLevelFragments
+
+For a pass that leaves the render pass of the level while it is still being drawn and comes back to it (the distance
+with the glass in it, vk_post.cpp VK_GlassMask): the count stops before it and goes on after it in
+another query of the pool, the parts are added up when they are read. qtrue: it was counting.
+===============
+*/
+qboolean VK_PauseLevelFragments( void ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || !frame->fragments || !frame->fragmentsActive ) {
+		return qfalse;
+	}
+	qvkCmdEndQuery( frame->cmd, frame->fragments, (uint32_t)frame->fragmentsParts );
+	frame->fragmentsParts++;
+	frame->fragmentsActive = qfalse;
+	return qtrue;
 }
 
 // no mark of the frame yet but its start
@@ -240,8 +267,17 @@ qboolean VK_GpuFirstMark( void ) {
 	return (qboolean)( vk.frame && vk.frame->numMarks <= 1 );
 }
 
+void VK_Checkpoint( const char *name ) {
+	if ( vk.checkpoints && vk.frame ) {
+		qvkCmdSetCheckpointNV( vk.frame->cmd, name );
+	}
+}
+
 void VK_GpuMark( const char *name ) {
 	vkFrame_t *frame = vk.frame;
+
+	// (what the time is named after is done here: a place for a lost device as well)
+	VK_Checkpoint( name );
 
 	if ( !frame || !frame->timestamps || frame->numMarks == VK_GPU_MARKS ) {
 		return;
@@ -275,6 +311,57 @@ void VK_GpuTimes_f( void ) {
 	vk_gpuFrames = 0;
 }
 
+/*
+===============
+The globals of a frame in versions
+
+The device reads the globals when it runs the frame, so a pass that writes numbers for itself into them changed them
+for everything else of the frame too: a pass could have one set of numbers a frame, and the last one that wrote them
+won (the saber blades of a mirror needed rows of their own for that). Now each change is a version of its own in the
+buffer of the frame, bound at its offset (a dynamic uniform buffer, binding 0 of the set of the frame): a draw reads
+the version that was bound when it was recorded. The changes are made in a copy on the CPU and the whole of it goes
+into the next place of the buffer (writing that memory is fast, reading it is not).
+===============
+*/
+static vkGlobals_t	vk_globalsCpu;
+static uint32_t		vk_globalsStride;	// from one version to the next, as the device wants offsets of uniform buffers
+static qboolean		vk_globalsFull;
+
+vkGlobals_t *VK_GlobalsEdit( void ) {
+	return &vk_globalsCpu;
+}
+
+void VK_GlobalsCommit( void ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame ) {
+		return;
+	}
+	// (more changes than places: the last place is written again, as all of them were before)
+	if ( frame->globalsUsed >= VK_GLOBALS_VERSIONS ) {
+		if ( !vk_globalsFull ) {
+			vk_globalsFull = qtrue;
+			ri.Printf( PRINT_DEVELOPER, "VK_GlobalsCommit: more than %d versions of the globals in a frame\n", VK_GLOBALS_VERSIONS );
+		}
+		frame->globalsUsed = VK_GLOBALS_VERSIONS - 1;
+	}
+	frame->globalsOffset = (uint32_t)frame->globalsUsed * vk_globalsStride;
+	memcpy( (byte *)frame->globals.mapped + frame->globalsOffset, &vk_globalsCpu, sizeof( vk_globalsCpu ) );
+	frame->globalsUsed++;
+	VK_BindFrameSets();
+}
+
+void VK_GlobalsAll( size_t offset, size_t bytes ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || offset + bytes > sizeof( vk_globalsCpu ) ) {
+		return;
+	}
+	for ( int i = 0; i < frame->globalsUsed; i++ ) {
+		memcpy( (byte *)frame->globals.mapped + (size_t)i * vk_globalsStride + offset, (const byte *)&vk_globalsCpu + offset, bytes );
+	}
+}
+
 void VK_InitFrames( void ) {
 	VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	VkFenceCreateInfo fence = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -288,6 +375,11 @@ void VK_InitFrames( void ) {
 	set.descriptorPool = vk.descriptorPool;
 	set.descriptorSetCount = 1;
 	set.pSetLayouts = &vk.frameSetLayout;
+	{
+		const VkDeviceSize align = Q_max( vk.properties.limits.minUniformBufferOffsetAlignment, (VkDeviceSize)16 );
+
+		vk_globalsStride = (uint32_t)( ( sizeof( vkGlobals_t ) + align - 1 ) / align * align );
+	}
 
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		vkFrame_t *frame = &vk.frames[i];
@@ -300,7 +392,9 @@ void VK_InitFrames( void ) {
 		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->acquired ) );
 		VK_CreateBuffer( &frame->vertexes, VK_VERTEX_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->indexes, VK_INDEX_BYTES, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, qtrue );
-		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, qtrue );
+		VK_CreateBuffer( &frame->globals, (vkSize_t)vk_globalsStride * VK_GLOBALS_VERSIONS, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, qtrue );
+		frame->globalsUsed = 0;
+		frame->globalsOffset = 0;
 		VK_CreateBuffer( &frame->transforms, sizeof( vkTransform_t ) * VK_MAX_TRANSFORMS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->draws, sizeof( vkDraw_t ) * VK_MAX_DRAWS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->bones, sizeof( float ) * 12 * VK_MAX_BONES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
@@ -318,11 +412,12 @@ void VK_InitFrames( void ) {
 		}
 		frame->fragments = VK_NULL_HANDLE;
 		frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+		frame->fragmentsParts = 0;
 		if ( vk.pipelineStats ) {
 			VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
 
 			query.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
-			query.queryCount = 1;
+			query.queryCount = VK_FRAGMENT_PARTS;
 			query.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
 			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->fragments ) );
 		}
@@ -335,12 +430,13 @@ void VK_InitFrames( void ) {
 		memset( writes, 0, sizeof( writes ) );
 		for ( uint32_t j = 0; j < 4; j++ ) {
 			buffers[j].offset = 0;
-			buffers[j].range = VK_WHOLE_SIZE;
+			// (one version of the globals is seen at a time, at the offset given when the set is bound)
+			buffers[j].range = j ? VK_WHOLE_SIZE : sizeof( vkGlobals_t );
 			writes[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writes[j].dstSet = frame->set;
 			writes[j].dstBinding = j;
 			writes[j].descriptorCount = 1;
-			writes[j].descriptorType = j ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			writes[j].descriptorType = j ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 			writes[j].pBufferInfo = &buffers[j];
 		}
 		qvkUpdateDescriptorSets( vk.device, 4, writes, 0, NULL );
@@ -584,6 +680,22 @@ void VK_EndTarget( void ) {
 	qvkCmdEndRendering( vk.frame->cmd );
 }
 
+// A view of its own (behind thick glass, through a portal) is drawn for a part of the frame alone (vk.limit,
+// VK_BeginSubView): no scissor of the frame reaches past it while it is on.
+static void VK_LimitScissor( VkRect2D *scissor ) {
+	if ( !vk.limitOn ) {
+		return;
+	}
+	const int left = Q_max( scissor->offset.x, vk.limit[0] ), top = Q_max( scissor->offset.y, vk.limit[1] );
+	const int right = Q_min( scissor->offset.x + (int)scissor->extent.width, vk.limit[2] );
+	const int bottom = Q_min( scissor->offset.y + (int)scissor->extent.height, vk.limit[3] );
+
+	scissor->offset.x = left;
+	scissor->offset.y = top;
+	scissor->extent.width = (uint32_t)Q_max( right - left, 0 );
+	scissor->extent.height = (uint32_t)Q_max( bottom - top, 0 );
+}
+
 /*
 ===============
 VK_ViewportAndScissor
@@ -610,6 +722,7 @@ void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth,
 	scissor.offset.y = up;
 	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
 	scissor.extent.height = (uint32_t)Q_max( down - up, 0 );
+	VK_LimitScissor( &scissor );
 	qvkCmdSetViewport( vk.frame->cmd, 0, 1, &viewport );
 	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
@@ -636,6 +749,7 @@ void VK_Scissor( int left, int top, int right, int bottom ) {
 	scissor.offset.y = top;
 	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
 	scissor.extent.height = (uint32_t)Q_max( bottom - top, 0 );
+	VK_LimitScissor( &scissor );
 	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
 
@@ -689,7 +803,7 @@ void VK_BindFrameSets( void ) {
 	}
 	sets[0] = vk.frame->set;
 	sets[1] = vk.textureSet;
-	qvkCmdBindDescriptorSets( vk.frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipelineLayout, 0, 2, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( vk.frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipelineLayout, 0, 2, sets, 1, &vk.frame->globalsOffset );
 }
 
 /*
@@ -711,8 +825,9 @@ void VK_BeginCommands( vkFrame_t *frame ) {
 	VK_GpuRead( frame );
 	frame->numMarks = 0;
 	frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+	frame->fragmentsParts = 0;
 	if ( frame->fragments ) {
-		qvkCmdResetQueryPool( frame->cmd, frame->fragments, 0, 1 );
+		qvkCmdResetQueryPool( frame->cmd, frame->fragments, 0, VK_FRAGMENT_PARTS );
 	}
 	if ( frame->timestamps ) {
 		qvkCmdResetQueryPool( frame->cmd, frame->timestamps, 0, VK_GPU_MARKS );
@@ -792,7 +907,7 @@ void VK_PresentFrame( const float *gamma ) {
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, &vk.final, NULL, 0, qfalse );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.gammaPipeline );
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.postSet, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.color.readSet, 0, NULL );
 	qvkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 4, gamma );
 	qvkCmdSetViewport( cmd, 0, 1, &viewport );
 	qvkCmdSetScissor( cmd, 0, 1, &scissor );
@@ -1042,8 +1157,13 @@ PASSES OVER WHOLE TARGETS
 
 static void VK_FullTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
 	const VkViewport viewport = { 0.0f, 0.0f, (float)target->width, (float)target->height, 0.0f, 1.0f };
-	const VkRect2D scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
+	VkRect2D scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
 
+	// (a pass over the frame, or over a target in its size, in a view of what lies behind thick glass: its part of the
+	// frame)
+	if ( target == &vk.color || ( target->width == vk.width && target->height == vk.height ) ) {
+		VK_LimitScissor( &scissor );
+	}
 	qvkCmdSetViewport( cmd, 0, 1, &viewport );
 	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
@@ -1052,20 +1172,10 @@ static void VK_FullTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
 // (VK_BlurFrame reads it): without that case its place in blurSets was worked out from an address that is not
 // in vk.blur, and the driver got a handle that is none.
 static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
-	if ( source == &vk.color ) {
-		return vk.postSet;
-	}
-	if ( source == &vk.glow ) {
-		return vk.glowSet;
-	}
-	if ( source == &vk.soft[0] || source == &vk.soft[1] ) {
-		return vk.softSets[source - vk.soft];
-	}
-	if ( source == &vk.screen ) {
-		return vk.screenSet;
-	}
-	if ( source == &vk.smoke[0] || source == &vk.smoke[1] ) {
-		return vk.smokeSets[source - vk.smoke];
+	// (every target that a pass reads has its set, vkTarget_t readSet, and it goes with the target when targets trade
+	// places)
+	if ( source->readSet ) {
+		return source->readSet;
 	}
 	return vk.blurSets[source - vk.blur];
 }
@@ -1176,11 +1286,13 @@ void VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float streng
 // The depth is not drawn into while the pass reads it: the pass that follows takes it back (VK_BeginTarget).
 // area: only that part of the frame is wanted (left, top, width, height in its pixels, width 0: all), the pass is
 // cut to it in the pixels of its target and two more each way.
-static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm, const int *area = NULL ) {
+// keep: the pixels the shader leaves out stay as the target has them.
+static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm, const int *area = NULL,
+	qboolean keep = qfalse ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	// (source NULL: the shader reads the depth alone, the set of the frame only fills the place and the frame is not
 	// made of its samples for it)
-	const VkDescriptorSet sets[2] = { source ? VK_PostSet( source ) : vk.postSet, vk.depthSet };
+	const VkDescriptorSet sets[2] = { source ? VK_PostSet( source ) : vk.color.readSet, vk.depth.readSet };
 
 	if ( source ) {
 		VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -1189,7 +1301,7 @@ static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *t
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 	vk.boundPipeline = pipeline;
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
+	VK_BeginRendering( cmd, target, NULL, keep ? 2 : 0, qfalse );
 	VK_FullTarget( cmd, target );
 	if ( area && area[2] > 0 ) {
 		const int	left = Q_max( area[0] * target->width / vk.color.width - 2, 0 );
@@ -1215,6 +1327,14 @@ void VK_SoftDepthPass( const float *parm ) {
 	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.softDepth, parm );
 }
 
+void VK_GlassDepthPass( const float *parm ) {
+	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.glassDepth, parm );
+}
+
+void VK_WorldDepthPass( const float *parm ) {
+	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.worldDepth, parm );
+}
+
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_DepthPass( vk.focusPipeline, source, target, parm );
 }
@@ -1231,9 +1351,10 @@ void VK_ScreenFxPrepPass( vkTarget_t *source, vkTarget_t *target, const float *p
 void VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *prep, const float *fx ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sets[3] = { vk.frame->set, VK_PostSet( last ), VK_PostSet( prep ) };
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	vkGlobals_t *globals = VK_GlobalsEdit();
 
 	memcpy( globals->screenFx, fx, sizeof( globals->screenFx ) );
+	VK_GlobalsCommit();
 	VK_TargetLayout( cmd, last, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, prep, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxSmokePipeline );
@@ -1241,7 +1362,7 @@ void VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *pre
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
 	VK_FullTarget( cmd, target );
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 1, &vk.frame->globalsOffset );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -1250,17 +1371,18 @@ void VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *pre
 // as VK_DepthPass(), with the globals of the frame in place of a source and its numbers
 void VK_ScreenFxFogPass( vkTarget_t *target, const float *fx ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkDescriptorSet sets[2] = { vk.frame->set, vk.depthSet };
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	const VkDescriptorSet sets[2] = { vk.frame->set, vk.depth.readSet };
+	vkGlobals_t *globals = VK_GlobalsEdit();
 
 	memcpy( globals->screenFx, fx, sizeof( globals->screenFx ) );
+	VK_GlobalsCommit();
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxFogPipeline );
 	vk.boundPipeline = vk.screenFxFogPipeline;
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
 	VK_FullTarget( cmd, target );
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.fogPipelineLayout, 0, 2, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.fogPipelineLayout, 0, 2, sets, 1, &vk.frame->globalsOffset );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -1270,10 +1392,11 @@ void VK_ScreenFxFogPass( vkTarget_t *target, const float *fx ) {
 // (and its mist before it, with the same numbers).
 void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, const float *fx ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkDescriptorSet sets[5] = { vk.frame->set, vk.screenSet, VK_PostSet( prep ), VK_PostSet( fog ), VK_PostSet( smoke ) };
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	const VkDescriptorSet sets[5] = { vk.frame->set, vk.screen.readSet, VK_PostSet( prep ), VK_PostSet( fog ), VK_PostSet( smoke ) };
+	vkGlobals_t *globals = VK_GlobalsEdit();
 
 	memcpy( globals->screenFx, fx, sizeof( globals->screenFx ) );
+	VK_GlobalsCommit();
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, prep, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, fog, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -1281,7 +1404,7 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipeline );
 	vk.boundPipeline = vk.screenFxPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 5, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 5, sets, 1, &vk.frame->globalsOffset );
 	VK_FullTarget( cmd, &vk.color );
 	if ( vk.passArea[2] > 0 ) {
 		// only where the effects of this frame change the picture (VK_ScreenFx)
@@ -1349,17 +1472,18 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 void VK_WetPass( const float *wet, int count, const int *viewport, const int *area ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
-	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.reflect.image ? vk.reflectSet : vk.screenSet };
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screen.readSet, vk.depth.readSet, vk.reflect.image ? vk.reflect.readSet : vk.screen.readSet };
+	vkGlobals_t *globals = VK_GlobalsEdit();
 
 	memcpy( globals->wet, wet, sizeof( globals->wet ) );
+	VK_GlobalsCommit();
 	if ( vk.reflect.image ) {
 		VK_TargetLayout( cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	}
 	VK_BeginOverLevel( cmd, area );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.wetPipeline );
 	vk.boundPipeline = vk.wetPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 1, &vk.frame->globalsOffset );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	{
 		// (the scissor to the part, the viewport stays the view)
@@ -1378,14 +1502,15 @@ void VK_WetPass( const float *wet, int count, const int *viewport, const int *ar
 // the sheets of the pictures are textures of the table, the shader takes each by its number
 void VK_PaintPass( const float *paint, int count, const int *viewport ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.textureSet };
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screen.readSet, vk.depth.readSet, vk.textureSet };
+	vkGlobals_t *globals = VK_GlobalsEdit();
 
 	memcpy( globals->paint, paint, sizeof( globals->paint ) );
+	VK_GlobalsCommit();
 	VK_BeginOverLevel( cmd );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.paintPipeline );
 	vk.boundPipeline = vk.paintPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.paintPipelineLayout, 0, 4, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.paintPipelineLayout, 0, 4, sets, 1, &vk.frame->globalsOffset );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
 	qvkCmdEndRendering( cmd );
@@ -1395,7 +1520,7 @@ void VK_PaintPass( const float *paint, int count, const int *viewport ) {
 // into it this frame (the shader does not read it then).
 void VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const float *parm ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkDescriptorSet sets[4] = { vk.screenSet, VK_PostSet( soft ), VK_PostSet( prep ), VK_PostSet( mark ) };
+	const VkDescriptorSet sets[4] = { vk.screen.readSet, VK_PostSet( soft ), VK_PostSet( prep ), VK_PostSet( mark ) };
 
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, soft, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -1474,7 +1599,7 @@ void VK_TonemapPass( const float *parm ) {
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.tonemapPipeline );
 	vk.boundPipeline = vk.tonemapPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 1, &vk.screenSet, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 1, &vk.screen.readSet, 0, NULL );
 	qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( push ), push );
 	VK_FullTarget( cmd, &vk.color );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
@@ -1528,6 +1653,11 @@ static void VK_CopyTargetPart( vkTarget_t *source, vkTarget_t *dest, const int *
 
 void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
 	VK_CopyTargetPart( source, dest, NULL, 0 );
+}
+
+// a part of the picture: left, top, width, height
+void VK_CopyTargetRect( vkTarget_t *source, vkTarget_t *dest, const int *area ) {
+	VK_CopyTargetPart( source, dest, area, 0 );
 }
 
 // the part of the frame the passes of the screen effects are cut to (vk.passArea), with margin pixels around it

@@ -127,6 +127,9 @@ static const uint32_t vk_saberFrag[] =
 static const uint32_t vk_saberportalFrag[] =
 #include "shaders/saberportal_frag.inc"
 ;
+static const uint32_t vk_saberearlyFrag[] =
+#include "shaders/saberearly_frag.inc"
+;
 static const uint32_t vk_saberglowFrag[] =
 #include "shaders/saberglow_frag.inc"
 ;
@@ -203,7 +206,8 @@ static void VK_CreateLayouts( void ) {
 	memset( frame, 0, sizeof( frame ) );
 	for ( uint32_t i = 0; i < 4; i++ ) {
 		frame[i].binding = i;
-		frame[i].descriptorType = i ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		// (the globals at an offset given when the set is bound: a version for each pass that changes them, VK_GlobalsCommit)
+		frame[i].descriptorType = i ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 		frame[i].descriptorCount = 1;
 		frame[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		if ( vk.tessellation ) {
@@ -243,7 +247,7 @@ static void VK_CreateLayouts( void ) {
 	info.pBindings = &post;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.postSetLayout ) );
 
-	sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	sizes[0].descriptorCount = VK_FRAMES;
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
@@ -252,10 +256,12 @@ static void VK_CreateLayouts( void ) {
 	// the two of the smoke of the screen effects, the copy of the frame the scope reads, the mirror of the puddles,
 	// the depth, the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures), and the distance
 	// of the level of v_softParticles that the sparks of v_gpuSparks bounce off
-	// and the smoke of the level as a volume and the noise of its billows (vk_smoke.cpp)
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 19;
+	// and the smoke of the level as a volume and the noise of its billows (vk_smoke.cpp), and the distance of the
+	// glass for v_glassDebug (vk.glassSet). (One short, the first frame of a level ended the game: the error of the
+	// set that was not to be had, 2026-11-26.)
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 24;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 20;
+	pool.maxSets = VK_FRAMES + 25;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -335,6 +341,7 @@ static void VK_CreateLayouts( void ) {
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.postSampler ) );
 	VK_WriteSet( vk.postSet, vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vk.color.readSet = vk.postSet;
 }
 
 static VkBlendFactor VK_SrcBlend( uint32_t stateBits ) {
@@ -853,6 +860,8 @@ void VK_InitPipelines( void ) {
 	vk.saberPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 	vk.saberPortalShader = VK_CreateShader( vk_saberportalFrag, sizeof( vk_saberportalFrag ) );
 	vk.saberPortalPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberPortalShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
+	vk.saberEarlyShader = VK_CreateShader( vk_saberearlyFrag, sizeof( vk_saberearlyFrag ) );
+	vk.saberEarlyPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberEarlyShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 	vk.saberGlowShader = VK_CreateShader( vk_saberglowFrag, sizeof( vk_saberglowFrag ) );
 	vk.saberGlowPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberGlowShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 	VK_PrewarmPipelines();
@@ -905,6 +914,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.saberPortalPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberPortalShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberGlowPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.saberEarlyPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.saberEarlyShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberGlowShader, NULL );
 	if ( vk.pipelineCache ) {
 		qvkDestroyPipelineCache( vk.device, vk.pipelineCache, NULL );

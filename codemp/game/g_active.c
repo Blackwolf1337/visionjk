@@ -687,6 +687,11 @@ void G_MoverTouchPushTriggers( gentity_t *ent, vec3_t oldOrg )
 	}
 }
 
+// VisionJK: the holes of the portals of the portal gun for the Pmove of a player who walks through them (portal/
+// g_portal.c), set around his Pmove in ClientThink_real and 0 at any other time
+static traceHole_t	pmHoles[MAX_TRACE_HOLES];
+static int			pmNumHoles;
+
 static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask ) {
 	// Not from JA+: the two of a hug with +button13 stand in each other, so neither is there for the moves of
 	// the other (g_props.c). Whatever mask a trace of the move has: the wall jump that kicks off a player asks
@@ -696,7 +701,10 @@ static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins,
 
 	if ( mate )
 		mate->r.contents = 0;
-	JP_Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
+	if ( pmNumHoles )
+		JP_TraceHoles( results, start, mins, maxs, end, passEntityNum, contentMask, pmHoles, pmNumHoles );
+	else
+		JP_Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
 	if ( mate )
 		mate->r.contents = contents;
 
@@ -3120,10 +3128,26 @@ void ClientThink_real( gentity_t *ent ) {
 		JP_KissSlap( ent, &pmove.cmd );
 	// not from JA+: the mouse of who turns a prop with the physgun (g_props.c)
 	G_PropGunCmd( ent, &pmove.cmd );
+	// VisionJK: a player whose cgame predicts it walks through the portals of the portal gun (portal/g_portal.c)
+	if ( !isNPC && G_PortalMoves( ent ) ) {
+		static bgPortal_t portals[MAX_PORTALS];
+
+		pmove.numPortals = G_Portals( portals, MAX_PORTALS );
+		pmove.portals = portals;
+		pmNumHoles = BG_PortalHolesNear( portals, pmove.numPortals, ent->client->ps.origin, pmHoles, MAX_TRACE_HOLES );
+	}
 	Pmove (&pmove);
+	pmNumHoles = 0;
 
 	if ( clientThinkFromCmd && !isNPC ) {
 		G_AC_Think( ent, ucmd );	// the wiggle bot (anticheat/g_anticheat.c)
+	}
+	// and anybody else is put through when he touches an opening
+	if ( !isNPC && !pmove.portals ) {
+		G_PortalTouch( ent, pmove.mins, pmove.maxs );
+	}
+	if ( !isNPC ) {
+		G_PortalButtons( ent, ucmd->buttons );
 	}
 
 	if (ent->client->solidHack)

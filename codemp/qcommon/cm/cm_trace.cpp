@@ -426,20 +426,173 @@ TRACING
 
 /*
 ================
+CM_SetupHoles
+
+VisionJK: the traces with holes (CM_BoxTraceHoles, traceHole_t in q_shared.h). The box is inside a hole where each
+of six conditions holds, each of them a + b * fraction <= limit along one axis of the hole, so the fractions at which
+it is inside are one stretch of the trace. Worked out once for the trace, before it goes through the brushes.
+================
+*/
+static void CM_SetupHoles( const traceWork_t *tw, const traceHole_t *holes, int numHoles, cmTraceHole_t *out ) {
+	vec3_t	start, delta;
+
+	VectorSubtract( tw->end, tw->start, delta );
+	for ( int i = 0; i < numHoles; i++ ) {
+		const traceHole_t	*h = &holes[i];
+		cmTraceHole_t		*o = &out[i];
+		float				c[3], d[3], e[3];
+		int					exitSide = -1;
+		float				exitRate = 1.0f;
+
+		VectorCopy( h->axis[0], o->forward );
+		VectorSubtract( tw->start, h->origin, start );
+		for ( int k = 0; k < 3; k++ ) {
+			c[k] = DotProduct( start, h->axis[k] );
+			d[k] = DotProduct( delta, h->axis[k] );
+			// (the box is symmetric about tw->start here, CM_Trace made it so)
+			e[k] = fabsf( h->axis[k][0] ) * tw->size[1][0] + fabsf( h->axis[k][1] ) * tw->size[1][1]
+				+ fabsf( h->axis[k][2] ) * tw->size[1][2];
+		}
+
+		o->tin = -1e30f;
+		o->tout = 1e30f;
+		// side j: axis j / 2, the positive end for even j; axis 0 has the face (a unit of slack in front) and the
+		// bottom of the hole, the other two its rims
+		for ( int j = 0; j < 6; j++ ) {
+			const int	k = j >> 1;
+			const float	sign = ( j & 1 ) ? -1.0f : 1.0f;
+			const float	a = sign * c[k], b = sign * d[k];
+			float		limit;
+
+			if ( k == 0 ) {
+				limit = ( sign > 0.0f ) ? 1.0f + e[0] : h->half[0] - e[0];
+			} else {
+				limit = h->half[k] - e[k];
+			}
+			if ( fabsf( b ) < 1e-6f ) {
+				if ( a > limit ) {
+					o->tin = 1.0f;
+					o->tout = -1.0f;
+					break;
+				}
+				continue;
+			}
+			if ( b > 0.0f ) {
+				if ( ( limit - a ) / b < o->tout ) {
+					o->tout = ( limit - a ) / b;
+					exitSide = j;
+					exitRate = b;
+				}
+			} else if ( ( limit - a ) / b > o->tin ) {
+				o->tin = ( limit - a ) / b;
+			}
+		}
+
+		// the side it meets on its way out, as a plane facing into the hole, as brush planes face out of the brush
+		if ( exitSide >= 0 ) {
+			const int	k = exitSide >> 1;
+			const float	sign = ( exitSide & 1 ) ? -1.0f : 1.0f;
+			vec3_t		point;
+
+			VectorScale( h->axis[k], -sign, o->plane.normal );
+			VectorMA( h->origin, sign * ( ( k == 0 && sign > 0.0f ) ? 1.0f : h->half[k] ), h->axis[k], point );
+			o->plane.dist = DotProduct( o->plane.normal, point );
+			o->backoff = SURFACE_CLIP_EPSILON / exitRate;
+		} else {
+			// (it never leaves the hole on this trace, the plane is never asked for)
+			VectorCopy( h->axis[0], o->plane.normal );
+			o->plane.dist = DotProduct( h->axis[0], h->origin );
+			o->backoff = 0.0f;
+		}
+		o->plane.type = PlaneTypeForNormal( o->plane.normal );
+		SetPlaneSignbits( &o->plane );
+	}
+}
+
+/*
+================
+CM_HoleContact
+
+VisionJK: the traces with holes. The box overlaps a brush from fraction t on until leave: the first fraction at which
+that is a contact. That is t where the box is not inside a hole there, else where it leaves the hole while still in
+the brush (*plane is then the side of the hole it meets), and -1 where it is inside holes all the way.
+
+entered is the side of the brush the box comes in by (NULL: it starts in the brush). One that faces into the wall is
+the back of a wall thinner than the hole is deep: there the box comes from the room behind it, and that is a contact
+as ever. Without that a wall up to about 34 units thick could be walked through from behind, where the hole reaches
+out of it.
+================
+*/
+static float CM_HoleContact( const traceWork_t *tw, float t, float leave, const cplane_t *entered, const cplane_t **plane ) {
+	const cmTraceHole_t	*left = NULL;
+
+	for ( int n = 0; n < tw->numHoles; n++ ) {
+		const cmTraceHole_t	*inside = NULL;
+
+		for ( int i = 0; i < tw->numHoles; i++ ) {
+			if ( tw->holes[i].tin <= t && t < tw->holes[i].tout ) {
+				inside = &tw->holes[i];
+				break;
+			}
+		}
+		if ( !inside ) {
+			break;
+		}
+		if ( !left && entered && DotProduct( entered->normal, inside->forward ) < -0.7f ) {
+			break;
+		}
+		if ( inside->tout >= leave ) {
+			return -1.0f;
+		}
+		t = inside->tout;
+		left = inside;
+	}
+	if ( left ) {
+		t -= left->backoff;
+		if ( t < 0.0f ) {
+			t = 0.0f;
+		}
+		*plane = &left->plane;
+	}
+	return t;
+}
+
+// VisionJK: whether the box at fraction t of a trace with holes is inside one of them
+static bool CM_InsideHole( const traceWork_t *tw, float t ) {
+	for ( int i = 0; i < tw->numHoles; i++ ) {
+		if ( tw->holes[i].tin <= t && t <= tw->holes[i].tout ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/*
+================
 CM_TraceThroughPatch
 ================
 */
 
 void CM_TraceThroughPatch( traceWork_t *tw, trace_t &trace, cPatch_t *patch ) {
 	float		oldFrac;
+	trace_t		before;
 
 	c_patch_traces++;
 
 	oldFrac = trace.fraction;
+	if ( tw->numHoles ) {
+		before = trace;
+	}
 
 	CM_TraceThroughPatchCollide( tw, trace, patch->pc );
 
 	if ( trace.fraction < oldFrac ) {
+		// VisionJK: a patch is no convex body the box enters and leaves once as a brush is, so only the contact the
+		// patch code found is weighed: inside a hole it does not count (the box is not stopped later on in the patch)
+		if ( tw->numHoles && CM_InsideHole( tw, trace.fraction ) ) {
+			trace = before;
+			return;
+		}
 		trace.surfaceFlags = patch->surfaceFlags;
 		trace.contents = patch->contents;
 	}
@@ -587,6 +740,23 @@ void CM_TraceThroughBrush( traceWork_t *tw, trace_t &trace, cbrush_t *brush, boo
 	{
 		if(!infoOnly)
 		{
+			// VisionJK: a trace with holes that starts in this brush inside a hole is stopped only where it leaves
+			// the hole still in the brush, at that side of the hole
+			const cplane_t	*holePlane = NULL;
+			const float		contact = tw->numHoles ? CM_HoleContact( tw, 0.0f, tw->getout ? tw->leaveFrac : 1.0f, NULL, &holePlane ) : 0.0f;
+
+			if ( holePlane || contact < 0.0f )
+			{
+				if ( holePlane && contact < trace.fraction )
+				{
+					trace.fraction = contact;
+					trace.plane = *holePlane;
+					trace.surfaceFlags = 0;
+					trace.contents = brush->contents;
+				}
+				tw->enterFrac = 0.0f;
+				return;
+			}
 			// original point was inside brush
 			trace.startsolid = qtrue;
 			if (!tw->getout)
@@ -606,6 +776,29 @@ void CM_TraceThroughBrush( traceWork_t *tw, trace_t &trace, cbrush_t *brush, boo
 			if (tw->enterFrac < 0.0f)
 			{
 				tw->enterFrac = 0.0f;
+			}
+			if ( !infoOnly && tw->numHoles )
+			{
+				// VisionJK: a trace with holes, the box enters this brush inside a hole: the contact is where it
+				// leaves the hole still in the brush, or none
+				const cplane_t	*holePlane = NULL;
+				const float		contact = CM_HoleContact( tw, tw->enterFrac, tw->leaveFrac, tw->clipplane, &holePlane );
+
+				if ( contact < 0.0f )
+				{
+					return;
+				}
+				if ( holePlane )
+				{
+					if ( contact < trace.fraction )
+					{
+						trace.fraction = contact;
+						trace.plane = *holePlane;
+						trace.surfaceFlags = tw->leadside ? cmg.shaders[tw->leadside->shaderNum].surfaceFlags : 0;
+						trace.contents = brush->contents;
+					}
+					return;
+				}
 			}
 			if(!infoOnly)
 			{
@@ -1216,9 +1409,11 @@ CM_Trace
 */
 void CM_Trace( trace_t *trace, const vec3_t start, const vec3_t end,
 						  const vec3_t mins, const vec3_t maxs,
-						  clipHandle_t model, const vec3_t origin, int brushmask, int capsule, sphere_t *sphere ) {
+						  clipHandle_t model, const vec3_t origin, int brushmask, int capsule, sphere_t *sphere,
+						  const traceHole_t *holes, int numHoles ) {
 	int			i;
 	traceWork_t	tw;
+	cmTraceHole_t	cmHoles[MAX_TRACE_HOLES];
 	vec3_t		offset;
 	cmodel_t	*cmod;
 	clipMap_t	*local = 0;
@@ -1331,6 +1526,15 @@ void CM_Trace( trace_t *trace, const vec3_t start, const vec3_t end,
 				tw.bounds[1][i] = tw.start[i] + tw.size[1][i];
 			}
 		}
+	}
+
+	if ( numHoles > 0 && holes ) {
+		if ( numHoles > MAX_TRACE_HOLES ) {
+			numHoles = MAX_TRACE_HOLES;
+		}
+		CM_SetupHoles( &tw, holes, numHoles, cmHoles );
+		tw.holes = cmHoles;
+		tw.numHoles = numHoles;
 	}
 
 	//
@@ -1464,7 +1668,18 @@ CM_BoxTrace
 void CM_BoxTrace( trace_t *results, const vec3_t start, const vec3_t end,
 						  const vec3_t mins, const vec3_t maxs,
 						  clipHandle_t model, int brushmask, int capsule ) {
-	CM_Trace( results, start, end, mins, maxs, model, vec3_origin, brushmask, capsule, NULL );
+	CM_Trace( results, start, end, mins, maxs, model, vec3_origin, brushmask, capsule, NULL, NULL, 0 );
+}
+
+/*
+==================
+CM_BoxTraceHoles
+==================
+*/
+void CM_BoxTraceHoles( trace_t *results, const vec3_t start, const vec3_t end,
+						  const vec3_t mins, const vec3_t maxs,
+						  clipHandle_t model, int brushmask, int capsule, const traceHole_t *holes, int numHoles ) {
+	CM_Trace( results, start, end, mins, maxs, model, vec3_origin, brushmask, capsule, NULL, holes, numHoles );
 }
 
 /*
@@ -1548,7 +1763,7 @@ void CM_TransformedBoxTrace( trace_t *trace, const vec3_t start, const vec3_t en
 	}
 
 	// sweep the box through the model
-	CM_Trace( trace, start_l, end_l, symetricSize[0], symetricSize[1], model, origin, brushmask, capsule, &sphere );
+	CM_Trace( trace, start_l, end_l, symetricSize[0], symetricSize[1], model, origin, brushmask, capsule, &sphere, NULL, 0 );
 
 	// if the bmodel was rotated and there was a collision
 	if ( rotated && trace->fraction != 1.0 ) {

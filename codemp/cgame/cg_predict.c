@@ -29,6 +29,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cg_local.h"
 #include "game/props/bg_props.h"
+#include "cgame/portal/cg_portals.h"
+#include "cgame/portal/cg_portal_draw.h"
 
 static	pmove_t		cg_pmove;
 
@@ -641,17 +643,93 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins, const
 CG_Trace
 ================
 */
-void	CG_Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
-					 int skipNumber, int mask ) {
+// VisionJK: CG_Trace and CG_PortalTrace; holes (traceHole_t, q_shared.h) are cut into the world only
+static void CG_TraceWith( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
+					 int skipNumber, int mask, const traceHole_t *holes, int numHoles ) {
 	trace_t	t;
 
-	trap->CM_Trace ( &t, start, end, mins, maxs, 0, mask, 0);
+	if ( numHoles > 0 ) {
+		trap->ext.CM_TraceHoles( &t, start, end, mins, maxs, 0, mask, 0, holes, numHoles );
+	} else {
+		trap->CM_Trace ( &t, start, end, mins, maxs, 0, mask, 0);
+	}
 	t.entityNum = t.fraction != 1.0 ? ENTITYNUM_WORLD : ENTITYNUM_NONE;
 	// check all other solid models
 	CG_ClipMoveToEntities (start, mins, maxs, end, skipNumber, mask, &t, qfalse);
 	CG_ClipMoveToProps( start, mins, maxs, end, skipNumber, mask, &t );
 
 	*result = t;
+}
+
+void	CG_Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
+					 int skipNumber, int mask ) {
+	CG_TraceWith( result, start, mins, maxs, end, skipNumber, mask, NULL, 0 );
+}
+
+// VisionJK: the portals of the portal gun for the prediction of a move through them, and the holes of the open ones
+// (game/portal/bg_portal.h), set for each Pmove of CG_PredictPlayerState
+static bgPortal_t	predictPortals[MAX_PORTALS];
+static traceHole_t	predictHoles[MAX_TRACE_HOLES];
+static int			predictNumHoles;
+
+// the trace of the moves of a player who walks through the portals
+static void CG_PortalTrace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
+					 int skipNumber, int mask ) {
+	CG_TraceWith( result, start, mins, maxs, end, skipNumber, mask, predictHoles, predictNumHoles );
+}
+
+static qboolean CG_PortalEngine( void );
+
+void CG_PortalViewTrace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
+					 int skipNumber, int mask ) {
+	traceHole_t	holes[MAX_TRACE_HOLES];
+	int			numHoles = 0;
+
+	if ( CG_PortalEngine() ) {
+		const bgPortal_t	*list;
+		int					count;
+
+		list = CG_PortalList( &count );
+		numHoles = BG_PortalHolesNear( list, count, start, holes, MAX_TRACE_HOLES );
+	}
+	CG_TraceWith( result, start, mins, maxs, end, skipNumber, mask, holes, numHoles );
+}
+
+// the engine has the traces with holes (cgameImport_t.ext.CM_TraceHoles behind the ROM cvar v_cgameTraceHoles)
+static qboolean CG_PortalEngine( void ) {
+	static int engine = -1;
+
+	if ( engine < 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameTraceHoles", value, sizeof( value ) );
+		engine = atoi( value ) == 1 ? 1 : 0;
+	}
+	return (qboolean)( engine && trap->ext.CM_TraceHoles );
+}
+
+/*
+================
+CG_PortalCaps
+
+VisionJK: at the start. v_caps tells the server that this client predicts the moves through the portals of the
+portal gun (V_CAPS_PORTAL) only where the engine has the traces with holes; with an older one the server puts it
+through when it touches an opening, as any legacy client.
+================
+*/
+void CG_PortalCaps( void ) {
+	const int caps = CG_PortalEngine() ? ( v_caps.integer | V_CAPS_PORTAL ) : ( v_caps.integer & ~V_CAPS_PORTAL );
+
+	if ( caps != v_caps.integer ) {
+		trap->Cvar_Set( "v_caps", va( "%i", caps ) );
+		trap->Cvar_Update( &v_caps );
+	}
+}
+
+// this client walks through the portals by himself: the server says so (vs_caps) and he told it so (v_caps)
+static qboolean CG_PortalMoves( void ) {
+	return (qboolean)( CG_PortalEngine() && ( v_caps.integer & V_CAPS_PORTAL )
+		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & VS_CAPS_PORTAL ) );
 }
 
 /*
@@ -1252,6 +1330,16 @@ void CG_PredictPlayerState( void ) {
 	cg_pmove.ps = &cg.predictedPlayerState;
 	cg_pmove.trace = CG_Trace;
 	cg_pmove.pointcontents = CG_PointContents;
+	// VisionJK: through the portals of the portal gun as the server does it (ClientThink_real in g_active.c)
+	cg_pmove.portals = NULL;
+	cg_pmove.numPortals = 0;
+	if ( CG_PortalMoves() ) {
+		cg_pmove.numPortals = CG_Portals( predictPortals, MAX_PORTALS );
+		if ( cg_pmove.numPortals ) {
+			cg_pmove.portals = predictPortals;
+			cg_pmove.trace = CG_PortalTrace;
+		}
+	}
 
 	pEnt = &cg_entities[cg.predictedPlayerState.clientNum];
 	//rww - bgghoul2
@@ -1475,7 +1563,9 @@ void CG_PredictPlayerState( void ) {
 			vec3_t	delta;
 			float	len;
 
-			if ( cg.thisFrameTeleport ) {
+			// VisionJK: nor does a portal of the portal gun one prediction went through and the other not yet
+			// (the one from the newer snapshot): the view would slide across the level
+			if ( cg.thisFrameTeleport || ( ( oldPlayerState.eFlags ^ cg.predictedPlayerState.eFlags ) & EF_TELEPORT_BIT ) ) {
 				// a teleport will not cause an error decay
 				VectorClear( cg.predictedError );
 				if ( cg_showMiss.integer ) {
@@ -1563,6 +1653,9 @@ void CG_PredictPlayerState( void ) {
 		}
 
 		CG_JPNonInterference( qtrue );
+		if ( cg_pmove.portals ) {
+			predictNumHoles = BG_PortalHolesNear( predictPortals, cg_pmove.numPortals, cg_pmove.ps->origin, predictHoles, MAX_TRACE_HOLES );
+		}
 		Pmove (&cg_pmove);
 		CG_JPNonInterference( qfalse );
 

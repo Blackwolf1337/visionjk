@@ -3270,6 +3270,14 @@ void G_RunItem( gentity_t *ent ) {
 	}
 	trap->Trace( &tr, ent->r.currentOrigin, ent->r.mins, ent->r.maxs, origin, ent->r.ownerNum, mask, qfalse, 0, 0 );
 
+	// VisionJK: into a portal of the portal gun, out of the other one and on from there (portal/g_portal.c)
+	{
+		vec3_t start;
+
+		VectorCopy( ent->r.currentOrigin, start );
+		G_PortalTrajectory( ent, start, origin, &tr, ent->r.ownerNum, mask, 0, 0 );
+	}
+
 	VectorCopy( tr.endpos, ent->r.currentOrigin );
 
 	if ( tr.startsolid ) {

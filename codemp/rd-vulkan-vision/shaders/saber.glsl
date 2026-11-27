@@ -1,7 +1,7 @@
 // Saber blades in 3D (vk_post.cpp VK_SaberBlades, ext.AddSaberBladeToScene), for shaders/saber.frag (the view of the
 // level), shaders/saberportal.frag (a mirror or portal in it, PORTAL_VIEW) and shaders/saberglow.frag (into the buffer
-// of r_DynamicGlow, GLOW_PASS, which blurs it into the soft halo the flat blades get). Drawn after the solid level and
-// before what is transparent, so sparks and flashes come in front. Each pixel takes the nearest the ray from the eye
+// of r_DynamicGlow, GLOW_PASS, which blurs it into the soft halo the flat blades get). Drawn once the view is drawn,
+// over what is transparent too: water or glass behind a blade does not cover it. Each pixel takes the nearest the ray from the eye
 // through it comes to each blade, in the space of the level and not on the screen: a white hot core where it passes
 // within the core, a glow in the colour of the blade falling off round it. From the side a blade is a line, seen
 // along it a round glowing point; the cgame had drawn two flat strips turned to the eye that fell apart seen along
@@ -30,6 +30,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[382];
 	vec4	lights[34];
 	vec4	ssr[7];
+	vec4	glass[10];		// the views of what lies behind thick glass (VK_GlassRows of vk_post.cpp, VK_GLASS_VEC4S)
 	vec4	blades[236];
 	vec4	bladeView[11];
 } globals;
@@ -39,6 +40,10 @@ layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the sc
 #ifdef PORTAL_VIEW
 #define W		globals.bladeView
 #define VIEW	2
+#elif defined( EARLY_PASS )
+// (the blades behind thick glass, before it is drawn: 4 in the w of their colour in place of 1)
+#define W		globals.blades
+#define VIEW	4
 #else
 #define W		globals.blades
 #define VIEW	1
@@ -48,6 +53,10 @@ layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the sc
 
 layout( location = 0 ) out vec4 o_color;
 
+#if !defined( PORTAL_VIEW ) && !defined( EARLY_PASS )
+// (the view of the level: B[11].y 1 with the distance of the solid level in u_depth, so a blade behind glass shows)
+#define SCENE_IS_DISTANCE	( B[11].y > 0.5 )
+#endif
 #include "scene.glsl"
 
 // The nearest points of the ray eye + dir t (t from 0) and the blade a + seg u (u 0 to 1): u, t, how far apart, and
