@@ -1269,6 +1269,9 @@ static qboolean VK_AddDeviceSprites( surfaceType_t *surface ) {
 			refEntity_t mini = {};
 
 			memcpy( &mini, &backEnd.refdef.miniEntities[start + i].e, sizeof( backEnd.refdef.miniEntities[start + i].e ) );
+			if ( rb_fxPass && !RB_FxWanted( mini.origin ) ) {
+				continue;
+			}
 			VK_AddEntityQuads( &mini );
 		}
 		return qtrue;

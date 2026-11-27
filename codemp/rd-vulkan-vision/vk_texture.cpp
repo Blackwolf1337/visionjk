@@ -506,6 +506,24 @@ static VkImageView VK_DepthOnlyView( const vkTarget_t *depth ) {
 	return result;
 }
 
+// A copy of the frame for a shader to read. OpenGL copies a frame buffer that has no alpha, and such a texture reads as
+// 1 there. The frame here has an alpha channel with what the blends left in it, so the copy is looked at without it.
+static void VK_CreateFrameCopy( vkTarget_t *target ) {
+	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+
+	VK_CreateTarget( target, vk.width, vk.height, vk.color.format,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	qvkDestroyImageView( vk.device, target->view, NULL );
+	view.image = target->image;
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = target->format;
+	view.components.a = VK_COMPONENT_SWIZZLE_ONE;
+	view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view.subresourceRange.levelCount = 1;
+	view.subresourceRange.layerCount = 1;
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &target->view ) );
+}
+
 void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -525,25 +543,26 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_CreateTarget( &vk.softDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	vk.softShown = -1;
 	vk.softReady = qfalse;
+	VK_CreateTarget( &vk.glassDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.glassShown = -1;
+	vk.glassReady = qfalse;
+	VK_CreateTarget( &vk.worldDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.worldShown = -1;
+	vk.worldReady = qfalse;
+	VK_PostSetOnce( &vk.glassSet );
+	VK_WriteSet( vk.glassSet, vk.postSampler, vk.glassDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	// what lies behind thick glass (VK_EndGlassView): copies of a part of the frame, as vk.screen is one; and what the
+	// frame held where such a view was drawn into it, to put back (VK_BeginGlassView)
+	for ( int i = 0; i < GLASS_VIEWS; i++ ) {
+		VK_CreateFrameCopy( &vk.behind[i] );
+		vk.behindShown[i] = -1;
+		vk.behindFrame[i] = -1;
+	}
+	VK_CreateFrameCopy( &vk.behindKeep );
+	vk.limitOn = qfalse;
 	VK_PostSetOnce( &vk.softSet );
 	VK_WriteSet( vk.softSet, vk.postSampler, vk.softDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	{
-		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
-		// alpha channel with what the blends left in it, so the copy is looked at without it.
-		VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-
-		qvkDestroyImageView( vk.device, vk.screen.view, NULL );
-		view.image = vk.screen.image;
-		view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		view.format = vk.screen.format;
-		view.components.a = VK_COMPONENT_SWIZZLE_ONE;
-		view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		view.subresourceRange.levelCount = 1;
-		view.subresourceRange.layerCount = 1;
-		VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.screen.view ) );
-	}
+	VK_CreateFrameCopy( &vk.screen );
 	VK_CreateTarget( &vk.blur[0], blurWidth, blurHeight, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	for ( int i = 0; i < 2; i++ ) {
@@ -570,6 +589,8 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	// the copy of the frame the scope reads, filtered as the other ones (its view has an alpha of 1)
 	VK_PostSetOnce( &vk.screenSet );
 	VK_WritePostSet( vk.screenSet, vk.screen.view );
+	VK_PostSetOnce( &vk.behindKeepSet );
+	VK_WritePostSet( vk.behindKeepSet, vk.behindKeep.view );
 
 	// v_wetMirror: the view mirrored at the floor of the puddles, with the formats and the samples of the frame, so
 	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all. Half the size of the
@@ -687,6 +708,15 @@ void VK_DestroyPostTargets( void ) {
 	vk.ssrReady = qfalse;
 	VK_DestroyTarget( &vk.softDepth );
 	vk.softReady = qfalse;
+	VK_DestroyTarget( &vk.glassDepth );
+	vk.glassReady = qfalse;
+	VK_DestroyTarget( &vk.worldDepth );
+	vk.worldReady = qfalse;
+	for ( int i = 0; i < GLASS_VIEWS; i++ ) {
+		VK_DestroyTarget( &vk.behind[i] );
+		vk.behindFrame[i] = -1;
+	}
+	VK_DestroyTarget( &vk.behindKeep );
 	VK_DestroyTarget( &vk.volume );
 	VK_DestroyTarget( &vk.probeColor );
 	VK_DestroyTarget( &vk.probeColorMS );

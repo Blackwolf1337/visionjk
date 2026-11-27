@@ -746,6 +746,9 @@ typedef struct fog_s {
 } fog_t;
 
 #define MAX_PROBES		32			// VisionJK: reflection probes of a level (R_CreateProbes)
+#define GLASS_VIEWS		3			// VisionJK: views of what lies behind thick glass a view of the level can have (R_GlassViews)
+// own body, talk balloon: not in the view of the level itself, nor in one of what lies behind its glass
+#define R_VIEW_HIDES_OWN()	( !tr.viewParms.isPortal || tr.viewParms.glassView )
 #define PROBE_SIZE		128			//	pixels a face of one each way
 
 typedef struct viewParms_s {
@@ -757,6 +760,15 @@ typedef struct viewParms_s {
 	qboolean	isPuddle;			// VisionJK: the mirror at the floor of the puddles of RE_AddWet (R_PuddleView)
 	int			probeFace;			// VisionJK: 1 to 6 for a face of a reflection probe (R_ProbeViews), 0 else
 	int			probeIndex;			//	and which probe
+	// VisionJK: what lies behind a plane of thick glass, drawn once more for the glass to read where something stands
+	// in front of it (R_GlassViews). The view itself: glassView 1 to GLASS_VIEWS, the part of the main view it is
+	// drawn for in glassBounds (-1 to 1 across and up, as VK_BallBounds counts). The view of the level they were made
+	// for: how many, their planes (xyz normal away from the eye, w distance) and parts.
+	int			glassView;
+	float		glassBounds[4];
+	int			numGlassViews;
+	vec4_t		glassPlanes[GLASS_VIEWS];
+	float		glassParts[GLASS_VIEWS][4];
 	int			frameSceneNum;		// copied from tr.frameSceneNum
 	int			frameCount;			// copied from tr.frameCount
 	cplane_t	portalPlane;		// clip anything behind this if mirroring
@@ -1185,6 +1197,9 @@ typedef struct trGlobals_s {
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
 	image_t					*ssrImage;			// VisionJK: the slot of the texture table that shows the picture of v_ssr (vk_post.cpp)
 	image_t					*softDepthImage;	// VisionJK: and the one that shows the distance of v_softParticles
+	image_t					*glassDepthImage;	// VisionJK: how far the nearest of glass and solid is, for glass (VK_GlassMask)
+	image_t					*behindImage[GLASS_VIEWS];	// VisionJK: what lies behind a plane of thick glass (R_GlassViews, VK_EndGlassView)
+	image_t					*worldDepthImage;	// VisionJK: how far the solid level alone is, without its models, for glass (VK_WorldDepth)
 	image_t					*rtLightImage[2];	// VisionJK: slots of the texture table that show the masks of the shadows from the moving lights (vk_rt.cpp)
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
@@ -1448,6 +1463,7 @@ extern	liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];	// what RE_AddLiquid was 
 extern	int				r_numLiquids;
 extern	wetSpot_t		r_wet[WET_MAX_SPOTS];		// what RE_AddWet was given this frame
 extern	int				r_numWet;
+qboolean		R_IsThinGlass( const shader_t *shader );	// tr_main.cpp: all the glass of a shader is a thin pane (R_SortGlass)
 extern	wetSpot_t		r_ripples[WET_MAX_SURFACE];	//	and of those the rings on the water of the level (WET_SURFACE)
 extern	int				r_numRipples;
 extern	paintDecal_t	r_paint[PAINT_MAX_DECALS];	// what RE_AddPaint was given this frame

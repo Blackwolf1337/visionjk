@@ -30,6 +30,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[382];
 	vec4	lights[34];
 	vec4	ssr[7];
+	vec4	glass[10];		// the views of what lies behind thick glass (VK_GlassRows of vk_post.cpp, VK_GLASS_VEC4S)
 	vec4	blades[236];
 	vec4	bladeView[11];
 } globals;
@@ -39,6 +40,10 @@ layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the sc
 #ifdef PORTAL_VIEW
 #define W		globals.bladeView
 #define VIEW	2
+#elif defined( EARLY_PASS )
+// (the blades behind thick glass, before it is drawn: 4 in the w of their colour in place of 1)
+#define W		globals.blades
+#define VIEW	4
 #else
 #define W		globals.blades
 #define VIEW	1
@@ -48,7 +53,7 @@ layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the sc
 
 layout( location = 0 ) out vec4 o_color;
 
-#ifndef PORTAL_VIEW
+#if !defined( PORTAL_VIEW ) && !defined( EARLY_PASS )
 // (the view of the level: B[11].y 1 with the distance of the solid level in u_depth, so a blade behind glass shows)
 #define SCENE_IS_DISTANCE	( B[11].y > 0.5 )
 #endif

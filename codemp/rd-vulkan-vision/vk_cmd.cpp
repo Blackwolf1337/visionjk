@@ -181,14 +181,19 @@ static void VK_GpuRead( vkFrame_t *frame ) {
 	uint64_t ticks[VK_GPU_MARKS];
 	const double msPerTick = (double)vk.properties.limits.timestampPeriod / 1000000.0;
 
-	if ( frame->fragments && frame->fragmentsUsed ) {
-		uint64_t count = 0;
+	if ( frame->fragments && frame->fragmentsUsed && frame->fragmentsParts > 0 ) {
+		uint64_t parts[VK_FRAGMENT_PARTS] = { 0 };
 
-		if ( qvkGetQueryPoolResults( vk.device, frame->fragments, 0, 1, sizeof( count ), &count, sizeof( count ), VK_QUERY_RESULT_64_BIT )
-			== VK_SUCCESS ) {
-			vk_gpuFragments += (double)count;
+		if ( qvkGetQueryPoolResults( vk.device, frame->fragments, 0, (uint32_t)frame->fragmentsParts, sizeof( parts ), parts,
+			sizeof( parts[0] ), VK_QUERY_RESULT_64_BIT ) == VK_SUCCESS ) {
+			double count = 0.0;
+
+			for ( int i = 0; i < frame->fragmentsParts; i++ ) {
+				count += (double)parts[i];
+			}
+			vk_gpuFragments += count;
 			vk_gpuFragmentFrames++;
-			vk_profFragments += (double)count;
+			vk_profFragments += count;
 			vk_profFragmentFrames++;
 		}
 	}
@@ -224,15 +229,37 @@ void VK_LevelFragments( qboolean begin ) {
 		return;
 	}
 	if ( begin ) {
-		if ( !frame->fragmentsActive && !frame->fragmentsUsed ) {
-			qvkCmdBeginQuery( frame->cmd, frame->fragments, 0, 0 );
+		if ( !frame->fragmentsActive && !frame->fragmentsUsed && frame->fragmentsParts < VK_FRAGMENT_PARTS ) {
+			qvkCmdBeginQuery( frame->cmd, frame->fragments, (uint32_t)frame->fragmentsParts, 0 );
 			frame->fragmentsActive = qtrue;
 		}
 	} else if ( frame->fragmentsActive ) {
-		qvkCmdEndQuery( frame->cmd, frame->fragments, 0 );
+		qvkCmdEndQuery( frame->cmd, frame->fragments, (uint32_t)frame->fragmentsParts );
+		frame->fragmentsParts++;
 		frame->fragmentsActive = qfalse;
 		frame->fragmentsUsed = qtrue;
 	}
+}
+
+/*
+===============
+VK_PauseLevelFragments
+
+For a pass that leaves the render pass of the level while it is still being drawn and comes back to it (the distance
+with the glass in it, vk_post.cpp VK_GlassMask): the count stops before it and goes on after it in
+another query of the pool, the parts are added up when they are read. qtrue: it was counting.
+===============
+*/
+qboolean VK_PauseLevelFragments( void ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || !frame->fragments || !frame->fragmentsActive ) {
+		return qfalse;
+	}
+	qvkCmdEndQuery( frame->cmd, frame->fragments, (uint32_t)frame->fragmentsParts );
+	frame->fragmentsParts++;
+	frame->fragmentsActive = qfalse;
+	return qtrue;
 }
 
 // no mark of the frame yet but its start
@@ -318,11 +345,12 @@ void VK_InitFrames( void ) {
 		}
 		frame->fragments = VK_NULL_HANDLE;
 		frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+		frame->fragmentsParts = 0;
 		if ( vk.pipelineStats ) {
 			VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
 
 			query.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
-			query.queryCount = 1;
+			query.queryCount = VK_FRAGMENT_PARTS;
 			query.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
 			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->fragments ) );
 		}
@@ -584,6 +612,22 @@ void VK_EndTarget( void ) {
 	qvkCmdEndRendering( vk.frame->cmd );
 }
 
+// A view of what lies behind thick glass is drawn for a part of the frame alone (vk.limit, VK_BeginGlassView): no
+// scissor of the frame reaches past it while it is on.
+static void VK_LimitScissor( VkRect2D *scissor ) {
+	if ( !vk.limitOn ) {
+		return;
+	}
+	const int left = Q_max( scissor->offset.x, vk.limit[0] ), top = Q_max( scissor->offset.y, vk.limit[1] );
+	const int right = Q_min( scissor->offset.x + (int)scissor->extent.width, vk.limit[2] );
+	const int bottom = Q_min( scissor->offset.y + (int)scissor->extent.height, vk.limit[3] );
+
+	scissor->offset.x = left;
+	scissor->offset.y = top;
+	scissor->extent.width = (uint32_t)Q_max( right - left, 0 );
+	scissor->extent.height = (uint32_t)Q_max( bottom - top, 0 );
+}
+
 /*
 ===============
 VK_ViewportAndScissor
@@ -610,6 +654,7 @@ void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth,
 	scissor.offset.y = up;
 	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
 	scissor.extent.height = (uint32_t)Q_max( down - up, 0 );
+	VK_LimitScissor( &scissor );
 	qvkCmdSetViewport( vk.frame->cmd, 0, 1, &viewport );
 	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
@@ -636,6 +681,7 @@ void VK_Scissor( int left, int top, int right, int bottom ) {
 	scissor.offset.y = top;
 	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
 	scissor.extent.height = (uint32_t)Q_max( bottom - top, 0 );
+	VK_LimitScissor( &scissor );
 	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
 
@@ -711,8 +757,9 @@ void VK_BeginCommands( vkFrame_t *frame ) {
 	VK_GpuRead( frame );
 	frame->numMarks = 0;
 	frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+	frame->fragmentsParts = 0;
 	if ( frame->fragments ) {
-		qvkCmdResetQueryPool( frame->cmd, frame->fragments, 0, 1 );
+		qvkCmdResetQueryPool( frame->cmd, frame->fragments, 0, VK_FRAGMENT_PARTS );
 	}
 	if ( frame->timestamps ) {
 		qvkCmdResetQueryPool( frame->cmd, frame->timestamps, 0, VK_GPU_MARKS );
@@ -1042,8 +1089,12 @@ PASSES OVER WHOLE TARGETS
 
 static void VK_FullTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
 	const VkViewport viewport = { 0.0f, 0.0f, (float)target->width, (float)target->height, 0.0f, 1.0f };
-	const VkRect2D scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
+	VkRect2D scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
 
+	// (a pass over the frame in a view of what lies behind thick glass: its part of the frame)
+	if ( target == &vk.color ) {
+		VK_LimitScissor( &scissor );
+	}
 	qvkCmdSetViewport( cmd, 0, 1, &viewport );
 	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
@@ -1063,6 +1114,9 @@ static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
 	}
 	if ( source == &vk.screen ) {
 		return vk.screenSet;
+	}
+	if ( source == &vk.glassDepth ) {
+		return vk.glassSet;
 	}
 	if ( source == &vk.smoke[0] || source == &vk.smoke[1] ) {
 		return vk.smokeSets[source - vk.smoke];
@@ -1176,7 +1230,9 @@ void VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float streng
 // The depth is not drawn into while the pass reads it: the pass that follows takes it back (VK_BeginTarget).
 // area: only that part of the frame is wanted (left, top, width, height in its pixels, width 0: all), the pass is
 // cut to it in the pixels of its target and two more each way.
-static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm, const int *area = NULL ) {
+// keep: the pixels the shader leaves out stay as the target has them.
+static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm, const int *area = NULL,
+	qboolean keep = qfalse ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	// (source NULL: the shader reads the depth alone, the set of the frame only fills the place and the frame is not
 	// made of its samples for it)
@@ -1189,7 +1245,7 @@ static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *t
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 	vk.boundPipeline = pipeline;
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
+	VK_BeginRendering( cmd, target, NULL, keep ? 2 : 0, qfalse );
 	VK_FullTarget( cmd, target );
 	if ( area && area[2] > 0 ) {
 		const int	left = Q_max( area[0] * target->width / vk.color.width - 2, 0 );
@@ -1213,6 +1269,14 @@ void VK_SsrPrepPass( const float *parm ) {
 
 void VK_SoftDepthPass( const float *parm ) {
 	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.softDepth, parm );
+}
+
+void VK_GlassDepthPass( const float *parm ) {
+	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.glassDepth, parm );
+}
+
+void VK_WorldDepthPass( const float *parm ) {
+	VK_DepthPass( vk.softDepthPipeline, NULL, &vk.worldDepth, parm );
 }
 
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
@@ -1528,6 +1592,22 @@ static void VK_CopyTargetPart( vkTarget_t *source, vkTarget_t *dest, const int *
 
 void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
 	VK_CopyTargetPart( source, dest, NULL, 0 );
+}
+
+// a part of the picture: left, top, width, height
+void VK_CopyTargetRect( vkTarget_t *source, vkTarget_t *dest, const int *area ) {
+	VK_CopyTargetPart( source, dest, area, 0 );
+}
+
+// vk.behindKeep back onto the frame, as it is (its view has an alpha of 1), inside the limit of the scissor
+void VK_PutBackFrame( void ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.glowPipelines[VKA_BLEND] );
+	vk.boundPipeline = vk.glowPipelines[VKA_BLEND];
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.behindKeepSet, 0, NULL );
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
 // the part of the frame the passes of the screen effects are cut to (vk.passArea), with margin pixels around it

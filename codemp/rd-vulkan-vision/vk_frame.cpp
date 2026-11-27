@@ -498,7 +498,11 @@ part of the picture something reaches: the smoke (vk_smoke.cpp), a moving light 
 ===============
 */
 qboolean VK_BallBounds( const vec3_t origin, float radius, float *bounds ) {
-	const viewParms_t	*view = &backEnd.viewParms;
+	return VK_ViewBallBounds( &backEnd.viewParms, origin, radius, bounds );
+}
+
+// the same of a view the front end is making (R_GlassViews)
+qboolean VK_ViewBallBounds( const viewParms_t *view, const vec3_t origin, float radius, float *bounds ) {
 	const float			tanX = tanf( DEG2RAD( view->fovX ) * 0.5f ), tanY = tanf( DEG2RAD( view->fovY ) * 0.5f );
 	vec3_t				to;
 	float				lo[2], hi[2];

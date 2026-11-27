@@ -906,6 +906,24 @@ static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkD
 	}
 	draw->pbr[0] = mat->roughness;
 	draw->pbr[1] = 0.0f;
+	// the distance of the solid level where the view has it (VK_SoftDepth): the glass does not show what stands in
+	// front of it as if it lay behind it (generic.frag GlassInFront)
+	if ( ( vk.worldReady && tr.worldDepthImage ) || ( vk.frontReady && tr.softDepthImage ) ) {
+		// (of the level alone where the view has that, VK_WorldDepth: its models move with what lies behind them)
+		draw->tex3 = ( vk.worldReady && tr.worldDepthImage ) ? tr.worldDepthImage->texnum : tr.softDepthImage->texnum;
+		draw->pbr[1] = 1.0f;
+		// and the picture of the faces of the glass the eye sees (VK_GlassMask): a pane of the level stays inside its own
+		if ( vk.glassReady && tr.glassDepthImage ) {
+			draw->tex4 = tr.glassDepthImage->texnum;
+			draw->pbr[1] = 2.0f;
+		}
+	}
+	// The view of the level that has views of what lies behind its thick glass (R_GlassViews, globals.glass): the
+	// distance of everything solid, its models too (vk.softDepth), beside that of the level alone (vk.worldDepth, so
+	// only with the depth pre-pass). Where a model stands in front of the glass, the glass reads the view of what lies
+	// behind its plane, not its copy of the frame (generic.frag GlassBehind; the entries of the two in the texture
+	// table are in globals.glass, VK_GlassRows: the draw has no place left for them).
+	draw->pbr3[0] = ( vk.frontReady && vk.worldReady && backEnd.viewParms.numGlassViews && !backEnd.viewParms.isPortal ) ? 1.0f : 0.0f;
 	draw->pbr[2] = mat->ior;
 	draw->pbr[3] = (float)v_pbr->integer;
 	draw->pbr2[0] = mat->transmission;
@@ -922,8 +940,9 @@ static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkD
 	VectorCopy( mat->absorption, draw->material );
 	draw->material[3] = 0.0f;
 	VK_PbrProbes( draw );
-	// not blended: what it shows of the scene is in its colour. Its depth is written, so what is drawn after it and
-	// lies behind it is not drawn over it (R_SortGlass draws glass far to near, before the other transparent things)
+	// not blended: what it shows of the scene is in its colour. Its depth is written, so the glass drawn after it
+	// that lies behind it is not drawn over it (R_SortGlass draws glass far to near; a thin pane after the other
+	// transparent things, which it shows, thick glass before them)
 	*stateBits = GLS_DEPTHMASK_TRUE;
 	return qtrue;
 #endif

@@ -819,13 +819,305 @@ vec3 DebugLights( Transform t, Surface s, inout vec3 diffuse ) {
 }
 
 /* Glass (VK_GlassDraw, material keywords transmission, ior, thickness, absorption): the copy of the frame in tex1
-   behind the surface. Where it shows it is bent: the ray from the eye through the surface (refract by ior) against
-   the straight one, both carried thickness units on (a thin pane 4) and projected to the screen. It is blurred by the
+   behind the surface. Where it shows it is bent: by the bumps of its normal map, the ray through them (refract by
+   ior) against the one through the even surface, both carried thickness units on (a thin pane 4) and projected to the
+   screen; and moved to the side by the way through the pane, see there. It is blurred by the
    roughness (frosted), coloured by the absorption over the path through it (a thin pane by the colour alone) and
    by the texture as far as its alpha says. On top, what it mirrors of the probes by Fresnel (F0 from ior) and the
    shine of the lamps. A stage that adds its colour (pbr2.w) does not colour what shows through with its texture: black
-   in it means nothing added. pbr: roughness, -, ior, v_pbr; pbr2: transmission, thickness, absorption distance, whether
-   the stage adds; material: the absorption colour. */
+   in it means nothing added. pbr: roughness, 1 with the distance of the solid level in tex3 and 2 with the faces of the glass in tex4 too, ior,
+   v_pbr; pbr2:
+   transmission, thickness, absorption distance, whether the stage adds; material: the absorption colour.
+
+   The copy of the frame holds everything that was drawn, not only what lies behind this glass. A pane that reads it
+   to the side shows things that are not behind it: a player in front of it a second time beside himself, and at its
+   border what stands beside it, which the eye sees there as well (their pictures 2026-11-26: a silhouette of the
+   player in the pane next to him). And what does lie behind it is cut off at its border. Real thick glass shows
+   each thing behind it once. So a pane moves its picture inside its own face only, the face the eye sees of it
+   (GlassOwn), and by less and less towards the border of that face, where it ends at nothing: every place behind the
+   face is shown once, bent, and nothing from beside or in front of it comes in. A player in front of the pane cuts
+   his outline out of the face, so the picture ends there the same way.
+
+   That left the picture squeezed round whatever stands in front of the glass, and any other way of making up what
+   the copy does not hold showed as well. Where something stands in front of thick glass of the level, the level is
+   drawn once more, cut at the plane of the glass (R_GlassViews of tr_main.cpp, globals.glass), and the glass reads
+   that picture wherever its copy shows what stands in front (GlassBehind, GlassColor): such places count as its own
+   face, so the picture goes on behind a player in front of the pane as it does in real glass. pbr3.x: 1 where the
+   view has the distances that is told by (of everything solid and of the level alone, their entries in globals.glass). */
+vec3 g_glassPlane;		// 1 / the distance of the glass at the pixel, and how it changes a pixel across (xy) of the frame
+vec2 g_glassHere;		// the pixel, as a place of the copy
+
+// how far the surface of the glass, carried on flat, is at a place of the copy; below 0: behind the eye by there
+// (one over the distance of a flat surface changes evenly across the screen)
+float GlassPane( vec2 uv ) {
+	float inv = g_glassPlane.z + dot( g_glassPlane.xy, ( uv - g_glassHere ) * globals.screen.xy );
+
+	return inv > 1e-6 ? 1.0 / inv : -1.0;
+}
+
+// Whether the place uv of the copy shows something that stands in front of the glass. For glass that has no picture of
+// its face (on a model, or a view without one): in front of its surface carried on to that place, not nearer than the
+// glass is at the pixel that asks (a pane that runs away from the eye is nearer at one pixel than a player it passes
+// behind a few pixels on).
+bool GlassInFront( Draw d, vec2 uv ) {
+	ivec2 size = textureSize( TEX3( d ), 0 );
+	float solid = texelFetch( TEX3( d ), clamp( ivec2( uv * globals.screen.xy ), ivec2( 0 ), size - 1 ), 0 ).r;
+	float pane = GlassPane( uv );
+
+	// (a surface that has run behind the eye by there: all of it counts as in front)
+	return pane <= 0.0 || solid < pane - 2.0;
+}
+
+int g_glassView;		// which view of what lies behind the glass the pixel reads (globals.glass), below 0: none
+
+// Whether the place uv of the copy shows a model that stands in front of the glass where a view of what lies behind
+// its plane has the picture without it. Told by three distances there: of everything solid (vk.softDepth), of the level
+// alone (vk.worldDepth) and of the surface of the glass carried on to there: a model is the nearest thing, it is in front of the
+// glass, and the level behind it is not (the floor in front of a pane is nothing the pane shows, and the view of what
+// lies behind the plane has nothing there). A pixel next to such a place counts too: the copy is made of several
+// samples a pixel, and the outline of the model is in the colour of the pixels along it.
+bool GlassBehind( Draw d, vec2 uv ) {
+#ifdef VK_GLES
+	return false;
+#else
+	if ( g_glassView < 0 ) {
+		return false;
+	}
+	vec4 part = globals.glass[2 + g_glassView * 3];
+
+	if ( uv.x < part.x || uv.y < part.y || uv.x > part.z || uv.y > part.w ) {
+		return false;
+	}
+	float pane = GlassPane( uv );
+
+	if ( pane <= 0.0 ) {
+		return false;
+	}
+	// (the draw has no place left for them: the entries of the two distances in the texture table are in the rows)
+	uint solidSlot = uint( globals.glass[0].y ) - 1u, levelSlot = uint( globals.glass[0].z ) - 1u;
+	ivec2 at = ivec2( uv * globals.screen.xy ), last = textureSize( u_textures[nonuniformEXT( solidSlot )], 0 ) - 1;
+
+	for ( int i = 0; i < 5; i++ ) {
+		ivec2 next = clamp( at + ivec2( i == 1 ? 1 : ( i == 2 ? -1 : 0 ), i == 3 ? 1 : ( i == 4 ? -1 : 0 ) ), ivec2( 0 ), last );
+		float solid = texelFetch( u_textures[nonuniformEXT( solidSlot )], next, 0 ).r;
+		float level = texelFetch( u_textures[nonuniformEXT( levelSlot )], next, 0 ).r;
+
+		if ( solid < pane - 2.0 && solid < level - 1.0 && level > pane - 2.0 ) {
+			return true;
+		}
+	}
+	return false;
+#endif
+}
+
+// The view of what lies behind the glass is drawn without what the view of the level lays over its solid surfaces
+// afterwards (the shadows of the players, wet ground, smoke), and other glass in it has less to show than in the view
+// of the level. Read as it is, it stood out round a player: pale where his own shadow lies on the floor about him
+// (test level vjk_glass), blue where water in front of the floor mirrors the sky in the one picture and not in the
+// other (t3_bounty, 2026-11-27). So it is read with what the copy of the frame has over it right beside what stands
+// in front (GlassShade): g_glassShade, how much darker the copy is there, and g_glassAdded, what it has on top.
+vec3 g_glassShade, g_glassAdded;
+
+// what lies behind the glass at the place uv of its copy of the frame
+vec3 GlassColor( Draw d, vec2 uv ) {
+#ifndef VK_GLES
+	if ( GlassBehind( d, uv ) ) {
+		return texture( u_textures[nonuniformEXT( uint( globals.glass[3 + g_glassView * 3].x ) - 1u )], uv ).rgb * g_glassShade + g_glassAdded;
+	}
+#endif
+	return texture( TEX1( d ), uv ).rgb;
+}
+
+// From the place uv the pixel reads, which shows something in front of the glass, towards the pixel itself: the first
+// place that does not, where the copy of the frame and the view of what lies behind the glass show the same surface.
+// What the one has of shadow and of light over the other there is taken for the place behind the model as well.
+void GlassShade( Draw d, vec2 uv, vec2 here ) {
+	g_glassShade = vec3( 1.0 );
+	g_glassAdded = vec3( 0.0 );
+#ifndef VK_GLES
+	if ( !GlassBehind( d, uv ) ) {
+		return;
+	}
+	vec4 part = globals.glass[2 + g_glassView * 3];
+
+	for ( int i = 1; i <= 6; i++ ) {
+		vec2 at = mix( uv, here, float( i ) / 6.0 );
+
+		if ( at.x < part.x || at.y < part.y || at.x > part.z || at.y > part.w ) {
+			return;
+		}
+		if ( !GlassBehind( d, at ) ) {
+			// (over a few places along the way on: of one alone the grain of the surface came with it)
+			vec2 on = ( here - uv ) / 6.0;
+			vec3 copy = vec3( 0.0 ), view = vec3( 0.0 );
+
+			for ( int k = 0; k < 3; k++ ) {
+				vec2 from = clamp( at + on * float( k ), part.xy, part.zw );
+
+				copy += texture( TEX1( d ), from ).rgb;
+				view += texture( u_textures[nonuniformEXT( uint( globals.glass[3 + g_glassView * 3].x ) - 1u )], from ).rgb;
+			}
+			copy /= 3.0;
+			view /= 3.0;
+			g_glassShade = clamp( copy / max( view, vec3( 0.02 ) ), vec3( 0.25 ), vec3( 1.0 ) );
+			g_glassAdded = max( copy - view, vec3( 0.0 ) );
+			return;
+		}
+	}
+#endif
+}
+
+// Whether the eye sees this glass at the place uv of the frame: the nearest thing there, glass or solid (tex4,
+// vk_post.cpp VK_GlassMask), is as far as its surface. Not past the border of the frame. And where something stands
+// in front of it that a view of what lies behind it has the picture without (GlassBehind).
+bool GlassOwn( Draw d, vec2 uv ) {
+	if ( uv != clamp( uv, vec2( 0.0 ), vec2( 1.0 ) ) ) {
+		return false;
+	}
+	float pane = GlassPane( uv );
+
+	if ( pane <= 0.0 ) {
+		return false;
+	}
+	return abs( texelFetch( TEX4( d ), ivec2( uv * globals.screen.xy ), 0 ).r - pane ) < 1.0 + pane * 0.015 || GlassBehind( d, uv );
+}
+
+// How many pixels the face of the glass goes on from the pixel along a line of the screen (pixel: a pixel of that line
+// in places of the copy), up to most. Looked at in four steps, so a thin thing in front of the pane is not stepped
+// over, then the place where the face ends is halved in on.
+float GlassRoom( Draw d, vec2 here, vec2 pixel, float most ) {
+	float good = 0.0, bad = most;
+
+	for ( int i = 1; i <= 4; i++ ) {
+		float at = most * float( i ) * 0.25;
+
+		if ( !GlassOwn( d, here + pixel * at ) ) {
+			bad = at;
+			break;
+		}
+		good = at;
+	}
+	if ( good >= most ) {
+		return most;
+	}
+	for ( int i = 0; i < 4; i++ ) {
+		float mid = ( good + bad ) * 0.5;
+
+		if ( GlassOwn( d, here + pixel * mid ) ) {
+			good = mid;
+		} else {
+			bad = mid;
+		}
+	}
+	return good;
+}
+
+#define GLASS_MOST	0.07	// of the height of the frame: the most glass moves what it shows
+
+vec4 g_glassAt, g_glassEye, g_glassAside;	// in clip space: the pixel on the glass, the eye, the move to the side
+vec2 g_glassBump;							// what the bumps of the glass add, in places of the copy
+
+// how far the solid level is at a place of the copy (tex3); below 0: it stands in front of the glass there
+float GlassScene( Draw d, vec2 uv ) {
+	ivec2 size = textureSize( TEX3( d ), 0 );
+	float solid = texelFetch( TEX3( d ), clamp( ivec2( uv * globals.screen.xy ), ivec2( 0 ), size - 1 ), 0 ).r;
+	float pane = GlassPane( uv );
+
+	return ( pane <= 0.0 || solid < pane - 2.0 ) ? -1.0 : solid;
+}
+
+// By how much of the copy the glass moves something that lies scene far from the eye behind the pixel: the same way
+// to the side at every distance, so less on the screen the farther it is. No further than a part of the frame: glass
+// as thick as a wall, seen along its face, would move the picture by half the screen, and it fell apart.
+vec2 GlassMove( float scene ) {
+	vec4 straight = g_glassEye + ( g_glassAt - g_glassEye ) * max( scene / max( v_depth, 1.0 ), 1.0 );
+	vec4 through = straight + g_glassAside;
+	vec2 offset = g_glassBump + ( through.xy / through.w - straight.xy / straight.w ) * vec2( 0.5, -0.5 );
+	float far_ = length( offset * globals.screen.xy ), most = GLASS_MOST * globals.screen.y;
+
+	return far_ > most ? offset * ( most / far_ ) : offset;
+}
+
+/* From where in the copy the pixel takes its picture. The move depends on how far the thing shown is, and that is
+   known only once the place is: taken by the distance at the pixel itself, a player behind the glass (near, moved
+   far) and the floor behind him (far, moved little) were read with the wrong move along his outline, which showed a
+   strip of him a second time beside himself and thinned his neck (their picture 2026-11-26, "when the player stands
+   behind the glass the ghosting still appears"). So the place is looked for whose own distance moves it onto this
+   pixel. What is near hides what is far, and is moved further: the way the picture can come from (from the move of
+   the distance at the pixel up to the most, that of something right behind the pane) is looked along for the nearest
+   thing, and if that, moved by its own distance, lands on this pixel, it is what the pixel shows. Else the pixel
+   shows what its own distance says, unless that lands on the near thing, which is not here: then whichever of the
+   two lands on what is farther, more of the ground behind (the near thing has moved off there, and nothing of the
+   copy knows what it hid). */
+#define GLASS_PROBES	10
+
+vec2 GlassSource( Draw d, vec2 here ) {
+	float	c0 = max( GlassScene( d, here ), v_depth );
+	vec2	o0 = GlassMove( c0 );
+	float	l0 = GlassScene( d, here + o0 );
+	vec2	reach = GlassMove( v_depth );
+	float	near_ = c0, tried = c0, fits = 1e9;
+	vec2	oNear = o0, oFit = o0, oTried = o0;
+
+	// (each distance met on the way that is nearer than the pixel's own is tried once: an arm in front of a chest is
+	// two of them, and only one lands here)
+	for ( int i = 0; i <= GLASS_PROBES; i++ ) {
+		float at = i == 0 ? l0 : GlassScene( d, here + mix( o0, reach, float( i ) / float( GLASS_PROBES ) ) );
+
+		if ( at <= 0.0 || at >= fits ) {
+			continue;
+		}
+		vec2 o = GlassMove( at );
+
+		if ( length( ( o - o0 ) * globals.screen.xy ) < 1.0 || length( ( o - oTried ) * globals.screen.xy ) < 0.75 ) {
+			continue;
+		}
+		tried = at;
+		oTried = o;
+		if ( at < near_ ) {
+			near_ = at;
+			oNear = o;
+		}
+		float there = GlassScene( d, here + o );
+
+		if ( there > 0.0 && there < fits && length( ( GlassMove( there ) - o ) * globals.screen.xy ) < 1.5 ) {
+			fits = there;
+			oFit = o;
+		}
+	}
+	if ( fits < 1e9 ) {
+		return oFit;
+	}
+	// nothing nearer lands here: the distance at the pixel says it, unless that lands on something near, which is not
+	// here then
+	if ( near_ >= c0 || ( l0 > 0.0 && length( ( GlassMove( l0 ) - o0 ) * globals.screen.xy ) < 1.5 ) ) {
+		return o0;
+	}
+	return GlassScene( d, here + oNear ) > l0 ? oNear : o0;
+}
+
+// The copy of the frame is made of several samples a pixel, its distances of one: a pixel on the outline of something
+// near can be far by its distance and half the near thing by its colour, and read as the ground it drew the outline
+// of the near thing a second time, thin, where the ground behind it shows. So a place next to something much nearer
+// is read a pixel and a half further from it.
+vec2 GlassClear( Draw d, vec2 uv ) {
+	float	at = GlassScene( d, uv );
+	vec2	pixel = 1.0 / globals.screen.xy, push = vec2( 0.0 );
+
+	if ( at <= 0.0 ) {
+		return uv;
+	}
+	for ( int i = 0; i < 4; i++ ) {
+		vec2	dir = vec2( i == 0 ? 1.0 : ( i == 1 ? -1.0 : 0.0 ), i == 2 ? 1.0 : ( i == 3 ? -1.0 : 0.0 ) );
+		float	next = GlassScene( d, uv + dir * pixel );
+
+		if ( next > 0.0 && next < at * 0.94 - 2.0 ) {
+			push -= dir;
+		}
+	}
+	return uv + push * pixel * 1.5;
+}
+
 vec4 GlassStage( Draw d ) {
 	const vec2 disk[12] = vec2[12]( vec2( -0.326, -0.406 ), vec2( -0.840, -0.074 ), vec2( -0.696, 0.457 ), vec2( -0.203, 0.621 ),
 		vec2( 0.962, -0.195 ), vec2( 0.473, -0.480 ), vec2( 0.519, 0.767 ), vec2( 0.185, -0.893 ), vec2( 0.507, 0.064 ),
@@ -843,19 +1135,105 @@ vec4 GlassStage( Draw d ) {
 
 	// the screen behind, bent
 	float dist = thickness > 0.0 ? thickness : 4.0;
+	bool known = d.pbr.y > 0.5;
 	vec3 bent = refract( -toEye, n, 1.0 / ior );
 	if ( dot( bent, bent ) < 1e-6 ) {
 		bent = -toEye;
 	}
-	vec4 straight = t.mvp * vec4( v_position - toEye * dist, 1.0 );
-	vec4 through = t.mvp * vec4( v_position + bent * dist, 1.0 );
+	// The ray through the pane as it would go without its bumps, and what the bumps of a normal map add: they turn the
+	// ray, the more of the picture the thicker the glass.
+	vec3 even = refract( -toEye, flat_, 1.0 / ior );
+	if ( dot( even, even ) < 1e-6 ) {
+		even = -toEye;
+	}
+	vec4 flatAt = t.mvp * vec4( v_position + even * dist, 1.0 );
+	vec4 bumpAt = t.mvp * vec4( v_position + bent * dist, 1.0 );
+	vec2 offset = bumpAt.xy / bumpAt.w - flatAt.xy / flatAt.w;
+	// A pane with two even sides lets a ray out the way it came in, only moved to the side by its way through the
+	// glass: what lies behind is seen moved by that much, the look of thick glass. (Taken away for flat panes for an
+	// hour on 2026-11-26, to be rid of the second picture of a player in the pane: their word "das ist kein glas effekt
+	// mehr". Then the player was shown unmoved in his place and the level moved round him: "so sieht niemals echtes
+	// glas aus". What lies behind glass is moved, all of it; the second picture is dealt with where the copy is read.)
 	// (the viewport turns the y of OpenGL: up on the screen is down in the frame)
-	vec2 offset = ( through.xy / through.w - straight.xy / straight.w ) * vec2( 0.5, -0.5 );
-	vec2 uv = gl_FragCoord.xy / globals.screen.xy + offset;
+	offset *= vec2( 0.5, -0.5 );
+	vec2 here = gl_FragCoord.xy / globals.screen.xy;
+	g_glassHere = here;
+	g_glassPlane = vec3( dFdx( 1.0 / v_depth ), dFdy( 1.0 / v_depth ), 1.0 / v_depth );
+	// the view of what lies behind this glass: the one of its own plane, or of a plane that lies as it does close in
+	// front of it (the other side of the same pane)
+	g_glassView = -1;
+#ifndef VK_GLES
+	if ( d.pbr3.x > 0.5 && globals.glass[0].y > 0.5 && globals.glass[0].z > 0.5 ) {
+		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+		vec3 facing = normalize( mat3( t.model ) * flat_ );
+		int count = min( int( globals.glass[0].x ), 3 );
+		float least = 24.0;
+
+		for ( int i = 0; i < count; i++ ) {
+			vec4 plane = globals.glass[1 + i * 3];
+			float past = dot( plane.xyz, world ) - plane.w;
+
+			if ( globals.glass[3 + i * 3].x > 0.5 && abs( dot( plane.xyz, facing ) ) > 0.99 && past > -1.0 && past < least ) {
+				least = past;
+				g_glassView = i;
+			}
+		}
+	}
+#endif
+	if ( known ) {
+		// (the move to the side is the same however far what lies behind is, so on the screen the less the farther:
+		// GlassSource finds the place of the copy whose own distance moves it onto this pixel)
+		vec3 way = even * ( dist / max( dot( even, -flat_ ), 0.25 ) );
+		vec3 eye = t.viewOrigin.xyz;
+
+		g_glassAt = t.mvp * vec4( v_position, 1.0 );
+		g_glassEye = t.mvp * vec4( eye, 1.0 );
+		g_glassAside = t.mvp * vec4( way - toEye * dot( way, toEye ), 0.0 );
+		g_glassBump = offset;
+		offset = thickness > 0.0 ? GlassSource( d, here ) : GlassMove( GlassScene( d, here ) );
+	} else {
+		vec4 straight = t.mvp * vec4( v_position - toEye * dist, 1.0 );
+
+		offset += ( flatAt.xy / flatAt.w - straight.xy / straight.w ) * vec2( 0.5, -0.5 );
+		// (no further than a part of the frame: glass as thick as a wall, seen along its face, would move the picture
+		// by half the screen, and it fell apart)
+		float far_ = length( offset * globals.screen.xy ), most = GLASS_MOST * globals.screen.y;
+
+		if ( far_ > most ) {
+			offset *= most / far_;
+		}
+	}
+	// inside its own face only (the header): the move shrinks towards the border of the face it points at and the one
+	// behind it, over twice its own length, so the picture is stretched or squeezed by half there at most and ends
+	// unmoved at the border
+	bool faced = d.pbr.y > 1.5 && GlassOwn( d, here );
+	float far_ = length( offset * globals.screen.xy );
+	if ( faced ) {
+		if ( far_ > 0.5 ) {
+			vec2 pixel = offset / far_;
+			float most = far_ * 2.0;
+
+			offset *= min( GlassRoom( d, here, pixel, most ), GlassRoom( d, here, -pixel, most ) ) / most;
+		}
+	} else {
+		// (glass without a picture of its face: not past the border of the frame, where every pixel read the last
+		// column of the copy, streaks at the left and right of the picture)
+		vec2 room = mix( here, 1.0 - here, step( 0.0, offset ) );
+
+		offset *= clamp( room / max( abs( offset ) * 2.0, vec2( 1e-5 ) ), 0.0, 1.0 );
+	}
+	vec2 uv = here + offset;
+	if ( !faced && known && GlassInFront( d, uv ) && !GlassBehind( d, uv ) ) {
+		uv = here;
+	}
+	if ( known && thickness > 0.0 ) {
+		uv = GlassClear( d, uv );
+	}
+	GlassShade( d, uv, here );
 	vec3 back;
 	float radius = roughness * roughness * 0.06;
 	if ( radius < 0.0005 ) {
-		back = texture( TEX1( d ), uv ).rgb;
+		back = GlassColor( d, uv );
 	} else {
 		vec2 aspect = vec2( globals.screen.y / globals.screen.x, 1.0 ) * radius;
 		// the disk turned another way at each pixel (interleaved gradient noise, Jimenez 2014), so its twelve points
@@ -863,10 +1241,18 @@ vec4 GlassStage( Draw d ) {
 		float turn = 6.2831853 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
 		mat2 rotation = mat2( cos( turn ), sin( turn ), -sin( turn ), cos( turn ) );
 		back = vec3( 0.0 );
+		float count = 0.0;
 		for ( int i = 0; i < 12; i++ ) {
-			back += texture( TEX1( d ), uv + rotation * disk[i] * aspect ).rgb;
+			vec2 at = uv + rotation * disk[i] * aspect;
+
+			// (frosted glass does not blur what stands in front of it or beside it into itself either)
+			if ( faced ? !GlassOwn( d, at ) : ( known && GlassInFront( d, at ) && !GlassBehind( d, at ) ) ) {
+				continue;
+			}
+			back += GlassColor( d, at );
+			count += 1.0;
 		}
-		back /= 12.0;
+		back = count > 0.0 ? back / count : GlassColor( d, uv );
 	}
 	back = pow( back, vec3( 2.2 ) );
 

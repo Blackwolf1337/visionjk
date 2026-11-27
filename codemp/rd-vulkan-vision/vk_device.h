@@ -90,6 +90,7 @@ typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the
 } vkDeviceImage_t;
 
 #define VK_GPU_MARKS		48			// timestamps in one frame
+#define VK_FRAGMENT_PARTS	2			// queries the count of the fragments of the level may be spread over
 
 typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkCommandBuffer	cmd;
@@ -104,9 +105,11 @@ typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkQueryPool		timestamps;
 	const char		*markNames[VK_GPU_MARKS];	// what ends at that mark, [0] is the start of the frame
 	int				numMarks;
-	// and how often the fragment shader ran while the level was drawn (VK_LevelFragments)
+	// and how often the fragment shader ran while the level was drawn (VK_LevelFragments), in up to
+	// VK_FRAGMENT_PARTS queries
 	VkQueryPool		fragments;
 	qboolean		fragmentsActive, fragmentsUsed;
+	int				fragmentsParts;		// queries of it that hold a part of the count (a pass in between pauses it)
 } vkDeviceFrame_t;
 
 // ------------------------------------------------------------------------------------------------------------
@@ -238,7 +241,32 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				softSet;			// it as a post set (the bounces of the sparks, vk_sparks.cpp)
 	VkShaderModule				softDepthShader;
 	VkPipeline					softDepthPipeline;
-	qboolean					softReady;			// drawn for the view that is being drawn
+	qboolean					softReady;			// drawn for the view that is being drawn, for its soft sprites
+	qboolean					frontReady;			//	and it holds the distance of everything solid of that view (glass asks it what stands in front)
+	// The same with the glass of the view in it, taken after its depth alone is drawn (vk_backend.cpp RB_GlassPrepass,
+	// vk_post.cpp VK_GlassMask): the face of each pane the eye sees. A pane moves the picture it shows inside that
+	// face and not at its border (generic.frag GlassRoom).
+	vkTarget_t					glassDepth;
+	VkDescriptorSet				glassSet;			// it as a post set (v_glassDebug)
+	qboolean					glassReady;
+	int							glassShown;
+	// And the solid level alone, taken right after its depth pre-pass, before any model is drawn (vk_post.cpp
+	// VK_WorldDepth): by it glass tells how far what it shows is. With the models in it a player behind a pane was
+	// moved further than the wall behind him, and the place he left showed as a pale shape of him.
+	vkTarget_t					worldDepth;
+	qboolean					worldReady;
+	int							worldShown;
+	// What lies behind a plane of thick glass, where something stands in front of it: a view of its own, cut at the
+	// plane, drawn into the frame before the view of the level and kept here (R_GlassViews of tr_main.cpp,
+	// VK_BeginGlassView). Glass reads it where its copy of the frame shows what stands in front of it.
+	vkTarget_t					behind[GLASS_VIEWS];
+	vkTarget_t					behindKeep;					// what the frame held where such a view is drawn, put back after it
+	VkDescriptorSet				behindKeepSet;
+	int							behindShown[GLASS_VIEWS];	// the entry of the texture table that shows each, -1: none yet
+	int							behindFrame[GLASS_VIEWS];	// the frame each was drawn in
+	// while such a view is drawn nothing is drawn outside its part of the frame: left, top, right, bottom in pixels
+	qboolean					limitOn;
+	int							limit[4];
 	qboolean					solidReady;			// it holds the solid level of the view whose list was drawn last: for the
 													// passes at the end of that view that must not stop at glass, which
 													// writes its depth (the saber blades, the rings on water)
@@ -248,6 +276,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					saberPipeline;
 	VkShaderModule				saberPortalShader;	// the same in a mirror or portal
 	VkPipeline					saberPortalPipeline;
+	VkShaderModule				saberEarlyShader;	// the blades behind thick glass, before it is drawn
+	VkPipeline					saberEarlyPipeline;
 	VkShaderModule				saberGlowShader;	// and into the buffer of r_DynamicGlow
 	VkPipeline					saberGlowPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
