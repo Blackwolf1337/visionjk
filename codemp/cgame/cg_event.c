@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cg_local.h"
 #include "cgame/duel/cg_duelannounce.h"
+#include "cgame/portal/cg_portal_draw.h"
 #include "fx_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_public.h"
@@ -2532,6 +2533,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
+		// VisionJK: a shot of the portal gun, drawn in the colour of its portal (portal/cg_portal_draw.c)
+		if ( cent->currentState.weapon == WP_BRYAR_OLD && cent->currentState.modelindex == PORTAL_MARK ) {
+			CG_PortalShotBeam( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.generic1 );
+			break;
+		}
 		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qfalse ) )
 			FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
 		CG_WaterImpact( cent->lerpOrigin, 0.7f );
@@ -3149,6 +3155,12 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			if (event == EV_PLAY_PORTAL_EFFECT_ID)
 			{ //This effect should only be played inside sky portals.
 				portalEffect = qtrue;
+			}
+			// VisionJK: the mark the server plays at a portal of the portal gun for the legacy clients, where this
+			// client draws the portal itself (portal/cg_portal_draw.c)
+			else if ( CG_PortalMarker( position ) )
+			{
+				break;
 			}
 
 			AngleVectors(es->angles, fxDir, 0, 0);

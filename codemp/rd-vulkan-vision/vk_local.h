@@ -84,6 +84,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_RIPPLE_VEC4S		( VK_WET_HEADER + 1 + VK_RIPPLE_SURFACES + WET_MAX_SURFACE * VK_RIPPLE_ROWS )	// shaders/ripple.frag: the view, the counts, a row a surface, five a ring
 #define VK_GLASS_VEC4S		( 1 + GLASS_VIEWS * 3 )		// generic.frag GlassBehind: how many, then three rows a view (VK_GlassRows)
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
+#define VK_PORTAL_ROWS		10		// shaders/portal.frag: ten rows a portal
+#define VK_PORTAL_VEC4S		( VK_WET_HEADER + 1 + MAX_SCENE_PORTALS * VK_PORTAL_ROWS )	// the view, the counts, the portals (VK_PortalDraw)
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
@@ -100,6 +102,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		smoke[VK_SMOKE_VEC4S][4];	// the smoke as a volume, see VK_SmokeDraw()
 	float		ripple[VK_RIPPLE_VEC4S][4];	// the rings on the water of the level, see VK_RippleDraw()
 	float		glassDebug[VK_WET_HEADER + 1][4];	// v_glassDebug: the view as VK_ViewRows() gives it, then x what is shown, see VK_GlassDebugDraw()
+	float		portal[VK_PORTAL_VEC4S][4];	// the openings of the portals of the portal gun, see VK_PortalDraw()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -417,6 +420,9 @@ extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
 extern cvar_t	*v_softParticles;	// vk_post.cpp
 extern cvar_t	*v_litParticles;	// vk_post.cpp
+extern cvar_t	*v_portalViews;		// vk_post.cpp: how many portals show the view through them (R_PortalViews)
+extern cvar_t	*v_portalDebug;		// vk_post.cpp
+extern cvar_t	*v_portalDepth;		// vk_post.cpp: how deep views through portals nest
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -536,6 +542,10 @@ void		VK_RippleShutdown( void );
 #define RIPPLE_BEHIND_GLASS	1	// VK_RippleDraw: the rings seen through thick glass, before it takes its copy of the frame
 #define RIPPLE_IN_FRONT		2	//	the others, after everything transparent
 void		VK_RippleDraw( int part );
+// the openings of the portals of the portal gun with the views through them (vk_portal.cpp)
+void		VK_PortalInit( void );
+void		VK_PortalShutdown( void );
+void		VK_PortalDraw( void );
 void		RE_SetSmoke( const smokeVolume_t *smoke );
 qboolean	RE_EmitSparks( const sparkBurst_t *burst );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse, qboolean early = qfalse );
@@ -556,9 +566,10 @@ void		VK_DrawWet( void );
 // VK_ViewportAndScissor() takes it
 void		VK_ViewRows( float ( *rows )[4], int *viewport );
 qboolean	VK_BeginPuddle( void );
-// a view of what lies behind thick glass (R_GlassViews): into the frame, for its part of it, and kept
-qboolean	VK_BeginGlassView( void );
-void		VK_EndGlassView( void );
+// a view of its own (behind thick glass, R_GlassViews; through a portal, R_PortalViews): into the frame, for its part
+// of it, and kept in its picture
+qboolean	VK_BeginSubView( void );
+void		VK_EndSubView( void );
 void		VK_GlassRows( void );
 void		VK_EndPuddle( void );
 qboolean	VK_BeginProbe( void );

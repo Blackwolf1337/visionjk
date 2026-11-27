@@ -784,6 +784,27 @@ typedef struct refdef_s {
 	char		text[MAX_RENDER_STRINGS][MAX_RENDER_STRING_LENGTH];
 } refdef_t;
 
+// VisionJK: a portal of the portal gun as the cgame hands it to the renderer (cgameImport_t.ext.R_AddPortal,
+// game/portal/bg_portal.h). The renderer draws the level as it is seen through it from its partner into a picture of
+// its own and lays that on the opening, with a rim of its colour; without a partner only the rim and a swirl.
+// How far in front of the face of a portal what lies inside its opening still counts as the face (the bumps of a
+// tessellated wall or floor stand up to that much out of the plane of the brush): the opening is laid over it
+// (rd-vulkan-vision shaders/portal.frag), and what stands that close to an opening is drawn on both sides of it
+// (cgame/portal/cg_portal_draw.c), its copy cut that much behind the face of the partner and kept so in the view
+// through (vk_shade.cpp): a player who walks up to a portal is shown by his copy where the opening covers him.
+#define PORTAL_FACE_RELIEF	8.0f
+
+typedef struct portalView_s {
+	vec3_t		origin;				// the middle of the opening, on the face of the wall
+	vec3_t		axis[3];			// 0 out of the wall, 1 to the left, 2 up along the opening
+	vec3_t		exitOrigin;			// the partner, as origin and axis; not read when open is 0
+	vec3_t		exitAxis[3];
+	float		halfWidth, halfHeight;
+	byte		color[4];			// of the rim
+	int			id;					// stays the same for a portal (its entity number): its picture is kept by it
+	int			open;				// 1: it has a partner, the view through it is drawn
+} portalView_t;
+
 
 enum {
 	STEREO_CENTER,

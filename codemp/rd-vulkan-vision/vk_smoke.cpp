@@ -271,7 +271,7 @@ void VK_SmokeDraw( int part ) {
 		return;
 	}
 	// (the view of the level, and a view behind its glass, vk_backend.cpp RB_DrawDeferredViews)
-	if ( ( backEnd.viewParms.isPortal && !backEnd.viewParms.glassView ) || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
+	if ( ( backEnd.viewParms.isPortal && !backEnd.viewParms.subView ) || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
 		|| ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		return;
 	}
@@ -349,8 +349,9 @@ void VK_SmokeDraw( int part ) {
 	r[0][2] = sm.volume.time;
 	r[0][3] = (float)lights;
 	globals->smoke[VK_SMOKE_VEC4S - 3][0] = (float)VK_SMOKE_SCALE;
-	// a view behind glass: the rays begin at its plane, what is in front of it is in the view of the level
-	if ( backEnd.viewParms.glassView ) {
+	// a view behind glass: the rays begin at its plane, what is in front of it is in the view of the level (through a
+	// portal: what lies behind the wall of the portal it looks out of is no part of it)
+	if ( backEnd.viewParms.subView ) {
 		VectorCopy( backEnd.viewParms.portalPlane.normal, globals->smoke[VK_SMOKE_VEC4S - 2] );
 		globals->smoke[VK_SMOKE_VEC4S - 2][3] = backEnd.viewParms.portalPlane.dist;
 	} else {

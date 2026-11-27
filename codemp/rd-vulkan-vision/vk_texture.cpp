@@ -573,14 +573,18 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_PostSetOnce( &vk.thickSet );
 	VK_WriteSet( vk.thickSet, vk.postSampler, vk.thickDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	vk.thickDepth.readSet = vk.thickSet;
-	// what lies behind thick glass (VK_EndGlassView): copies of a part of the frame, as vk.screen is one
-	for ( int i = 0; i < GLASS_VIEWS; i++ ) {
+	// the pictures of the views of their own (VK_EndSubView): copies of a part of the frame, as vk.screen is one. Those
+	// behind thick glass always, those through portals as many as v_portalViews asks (each the size of the window).
+	const int portalPictures = vk.depthReadable ? Com_Clampi( 0, PORTAL_VIEWS, v_portalViews ? v_portalViews->integer : 0 ) : 0;
+
+	for ( int i = 0; i < GLASS_VIEWS + portalPictures; i++ ) {
 		VK_CreateFrameCopy( &vk.behind[i] );
 		vk.behindShown[i] = -1;
 		vk.behindFrame[i] = -1;
+		vk.behindId[i] = -1;
 	}
 	vk.limitOn = qfalse;
-	// the targets of a view of its own (vk_post.cpp VK_BeginGlassView), as the frame has them (vk_main.cpp)
+	// the targets of a view of its own (vk_post.cpp VK_BeginSubView), as the frame has them (vk_main.cpp)
 	if ( vk.depthReadable ) {
 		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
@@ -773,9 +777,10 @@ void VK_DestroyPostTargets( void ) {
 	vk.glassReady = qfalse;
 	VK_DestroyTarget( &vk.worldDepth );
 	vk.worldReady = qfalse;
-	for ( int i = 0; i < GLASS_VIEWS; i++ ) {
+	for ( int i = 0; i < SUB_VIEWS; i++ ) {
 		VK_DestroyTarget( &vk.behind[i] );
 		vk.behindFrame[i] = -1;
+		vk.behindId[i] = -1;
 	}
 	VK_DestroyTarget( &vk.sub );
 	VK_DestroyTarget( &vk.subMS );

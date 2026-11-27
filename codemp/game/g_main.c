@@ -218,6 +218,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	WebAdmin_Init();
 	G_VoiceInit( restart ? qtrue : qfalse );
 	G_BoomboxInit( restart ? qtrue : qfalse );
+	G_PortalInit();
 
 	G_InitMemory();
 
@@ -3013,6 +3014,7 @@ void G_RunFrame( int levelTime ) {
 	G_DisorientFrame();
 	G_PoopFrame();
 	G_PropFrame();
+	G_PortalFrame();
 
 	if (level.gametype == GT_SIEGE &&
 		g_siegeRespawn.integer &&

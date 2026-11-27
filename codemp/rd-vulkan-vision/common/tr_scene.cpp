@@ -35,6 +35,8 @@ static	int			r_numSaberBlades;		// VisionJK: ext.AddSaberBladeToScene
 static	int			r_firstSceneSaberBlade;
 static	int			r_numGrassPushes;		// VisionJK: ext.AddGrassPushToScene
 static	int			r_firstSceneGrassPush;
+static	int			r_numPortals;			// VisionJK: ext.AddPortalToScene
+static	int			r_firstScenePortal;
 static	int			r_firstSceneDlight;
 
 static	int			r_numentities;
@@ -68,6 +70,8 @@ void R_InitNextFrame( void ) {
 	r_firstSceneSaberBlade = 0;
 	r_numGrassPushes = 0;
 	r_firstSceneGrassPush = 0;
+	r_numPortals = 0;
+	r_firstScenePortal = 0;
 
 	r_numentities = 0;
 	r_firstSceneEntity = 0;
@@ -92,6 +96,7 @@ void RE_ClearScene( void ) {
 	r_firstSceneDlight = r_numdlights;
 	r_firstSceneSaberBlade = r_numSaberBlades;
 	r_firstSceneGrassPush = r_numGrassPushes;
+	r_firstScenePortal = r_numPortals;
 	r_firstSceneEntity = r_numentities;
 	r_firstScenePoly = r_numpolys;
 	refEntParent = -1;
@@ -550,6 +555,24 @@ void RE_AddSaberBladeToScene( const saberBlade3D_t *blade ) {
 
 /*
 =====================
+RE_AddPortalToScene
+
+VisionJK: a portal of the portal gun (portalView_t, ext.AddPortalToScene): R_PortalViews draws the view through it
+when it is open, vk_portal.cpp its opening with that view and its rim
+=====================
+*/
+void RE_AddPortalToScene( const portalView_t *portal ) {
+	scenePortal_t *p;
+
+	if ( !tr.registered || !portal || r_numPortals >= MAX_SCENE_PORTALS || portal->halfWidth <= 0.0f || portal->halfHeight <= 0.0f ) {
+		return;
+	}
+	p = &backEndData->portals[r_numPortals++];
+	p->view = *portal;
+}
+
+/*
+=====================
 RE_AddLightToScene
 
 =====================
@@ -686,6 +709,9 @@ void RE_RenderScene( const refdef_t *fd ) {
 	tr.refdef.saberBlades = &backEndData->saberBlades[r_firstSceneSaberBlade];
 	tr.refdef.numGrassPushes = r_numGrassPushes - r_firstSceneGrassPush;
 	tr.refdef.grassPushes = &backEndData->grassPushes[r_firstSceneGrassPush];
+	tr.refdef.numPortals = r_numPortals - r_firstScenePortal;
+	tr.refdef.portals = &backEndData->portals[r_firstScenePortal];
+	tr.refdef.portalViews = backEndData->portalViews;
 
 	// Add the decals here because decals add polys and we need to ensure
 	// that the polys are added before the the renderer is prepared
@@ -749,6 +775,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	r_firstSceneEntity = r_numentities;
 	r_firstSceneMiniEntity = r_numminientities;
 	r_firstSceneDlight = r_numdlights;
+	r_firstScenePortal = r_numPortals;
 	r_firstScenePoly = r_numpolys;
 
 	refEntParent = -1;

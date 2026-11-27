@@ -88,7 +88,14 @@ uint32_t VK_CurrentTransform( void ) {
 		}
 		t.model[15] = 1.0f;
 		VectorCopy( backEnd.ori.viewOrigin, t.viewOrigin );
-		if ( backEnd.viewParms.isPortal && !backEnd.projection2D ) {
+		// (the copy of a body moved through a portal of the portal gun, cgame/portal/cg_portal_draw.c, is cut a little
+		// behind the face of the partner, PORTAL_FACE_RELIEF: in the view through that portal it keeps that, as it is
+		// what the opening shows where it lies over the body that walks into it; the level is cut at the face)
+		const qboolean portalCopy = (qboolean)( ent && ent->cut && backEnd.viewParms.portalView
+			&& DotProduct( ent->cutPlane, backEnd.viewParms.portalPlane.normal ) > 0.999f
+			&& ent->cutPlane[3] < backEnd.viewParms.portalPlane.dist );
+
+		if ( backEnd.viewParms.isPortal && !backEnd.projection2D && !portalCopy ) {
 			// glClipPlane of rd-vanilla: clip anything behind the portal surface
 			VectorCopy( backEnd.viewParms.portalPlane.normal, t.clipPlane );
 			t.clipPlane[3] = backEnd.viewParms.portalPlane.dist;

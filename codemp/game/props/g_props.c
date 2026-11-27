@@ -2837,6 +2837,39 @@ static void Body_LieStill( gentity_t *self, prop_t *p, contact_t *contacts, qboo
 
 /*
 =================
+Prop_Portal
+
+VisionJK: the portal gun (portal/g_portal.c). A prop whose box comes up to an open portal goes through it
+(G_PortalTouched): its middle comes out of the other one, its speed, its spin and its turn turned the way that one
+faces. Whoever held it lets go. It does not go through by halves as a player does, it has no holes in its traces.
+=================
+*/
+static void Prop_Portal( gentity_t *self, prop_t *p ) {
+	bgPortal_t	in, out;
+	vec3_t		exit;
+	trace_t		tr;
+	int			i;
+
+	if ( p->frozen || !G_PortalTouched( self->r.currentOrigin, self->r.mins, self->r.maxs, self->movedir, &in, &out ) )
+		return;
+	BG_PortalExit( &in, &out, self->r.currentOrigin, self->r.mins, self->r.maxs, PORTAL_TOUCH + 2.0f, exit );
+	trap->Trace( &tr, exit, self->r.mins, self->r.maxs, exit, self->s.number, MASK_SOLID, qfalse, 0, 0 );
+	if ( tr.startsolid || tr.allsolid )
+		return;
+
+	if ( p->holder )
+		Prop_Release( self );
+	VectorCopy( exit, self->r.currentOrigin );
+	BG_PortalVector( &in, &out, self->movedir, self->movedir );
+	BG_PortalVector( &in, &out, p->spin, p->spin );
+	for ( i = 0; i < 3; i++ )
+		BG_PortalVector( &in, &out, p->axis[i], p->axis[i] );
+	// the clients do not draw it on its way from the one to the other
+	self->s.eFlags ^= EF_TELEPORT_BIT;
+}
+
+/*
+=================
 Body_Move
 
 A server frame of the rigid body, in steps short enough for the contacts to hold. Then: does the hand still
@@ -3027,10 +3060,12 @@ static void Prop_Think( gentity_t *self ) {
 		Body_Move( self, p, dt );
 		if ( !p->box )
 			Ball_Props( self, dt );
+		Prop_Portal( self, p );
 		Body_Net( self, p );
 	} else {
 		Ball_Move( self, dt );
 		Ball_Props( self, dt );
+		Prop_Portal( self, p );
 		Ball_Net( self );
 	}
 }

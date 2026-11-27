@@ -835,6 +835,21 @@ Ghoul2 Insert End
 */
 } trace_t;
 
+// VisionJK: a hole in the solid world for a trace (the opening of a portal and the tunnel behind it, game/portal/
+// bg_portal.h). origin is the middle of the opening on the face of the wall, axis 0 points out of the wall, 1 and 2
+// lie along the opening; half[1] and half[2] are half its size, half[0] how deep it goes behind the face. A contact
+// with a brush or a patch does not count (qcommon/cm/cm_trace.cpp, the traces with holes of gameImport_t.ext and
+// cgameImport_t.ext) where the swept box at that point, measured along these axes from origin (its middle c, its
+// half size e along each axis), lies inside across: |c1| + e1 <= half[1] and |c2| + e2 <= half[2], and reaches into
+// the tunnel: c0 - e0 < 1 (some of it at or behind the face, give or take a unit) and c0 - e0 >= -half[0] (not past
+// its end). Contacts outside that count as ever: the rim of the opening, what stands in front of the wall.
+#define MAX_TRACE_HOLES		16
+typedef struct traceHole_s {
+	vec3_t		origin;
+	vec3_t		axis[3];
+	vec3_t		half;
+} traceHole_t;
+
 // trace->entityNum can also be 0 to (MAX_GENTITIES-1)
 // or ENTITYNUM_NONE, ENTITYNUM_WORLD
 

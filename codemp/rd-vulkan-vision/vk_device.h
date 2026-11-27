@@ -268,17 +268,26 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	vkTarget_t					worldDepth;
 	qboolean					worldReady;
 	int							worldShown;
-	// What lies behind a plane of thick glass, where something stands in front of it: a view of its own, cut at the
-	// plane, drawn into the frame before the view of the level and kept here (R_GlassViews of tr_main.cpp,
-	// VK_BeginGlassView). Glass reads it where its copy of the frame shows what stands in front of it.
-	vkTarget_t					behind[GLASS_VIEWS];
-	// The targets a view of its own is drawn into (a view of what lies behind glass, later a portal), in the size, the
-	// formats and the samples of the frame: they trade places with color, depth and their samples while it is drawn
-	// (VK_BeginGlassView), in the middle of the view of the level, after its shadows were traced.
+	// The pictures of the views of their own (viewParms_t subView), each drawn into the frame in the middle of the view
+	// of the level and kept here (VK_BeginSubView). First GLASS_VIEWS of what lies behind a plane of thick glass, where
+	// something stands in front of it, cut at the plane (R_GlassViews of tr_main.cpp): glass reads it where its copy of
+	// the frame shows what stands in front of it. Then up to PORTAL_VIEWS of what is seen through a portal of the portal
+	// gun, nested ones too (R_PortalViews, v_portalViews of them are made): its opening reads it (vk_portal.cpp).
+	vkTarget_t					behind[SUB_VIEWS];
+	// The targets a view of its own is drawn into, in the size, the formats and the samples of the frame: they trade
+	// places with color, depth and their samples while it is drawn (VK_BeginSubView), in the middle of the view of the
+	// level, after its shadows were traced.
 	vkTarget_t					sub, subMS, subDepth, subDepthMS;
 	VkDescriptorSet				subSet, subDepthSet;
-	int							behindShown[GLASS_VIEWS];	// the entry of the texture table that shows each, -1: none yet
-	int							behindFrame[GLASS_VIEWS];	// the frame each was drawn in
+	int							behindShown[SUB_VIEWS];	// the entry of the texture table that shows each, -1: none yet
+	int							behindFrame[SUB_VIEWS];	// the frame each was drawn in
+	// of a view through a portal, what VK_EndSubView kept with its picture: the portal it shows (its id), how the view
+	// it was made for (the view of the level or a view through another portal) puts a point onto the frame
+	// (viewParms_t portalClip, portalRect), and the part of the frame that was copied (left, top, right, bottom in pixels)
+	int							behindId[SUB_VIEWS];
+	float						behindClip[SUB_VIEWS][16];
+	float						behindRect[SUB_VIEWS][4];
+	int							behindArea[SUB_VIEWS][4];
 	// while such a view is drawn nothing is drawn outside its part of the frame: left, top, right, bottom in pixels
 	qboolean					limitOn;
 	int							limit[4];

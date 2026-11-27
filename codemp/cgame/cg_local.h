@@ -2308,6 +2308,7 @@ void CG_Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec
 void CG_G2Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
 					 int skipNumber, int mask );
 void CG_PredictPlayerState( void );
+void CG_PortalCaps( void );
 void CG_LoadDeferredPlayers( void );
 void CG_ModelArrived_f( void );
 

@@ -815,7 +815,8 @@ passEntityNum and entities owned by passEntityNum are explicitly not checked.
 /*
 Ghoul2 Insert Start
 */
-void SV_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod ) {
+// VisionJK: SV_Trace and SV_TraceHoles; holes (traceHole_t, q_shared.h) are cut into the world only
+static inline void SV_TraceWorldAndEntities( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod, const traceHole_t *holes, int numHoles ) {
 /*
 Ghoul2 Insert End
 */
@@ -832,7 +833,11 @@ Ghoul2 Insert End
 	Com_Memset ( &clip, 0, sizeof ( moveclip_t ) );
 
 	// clip to world
-	CM_BoxTrace( &clip.trace, start, end, mins, maxs, 0, contentmask, capsule );
+	if ( numHoles > 0 ) {
+		CM_BoxTraceHoles( &clip.trace, start, end, mins, maxs, 0, contentmask, capsule, holes, numHoles );
+	} else {
+		CM_BoxTrace( &clip.trace, start, end, mins, maxs, 0, contentmask, capsule );
+	}
 	clip.trace.entityNum = clip.trace.fraction != 1.0 ? ENTITYNUM_WORLD : ENTITYNUM_NONE;
 	if ( clip.trace.fraction == 0 ) {
 		*results = clip.trace;
@@ -874,6 +879,22 @@ Ghoul2 Insert End
 	SV_ClipMoveToEntities ( &clip );
 
 	*results = clip.trace;
+}
+
+void SV_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod ) {
+	SV_TraceWorldAndEntities( results, start, mins, maxs, end, passEntityNum, contentmask, capsule, traceFlags, useLod, NULL, 0 );
+}
+
+/*
+==================
+SV_TraceHoles
+
+VisionJK: SV_Trace with holes in the world, the openings of the portals of the portal gun (game/portal/bg_portal.h);
+the entities are clipped against as by SV_Trace
+==================
+*/
+void SV_TraceHoles( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, const traceHole_t *holes, int numHoles ) {
+	SV_TraceWorldAndEntities( results, start, mins, maxs, end, passEntityNum, contentmask, capsule, 0, 0, holes, numHoles );
 }
 
 

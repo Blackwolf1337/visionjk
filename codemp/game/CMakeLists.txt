@@ -48,6 +48,8 @@ set(MPGameGameFiles
 	"${MPDir}/game/bg/bg_saberLoad.c"
 	"${MPDir}/game/bg/bg_saga.c"
 	"${MPDir}/game/bg/bg_slidemove.c"
+	"${MPDir}/game/portal/bg_portal.c"
+	"${MPDir}/game/portal/bg_portal.h"
 	"${MPDir}/game/bg/bg_vehicleLoad.c"
 	"${MPDir}/game/bg/bg_weapons.c"
 	"${MPDir}/game/vehicles/FighterNPC.c"
@@ -300,6 +302,14 @@ set(MPGamePropsFiles
 	)
 source_group("game/props" FILES ${MPGamePropsFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})
+
+# the portal gun (bg_portal.c is with the bg files above, the cgame has it too)
+set(MPGamePortalFiles
+	"${MPDir}/game/portal/g_portal.c"
+	"${MPDir}/game/portal/g_portal.h"
+	)
+source_group("game/portal" FILES ${MPGamePortalFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGamePortalFiles})
 
 # moves no hand makes: the cap of a single move and the wiggle bot
 set(MPGameAntiCheatFiles

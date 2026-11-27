@@ -873,8 +873,9 @@ static int			rb_glassPanes;		// how many panes of thick glass the view has (RB_G
 static qboolean		rb_bladePending;
 static int			rb_bladeAt;
 static qboolean		rb_layering;		// the run of the list of the view of the level, and the runs it starts
-// the views of what lies behind glass that wait for the view of the level they were made for (RB_DrawDeferredViews)
-static const struct drawSurfsCommand_s	*rb_deferred[GLASS_VIEWS];
+// the views of their own (behind glass, through portals) that wait for the view of the level they were made for
+// (RB_DrawDeferredViews)
+static const struct drawSurfsCommand_s	*rb_deferred[SUB_VIEWS];
 static int			rb_numDeferred;
 static qboolean		rb_nested;			// such a view is being drawn
 static cvar_t		*v_glassDebug;
@@ -1008,7 +1009,7 @@ static void RB_AddDrawSurf( const drawSurf_t *drawSurf ) {
 #ifndef RD_VISION_GLES
 static void RB_DrawDeferredViews( void );
 
-// the view being drawn is the view of the level itself (no mirror, portal, puddle or view behind glass, no model of the HUD)
+// the view being drawn is the view of the level itself (no mirror, portal, puddle or view of its own, no model of the HUD)
 static qboolean RB_IsLevelView( void ) {
 	return (qboolean)( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 }
@@ -1023,7 +1024,7 @@ static void RB_DrawWet( int depthRange ) {
 	VK_GpuMark( "level" );
 #ifndef RD_VISION_GLES
 	if ( rb_nested ) {
-		// a view behind glass: the shadows again, against what the view of the level built
+		// a view of its own: the shadows again, against what the view of the level built
 		VK_RT_SubPass();
 	} else {
 		VK_RT_Pass();
@@ -1108,6 +1109,30 @@ qboolean VK_GlassViews( void ) {
 	RB_GlassCvars();
 	return (qboolean)( v_pbr->integer && v_glassCaptures->integer > 0 && v_glassDebug->integer != 2 && vk.depthReadable
 		&& vk.behind[0].image );
+}
+
+int VK_PortalPictures( void ) {
+#ifdef RD_VISION_GLES
+	return 0;
+#else
+	int count = 0;
+
+	if ( !vk.depthReadable || !vk.sub.image ) {
+		return 0;
+	}
+	while ( count < PORTAL_VIEWS && vk.behind[GLASS_VIEWS + count].image ) {
+		count++;
+	}
+	return count;
+#endif
+}
+
+int VK_PortalDepth( void ) {
+	return v_portalDepth ? Com_Clampi( 1, PORTAL_DEPTH, v_portalDepth->integer ) : 1;
+}
+
+int VK_PortalDebug( void ) {
+	return v_portalDebug ? v_portalDebug->integer : 0;
 }
 
 // a stage of the shader (or of what it is remapped to) is glass
@@ -1453,10 +1478,15 @@ static void RB_GlassViewBlades( void ) {
 ===============
 RB_DrawDeferredViews
 
-The views of what lies behind glass (R_GlassViews) come before the view of the level they were made for, as the front
-end makes them. They are kept until that view has made the shadows of the frame (its phase 3), and drawn then, into
-targets of their own (VK_BeginGlassView): so they can have what the view of the level has. Everything of the view of
-the level that drawing another view changes is kept here and given back after it.
+The views of their own, of what lies behind glass (R_GlassViews) and through the portals of the portal gun
+(R_PortalViews), come before the view of the level they were made for, as the front end makes them. They are kept
+until that view has made the shadows of the frame (its phase 3), and drawn then, into targets of their own
+(VK_BeginSubView): so they can have what the view of the level has. Everything of the view of the level that drawing
+another view changes is kept here and given back after it.
+
+The views through portals first, in the order they came: a view through a portal seen in another one comes before
+that one (R_PortalViews makes it inside it), so the openings a view draws find the pictures of their views drawn. Then
+those behind glass, which have the eye of the view of the level and show its openings with the same pictures it does.
 ===============
 */
 static const void *RB_DrawSurfs( const void *data );
@@ -1486,22 +1516,31 @@ static void RB_DrawDeferredViews( void ) {
 	const int				postBase = rb_postBase;
 	static glassPane_t		panes[GLASS_LAYER_PANES];
 
-	VK_Checkpoint( "the views behind glass begin" );
+	VK_Checkpoint( "the views of their own begin" );
 	memcpy( panes, rb_panes, sizeof( panes ) );
 	VK_GetEarlyBlades( early );
 	memcpy( &globals, VK_GlobalsEdit(), sizeof( globals ) );
 	rb_postBase = g_numPostRenders;
 	rb_nested = qtrue;
 
-	for ( int i = 0; i < rb_numDeferred; i++ ) {
-		RB_DrawSurfs( rb_deferred[i] );
+	for ( int pass = 0; pass < 2; pass++ ) {
+		for ( int i = 0; i < rb_numDeferred; i++ ) {
+			if ( ( rb_deferred[i]->viewParms.portalView != qfalse ) == ( pass == 0 ) ) {
+				RB_DrawSurfs( rb_deferred[i] );
+			}
+		}
 	}
 
 	rb_nested = qfalse;
 	rb_numDeferred = 0;
 	rb_postBase = postBase;
-	VK_Checkpoint( "the views behind glass are done" );
+	VK_Checkpoint( "the views of their own are done" );
 	backEnd = saved;
+	// (what is made once a view knows it by this number, the list of the moving lights with the part of the picture
+	// each lights, vk_shade.cpp VK_LightList: the views drawn here counted it on, and the rest of this view took the
+	// list of the last of them. Through a portal the eye is another one, and the lights of the level showed as squares
+	// where that eye had them, their picture 2026-11-27.)
+	rb_viewSerial++;
 	rb_overLater = overLater;
 	rb_sawOver = sawOver;
 	rb_glowView = glowView;
@@ -1661,10 +1700,13 @@ static void RB_DrawRange( rbRun_t *run, drawSurf_t *drawSurfs, int start, int en
 		}
 		oldSort = drawSurf->sort;
 
-		// (a view of what lies behind glass leaves those out: the view of the level draws them after its glass, which
-		// hides the ones behind it, and a distortion wants a copy of the frame)
-		if ( entityNum != REFENTITYNUM_WORLD && backEnd.viewParms.glassView
-			&& ( backEnd.refdef.entities[entityNum].e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) ) ) {
+		// (a view of its own leaves those out: the view of the level draws them after its glass, which hides the ones
+		// behind it, and a distortion wants a copy of the frame. A view through a portal of the portal gun is the only
+		// one that shows what it sees: it draws them at its end as the level view does, a distortion aside; the own
+		// body the third person camera fades is one of them)
+		if ( entityNum != REFENTITYNUM_WORLD && backEnd.viewParms.subView
+			&& ( backEnd.refdef.entities[entityNum].e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) )
+			&& ( !backEnd.viewParms.portalView || ( backEnd.refdef.entities[entityNum].e.renderfx & RF_DISTORTION ) ) ) {
 			shader = oldShader;
 			entityNum = oldEntityNum;
 			fogNum = oldFogNum;
@@ -1934,6 +1976,14 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		RB_DrawDeferredViews();
 		RB_SetDepthRange( run.depthRange );
 	}
+	// the openings of the portals of the portal gun, over the solid level and with the views through them now drawn
+	// (vk_portal.cpp); in a view of its own as well, where they show the pictures they have
+	if ( rb_layering && ( RB_IsLevelView() || backEnd.viewParms.subView ) && backEnd.refdef.numPortals ) {
+		VK_GpuMark( "level" );
+		VK_PortalDraw();
+		VK_GpuMark( "portals" );
+		RB_SetDepthRange( run.depthRange );
+	}
 #endif
 	// 4. what is transparent before the thick glass, the blades and what is transparent behind it
 #ifndef RD_VISION_GLES
@@ -2077,10 +2127,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	const drawSurfsCommand_t *cmd = (const drawSurfsCommand_t *)data;
 
 #ifndef RD_VISION_GLES
-	// a view of what lies behind glass is drawn in the middle of the view of the level it was made for, which comes
-	// after it (RB_DrawDeferredViews)
-	if ( cmd->viewParms.glassView && !rb_nested ) {
-		if ( rb_numDeferred < GLASS_VIEWS ) {
+	// a view of its own is drawn in the middle of the view of the level it was made for, which comes after it
+	// (RB_DrawDeferredViews)
+	if ( cmd->viewParms.subView && !rb_nested ) {
+		if ( rb_numDeferred < SUB_VIEWS ) {
 			rb_deferred[rb_numDeferred++] = cmd;
 		}
 		return (const void *)( cmd + 1 );
@@ -2098,7 +2148,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	}
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
-	VK_Checkpoint( backEnd.viewParms.glassView ? "a view behind glass begins" : backEnd.viewParms.isPuddle ? "the puddle view begins"
+	VK_Checkpoint( backEnd.viewParms.portalView ? "a view through a portal begins" : backEnd.viewParms.subView ? "a view behind glass begins" : backEnd.viewParms.isPuddle ? "the puddle view begins"
 		: backEnd.viewParms.probeFace ? "a probe face begins" : backEnd.viewParms.isPortal ? "a mirror or portal view begins"
 		: ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ? "a view without the level begins" : "the view of the level begins" );
 	// the view mirrored at the floor of the puddles goes into targets of its own, which the wet places read
@@ -2111,9 +2161,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( probeFace && !VK_BeginProbe() ) {
 		return (const void *)( cmd + 1 );
 	}
-	// what lies behind a plane of thick glass (R_GlassViews): into its part of the frame, and kept (VK_EndGlassView)
-	const int glassView = backEnd.viewParms.glassView;
-	if ( glassView && !VK_BeginGlassView() ) {
+	// a view of its own, behind a plane of thick glass (R_GlassViews) or through a portal (R_PortalViews): into its part
+	// of the frame, and kept (VK_EndSubView)
+	const int subView = backEnd.viewParms.subView;
+	if ( subView && !VK_BeginSubView() ) {
 		return (const void *)( cmd + 1 );
 	}
 	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
@@ -2128,7 +2179,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_overLater = focus;
 	rb_sawOver = qfalse;
 	// (not the puddle view: its targets are half the size of the glow buffer, VK_PuddleSize)
-	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !probeFace && !puddle && !glassView;
+	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !probeFace && !puddle && !subView;
 	rb_sawLate = qfalse;
 	// the sprayed pictures of RE_AddPaint, the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the
 	// level itself, before its glow. Paint and wet ground in the list before what is transparent (RB_DrawWet), the
@@ -2141,9 +2192,9 @@ static const void *RB_DrawSurfs( const void *data ) {
 #else
 	// (the sparks bounce off it: v_gpuSparks wants it too; and glass that has views of what lies behind it, to tell
 	// what stands in front of it)
-	// (a view behind glass of the level has what the view of the level does over its solid surfaces too: it is drawn
-	// in the middle of that one, RB_DrawDeferredViews)
-	const qboolean fullView = (qboolean)( levelView || backEnd.viewParms.glassView );
+	// (a view of its own of the level has what the view of the level does over its solid surfaces too: it is drawn in
+	// the middle of that one, RB_DrawDeferredViews)
+	const qboolean fullView = (qboolean)( levelView || subView );
 
 	rb_softLater = (qboolean)( fullView && ( v_softParticles->integer || v_gpuSparks->integer || backEnd.viewParms.numGlassViews )
 		&& vk.depthReadable && !probeFace && !puddle );
@@ -2199,14 +2250,14 @@ static const void *RB_DrawSurfs( const void *data ) {
 #endif
 	rb_deferDlights = qfalse;
 #ifndef RD_VISION_GLES
-	if ( glassView ) {
+	if ( subView ) {
 		if ( r_numRipples ) {
 			VK_RippleDraw( RIPPLE_IN_FRONT );
 		}
 		VK_SmokeDraw( SMOKE_IN_FRONT );
 		RB_GlassViewBlades();
-		VK_GpuMark( "glass views" );
-		VK_EndGlassView();
+		VK_GpuMark( backEnd.viewParms.portalView ? "portal views" : "glass views" );
+		VK_EndSubView();
 		tess.shader = NULL;
 		return (const void *)( cmd + 1 );
 	}

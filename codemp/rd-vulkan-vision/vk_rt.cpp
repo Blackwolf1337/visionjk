@@ -3416,8 +3416,9 @@ light passes wait for the shadows, rb_deferDlights), and the slot of the texture
 */
 int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
 	// (a view behind glass has the eye of the view of the level, so the mask is at the same pixels, but it holds what
-	// the view of the level sees there, the player in front of the glass: its lights go without)
-	if ( !rt.readValid || !VK_RT_Wanted() || !tr.rtLightImage[0] || backEnd.viewParms.glassView ) {
+	// the view of the level sees there, the player in front of the glass: its lights go without; a view through a
+	// portal has another eye altogether)
+	if ( !rt.readValid || !VK_RT_Wanted() || !tr.rtLightImage[0] || backEnd.viewParms.subView ) {
 		return 0;
 	}
 	const int read = rt.lightWrite ^ 1;

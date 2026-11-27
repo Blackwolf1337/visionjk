@@ -112,6 +112,7 @@ set(MPVulkanVisionVulkanFiles
 	"${MPDir}/rd-vulkan-vision/vk_sparks.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_glass.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_ripple.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_portal.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_smoke.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	)
@@ -246,6 +247,7 @@ set(MPVulkanVisionRTShaders
 	rtlightresolve.frag
 	glassdebug.frag
 	ripple.frag
+	portal.frag
 	smoke.frag
 	smokeup.frag
 	smlights.frag

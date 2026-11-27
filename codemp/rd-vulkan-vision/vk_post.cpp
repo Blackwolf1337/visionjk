@@ -41,6 +41,9 @@ cvar_t	*v_exposure;
 cvar_t	*v_ssr;
 cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
+cvar_t	*v_portalViews;
+cvar_t	*v_portalDebug;
+cvar_t	*v_portalDepth;
 
 // after a pass of its own in the middle of a view: the sets of the frame, the state and the viewport of the scene again
 void VK_ResumeScene( void ) {
@@ -66,6 +69,16 @@ void VK_InitPost( void ) {
 		"Smoke, dust and fire of the effects fade out where they meet walls and the floor and right in front of the eye, instead of cutting into them with a hard edge. Vulkan only. 0: off. Above 1: the units over which they fade (1: 10)" );
 	v_litParticles = ri.Cvar_Get( "v_litParticles", "1", CVAR_ARCHIVE_ND,
 		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor, and glow around a blade. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
+	v_portalViews = ri.Cvar_Get( "v_portalViews", "6", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"How many views through the portals of the portal gun a frame draws, the nearest first and those seen inside "
+		"another portal too (0 to 6); each keeps a picture the size of the window. 0: only their rims and swirls. Vulkan "
+		"only, takes effect after vid_restart" );
+	v_portalDepth = ri.Cvar_Get( "v_portalDepth", "3", CVAR_ARCHIVE_ND,
+		"How deep the views through the portals of the portal gun nest (1 to 3): 1 a portal shows what is behind it, 2 also "
+		"a portal seen through it, 3 one seen through that. Each costs a view of its own (v_portalViews of them in all)" );
+	v_portalDebug = ri.Cvar_Get( "v_portalDebug", "0", 0,
+		"The portals of the portal gun. 1: which got a view through them, printed once a second. 2: their openings show the "
+		"part of the frame their view was drawn for as a frame of their colour" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
 }
@@ -1508,13 +1521,13 @@ void VK_EndPuddle( void ) {
 
 /*
 ===============
-VK_BeginGlassView
+VK_BeginSubView
 
-A view of what lies behind a plane of thick glass (R_GlassViews of tr_main.cpp) is drawn into targets of its own that
-take the places of color, depth and their samples (vk.sub*), in the middle of the view of the level (vk_backend.cpp
-RB_DrawDeferredViews), and copied into its picture at the end (vk.behind). The passes that read the frame or the depth
-read its targets then (vkTarget_t readSet goes with them). Only its part of the frame is drawn (vk.limit). qfalse: it
-is not drawn.
+A view of its own (what lies behind a plane of thick glass, R_GlassViews of tr_main.cpp; what is seen through a portal
+of the portal gun, R_PortalViews) is drawn into targets of its own that take the places of color, depth and their
+samples (vk.sub*), in the middle of the view of the level (vk_backend.cpp RB_DrawDeferredViews), and copied into its
+picture at the end (vk.behind). The passes that read the frame or the depth read its targets then (vkTarget_t readSet
+goes with them). Only its part of the frame is drawn (vk.limit). qfalse: it is not drawn.
 ===============
 */
 #ifndef RD_VISION_GLES
@@ -1547,21 +1560,21 @@ static void VK_SwapSubTargets( void ) {
 }
 #endif
 
-qboolean VK_BeginGlassView( void ) {
+qboolean VK_BeginSubView( void ) {
 #ifdef RD_VISION_GLES
 	return qfalse;
 #else
-	const int	index = backEnd.viewParms.glassView - 1;
+	const int	index = backEnd.viewParms.subView - 1;
 	int			area[4];
 
-	if ( !vk.frame || index < 0 || index >= GLASS_VIEWS || !vk.behind[index].image || !tr.behindImage[index] || !vk.sub.image ) {
+	if ( !vk.frame || index < 0 || index >= SUB_VIEWS || !vk.behind[index].image || !tr.behindImage[index] || !vk.sub.image ) {
 		return qfalse;
 	}
-	VK_GlassArea( backEnd.viewParms.glassBounds, area );
+	VK_GlassArea( backEnd.viewParms.subBounds, area );
 	if ( area[2] <= 0 || area[3] <= 0 ) {
 		return qfalse;
 	}
-	VK_Checkpoint( "a view behind glass takes its targets" );
+	VK_Checkpoint( "a view of its own takes its targets" );
 	VK_EndTarget();
 	VK_SwapSubTargets();
 	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
@@ -1576,12 +1589,12 @@ qboolean VK_BeginGlassView( void ) {
 #endif
 }
 
-void VK_EndGlassView( void ) {
+void VK_EndSubView( void ) {
 #ifndef RD_VISION_GLES
-	const int	index = backEnd.viewParms.glassView - 1;
+	const int	index = backEnd.viewParms.subView - 1;
 	const int	area[4] = { vk.limit[0], vk.limit[1], vk.limit[2] - vk.limit[0], vk.limit[3] - vk.limit[1] };
 
-	VK_Checkpoint( "a view behind glass is copied" );
+	VK_Checkpoint( "a view of its own is copied" );
 	VK_EndTarget();
 	VK_CopyTargetRect( &vk.color, &vk.behind[index], area );
 	if ( vk.behindShown[index] != (int)tr.behindImage[index]->texnum ) {
@@ -1589,6 +1602,14 @@ void VK_EndGlassView( void ) {
 		VK_ShowTarget( vk.behindShown[index], &vk.behind[index] );
 	}
 	vk.behindFrame[index] = backEnd.viewParms.frameCount;
+	// (a view through a portal: what its opening needs to read it, vk_portal.cpp)
+	vk.behindId[index] = backEnd.viewParms.portalView ? backEnd.viewParms.portalId : -1;
+	memcpy( vk.behindClip[index], backEnd.viewParms.portalClip, sizeof( vk.behindClip[index] ) );
+	memcpy( vk.behindRect[index], backEnd.viewParms.portalRect, sizeof( vk.behindRect[index] ) );
+	vk.behindArea[index][0] = vk.limit[0];
+	vk.behindArea[index][1] = vk.limit[1];
+	vk.behindArea[index][2] = vk.limit[2];
+	vk.behindArea[index][3] = vk.limit[3];
 	// and the targets of the view it was drawn in
 	VK_SwapSubTargets();
 	vk.limitOn = qfalse;

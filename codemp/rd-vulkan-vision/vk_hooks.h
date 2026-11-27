@@ -54,6 +54,11 @@ void VK_NoteDrawSurfs( int numDrawSurfs );
 qboolean VK_GlassViews( void );
 int VK_GlassDebug( void );		// v_glassDebug
 qboolean VK_ViewBallBounds( const struct viewParms_s *view, const vec3_t origin, float radius, float *bounds );
+// how many views through the portals of the portal gun a frame can have, their pictures (v_portalViews; R_PortalViews
+// of tr_main.cpp, vk_backend.cpp), how deep they nest (v_portalDepth, 1 to PORTAL_DEPTH), and v_portalDebug
+int VK_PortalPictures( void );
+int VK_PortalDepth( void );
+int VK_PortalDebug( void );
 // ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
 qboolean RE_GpuProfile( gpuProfile_t *out );
 // vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the shadow of the player at origin came from, their colours and

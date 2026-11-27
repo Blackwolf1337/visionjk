@@ -84,11 +84,14 @@ static void WA_SendServerCommand( int clientNum, const char *text ) {
 
 gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
 	// the table of an engine that does not say vs_voiceShared ends before ext, of one that does not say
-	// vs_gameImportExt 2 after ext.SendDatagram (g_public.h)
+	// vs_gameImportExt 2 after ext.SendDatagram, of one that does not say 3 after ext.Cvar_UnusedList (g_public.h)
 	size_t size = offsetof( gameImport_t, ext );
+	const int extLevel = import->Cvar_VariableIntegerValue( "vs_gameImportExt" );
 
-	if ( import->Cvar_VariableIntegerValue( "vs_gameImportExt" ) >= 2 )
+	if ( extLevel >= 3 )
 		size = sizeof( waImport );
+	else if ( extLevel == 2 )
+		size = offsetof( gameImport_t, ext.TraceHoles );
 	else if ( import->Cvar_VariableIntegerValue( "vs_voiceShared" ) )
 		size = offsetof( gameImport_t, ext.Cvar_Flags );
 	memset( &waImport, 0, sizeof( waImport ) );

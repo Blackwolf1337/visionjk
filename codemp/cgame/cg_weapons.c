@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_boltsound.h"
 #include "cgame/weapons/cg_airring.h"
 #include "cgame/weapons/cg_wallfx.h"
+#include "cgame/portal/cg_portal_draw.h"
 #include "cgame/weapons/cg_hookrope.h"
 
 /*
@@ -925,6 +926,15 @@ void CG_AddViewWeapon( playerState_t *ps ) {
 
 	hand.hModel = weapon->handsModel;
 	hand.renderfx = RF_DEPTHHACK | RF_FIRST_PERSON;// | RF_MINLIGHT;
+	// VisionJK: close to an opening of the portal gun it is drawn after it, which would paint over it. Within a few units
+	// the wall the opening lies on is nearer in the depth than its crunched depth: no depth then, for the frames it takes
+	// to go through (portal/cg_portal_view.c)
+	if ( CG_PortalEyeNear( 40.0f ) ) {
+		hand.renderfx |= RF_FORCEPOST;
+		if ( CG_PortalEyeNear( 6.0f ) ) {
+			hand.renderfx |= RF_NODEPTH;
+		}
+	}
 
 	// add everything onto the hand
 	CG_AddPlayerWeapon( &hand, ps, &cg_entities[cg.predictedPlayerState.clientNum], ps->persistant[PERS_TEAM], angles, qfalse );

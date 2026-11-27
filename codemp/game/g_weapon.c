@@ -573,6 +573,9 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 	gentity_t	*traceEnt, *tent;
 	float		shotRange = 8192;
 	int			ignore, traces;
+	// VisionJK: through the portals of the portal gun the shot goes on another way, a beam for each piece
+	vec3_t		dir, beamFrom;
+	int			shooter = ent->s.number, portals = 0;
 
 	if ( level.gametype == GT_SIEGE )
 	{
@@ -585,6 +588,8 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 	start[2] += ent->client->ps.viewheight;//By eyes
 
 	VectorMA( start, shotRange, forward, end );
+	VectorCopy( forward, dir );
+	VectorCopy( muzzle, beamFrom );
 
 	ignore = ent->s.number;
 	traces = 0;
@@ -601,6 +606,29 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 
 		traceEnt = &g_entities[tr.entityNum];
 		G_WeapCutGrappleRope( ent, start, tr.endpos, 10.0f, qtrue );	// JA+
+
+		// VisionJK: into a portal of the portal gun (portal/g_portal.c), on out of the other one
+		{
+			vec3_t at, outStart, outEnd;
+
+			if ( portals < PORTAL_RAY_THROUGH && G_PortalRay( start, end, &tr, at, outStart, outEnd ) )
+			{
+				tent = G_TempEntity( at, EV_DISRUPTOR_MAIN_SHOT );
+				VectorCopy( beamFrom, tent->s.origin2 );
+				tent->s.eventParm = shooter;
+				VectorCopy( outStart, start );
+				VectorCopy( outEnd, end );
+				VectorCopy( outStart, beamFrom );
+				VectorSubtract( outEnd, outStart, dir );
+				VectorNormalize( dir );
+				// (a piece out of a portal starts where it starts, the cgame puts no muzzle there; and he can
+				// be hit by his own shot)
+				shooter = ENTITYNUM_NONE;
+				ignore = ENTITYNUM_NONE;
+				portals++;
+				continue;
+			}
+		}
 
 		if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
 		{ //g2 collision checks -rww
@@ -639,8 +667,8 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 				gentity_t *te = NULL;
 
 				tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_MAIN_SHOT );
-				VectorCopy( muzzle, tent->s.origin2 );
-				tent->s.eventParm = ent->s.number;
+				VectorCopy( beamFrom, tent->s.origin2 );
+				tent->s.eventParm = shooter;
 
 				te = G_TempEntity( tr.endpos, EV_SABER_BLOCK );
 				VectorCopy(tr.endpos, te->s.origin);
@@ -671,8 +699,8 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 
 	// always render a shot beam, doing this the old way because I don't much feel like overriding the effect.
 	tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_MAIN_SHOT );
-	VectorCopy( muzzle, tent->s.origin2 );
-	tent->s.eventParm = ent->s.number;
+	VectorCopy( beamFrom, tent->s.origin2 );
+	tent->s.eventParm = shooter;
 
 	traceEnt = &g_entities[tr.entityNum];
 
@@ -685,7 +713,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 				ent->client->accuracy_hits++;
 			}
 
-			G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NORMAL, MOD_DISRUPTOR );
+			G_Damage( traceEnt, ent, ent, dir, tr.endpos, damage, DAMAGE_NORMAL, MOD_DISRUPTOR );
 
 			tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_HIT );
 			tent->s.eventParm = DirToByte( tr.plane.normal );
@@ -737,6 +765,9 @@ void WP_DisruptorAltFire( gentity_t *ent )
 	int			count, maxCount = 60;
 	int			traces = DISRUPTOR_ALT_TRACES;
 	qboolean	fullCharge = qfalse;
+	// VisionJK: through the portals of the portal gun the shot goes on another way, a beam for each piece
+	vec3_t		dir, beamFrom;
+	int			shooter = ent->s.number, portals = 0;
 
 	damage = DISRUPTOR_ALT_DAMAGE-30;
 
@@ -787,10 +818,12 @@ void WP_DisruptorAltFire( gentity_t *ent )
 	damage += count;
 
 	skip = ent->s.number;
+	VectorCopy( forward, dir );
+	VectorCopy( muzzle, beamFrom );
 
 	for (i = 0; i < traces; i++ )
 	{
-		VectorMA( start, shotRange, forward, end );
+		VectorMA( start, shotRange, dir, end );
 
 		if (d_projectileGhoul2Collision.integer)
 		{
@@ -801,6 +834,31 @@ void WP_DisruptorAltFire( gentity_t *ent )
 			trap->Trace( &tr, start, NULL, NULL, end, skip, MASK_SHOT, qfalse, 0, 0 );
 		}
 		G_WeapCutGrappleRope( ent, start, tr.endpos, 10.0f, qtrue );	// JA+
+
+		// VisionJK: into a portal of the portal gun (portal/g_portal.c), on out of the other one; that takes
+		// none of the things the charge goes through
+		{
+			vec3_t at, outStart, outEnd;
+
+			if ( portals < PORTAL_RAY_THROUGH && G_PortalRay( start, end, &tr, at, outStart, outEnd ) )
+			{
+				tent = G_TempEntity( at, EV_DISRUPTOR_SNIPER_SHOT );
+				VectorCopy( beamFrom, tent->s.origin2 );
+				tent->s.shouldtarget = fullCharge;
+				tent->s.eventParm = shooter;
+				VectorCopy( outStart, start );
+				VectorCopy( outStart, beamFrom );
+				VectorSubtract( outEnd, outStart, dir );
+				VectorNormalize( dir );
+				// (a piece out of a portal starts where it starts, the cgame puts no muzzle there; and he can
+				// be hit by his own shot)
+				shooter = ENTITYNUM_NONE;
+				skip = ENTITYNUM_NONE;
+				portals++;
+				i--;
+				continue;
+			}
+		}
 
 		if ( tr.entityNum == ent->s.number )
 		{
@@ -857,9 +915,9 @@ void WP_DisruptorAltFire( gentity_t *ent )
 				gentity_t *te = NULL;
 
 				tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_SNIPER_SHOT );
-				VectorCopy( muzzle, tent->s.origin2 );
+				VectorCopy( beamFrom, tent->s.origin2 );
 				tent->s.shouldtarget = fullCharge;
-				tent->s.eventParm = ent->s.number;
+				tent->s.eventParm = shooter;
 
 				te = G_TempEntity( tr.endpos, EV_SABER_BLOCK );
 				VectorCopy(tr.endpos, te->s.origin);
@@ -878,9 +936,9 @@ void WP_DisruptorAltFire( gentity_t *ent )
 
 		// always render a shot beam, doing this the old way because I don't much feel like overriding the effect.
 		tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_SNIPER_SHOT );
-		VectorCopy( muzzle, tent->s.origin2 );
+		VectorCopy( beamFrom, tent->s.origin2 );
 		tent->s.shouldtarget = fullCharge;
-		tent->s.eventParm = ent->s.number;
+		tent->s.eventParm = shooter;
 
 		// If the beam hits a skybox, etc. it would look foolish to add impact effects
 		if ( render_impact )
@@ -910,7 +968,7 @@ void WP_DisruptorAltFire( gentity_t *ent )
 				 {
 					if ( traceEnt->takedamage )
 					{
-						G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage,
+						G_Damage( traceEnt, ent, ent, dir, tr.endpos, damage,
 								DAMAGE_NO_KNOCKBACK, MOD_DISRUPTOR_SNIPER );
 
 						tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_HIT );
@@ -945,7 +1003,7 @@ void WP_DisruptorAltFire( gentity_t *ent )
 					VectorCopy(traceEnt->client->ps.viewangles, preAng);
 				}
 
-				G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK, MOD_DISRUPTOR_SNIPER );
+				G_Damage( traceEnt, ent, ent, dir, tr.endpos, damage, DAMAGE_NO_KNOCKBACK, MOD_DISRUPTOR_SNIPER );
 
 				if (traceEnt->client && preHealth > 0 && traceEnt->health <= 0 && fullCharge &&
 					G_CanDisruptify(traceEnt))
@@ -4669,7 +4727,14 @@ void FireWeapon( gentity_t *ent, qboolean altFire ) {
 			break;
 
 		case WP_BRYAR_OLD:
-			WP_FireBryarPistol( ent, altFire );
+			// VisionJK: the portal gun (portal/g_portal.c)
+			if ( G_PortalGunReady( ent ) ) {
+				// (the orange portal was set when the alt fire was pressed, G_PortalAltPress)
+				G_PortalRefund( ent, altFire );
+				if ( !altFire )
+					G_PortalFire( ent, qfalse, muzzle, forward );
+			} else
+				WP_FireBryarPistol( ent, altFire );
 			break;
 
 		case WP_BLASTER:

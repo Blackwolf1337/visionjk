@@ -680,8 +680,8 @@ void VK_EndTarget( void ) {
 	qvkCmdEndRendering( vk.frame->cmd );
 }
 
-// A view of what lies behind thick glass is drawn for a part of the frame alone (vk.limit, VK_BeginGlassView): no
-// scissor of the frame reaches past it while it is on.
+// A view of its own (behind thick glass, through a portal) is drawn for a part of the frame alone (vk.limit,
+// VK_BeginSubView): no scissor of the frame reaches past it while it is on.
 static void VK_LimitScissor( VkRect2D *scissor ) {
 	if ( !vk.limitOn ) {
 		return;

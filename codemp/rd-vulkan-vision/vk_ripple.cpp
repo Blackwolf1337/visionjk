@@ -86,7 +86,7 @@ void VK_RippleDraw( int part ) {
 	if ( !vk.frame || !rp.pipeline || r_numRipples <= 0 || !tr.screenImage ) {
 		return;
 	}
-	if ( ( backEnd.viewParms.isPortal && !backEnd.viewParms.glassView ) || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
+	if ( ( backEnd.viewParms.isPortal && !backEnd.viewParms.subView ) || backEnd.viewParms.isPuddle || backEnd.viewParms.probeFace
 		|| ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		return;
 	}

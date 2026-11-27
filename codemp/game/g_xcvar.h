@@ -132,6 +132,9 @@ XCVAR_DEF( vs_maxCmdMsec,				"100",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_logClientCmds,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 // vs_sandbox 1: every player may use amsandbox (physgun, toolgun, gravity gun), not only the admins (g_props.c)
 XCVAR_DEF( vs_sandbox,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_portalGun 1: the players an admin gave the portal gun (amportalgun) fire portals with the old bryar pistol
+// (portal/g_portal.c); 0 closes every portal and the old bryar fires as it always did
+XCVAR_DEF( vs_portalGun,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_wiggleBlockTime,			"3",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_wiggleRate,				"14",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_logClientInfo,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
@@ -188,10 +191,11 @@ XCVAR_DEF( g_timeouttospec,				"70",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									qfalse )
 // What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
 // chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
-// passes on what stands above the heads (status/g_status.c). Bit 2 the key login, bit 3 who plays with what,
-// bits 4 to 6 were Focus and the Vision Temple and stay unused, bit 7 hats and capes (status/g_status.c), bit 8
-// the key login with the host key of the server (auth/bg_auth.h), bit 10 the AT-ST steps sideways, turns on the spot
-// and turns its head for a pilot whose cgame predicts it (BG_WalkerSteps).
+// passes on what stands above the heads (status/g_status.c). Bit 2 the key login, bit 3 who plays with what, bit 4
+// the moves through the portals of the portal gun (VS_CAPS_PORTAL, set while the game runs and only on an engine
+// with traces with holes, G_PortalInit), bits 5 and 6 were Focus and the Vision Temple and stay unused, bit 7 hats
+// and capes (status/g_status.c), bit 8 the key login with the host key of the server (auth/bg_auth.h), bit 10 the
+// AT-ST steps sideways, turns on the spot and turns its head for a pilot whose cgame predicts it (BG_WalkerSteps).
 XCVAR_DEF( vs_caps,				"1935",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 // The boombox (boombox/g_boombox.c), on the relay of the voice chat. vs_boombox is in the server info: the cgame of this
 // tree asks for boxes only where it reads it there. The programs that fetch the songs can only be named while the

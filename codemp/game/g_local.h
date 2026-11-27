@@ -38,6 +38,7 @@ typedef struct gclient_s gclient_t;
 #include "game/japlus/g_japlus.h"
 #include "game/unlagged/g_unlagged.h"
 #include "game/anticheat/g_anticheat.h"
+#include "game/portal/g_portal.h"
 
 //npc stuff
 #include "game/npc/b_public.h"
@@ -411,6 +412,9 @@ struct gentity_s {
 	vec3_t		jpSpawnOrigin;
 	qboolean	jpSpawnSet;
 	int			jpItemType;		// giType of the item, set when it spawns with jp_pushAll on
+
+	// VisionJK: a missile that flew through a portal of the portal gun may hit who shot it (portal/g_portal.c)
+	qboolean	portalPassed;
 };
 
 #define DAMAGEREDIRECT_HEAD		1

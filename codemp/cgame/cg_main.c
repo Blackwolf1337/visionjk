@@ -2730,6 +2730,7 @@ Ghoul2 Insert End
 	CG_MinesRegister();
 
 	CG_RegisterCvars();
+	CG_PortalCaps();
 
 	CG_InitConsoleCommands();
 

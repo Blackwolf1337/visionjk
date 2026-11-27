@@ -1571,6 +1571,11 @@ qboolean R_PointInSolid( const vec3_t p ) {
 	return (qboolean)( tr.world && R_PointInLeaf( p )->cluster == -1 );
 }
 
+// VisionJK: whether the leaf of a point is among those the last R_MarkLeaves found in the view (R_PortalViews)
+qboolean R_PointMarked( const vec3_t p ) {
+	return (qboolean)( tr.world && R_PointInLeaf( p )->visframe == tr.visCount );
+}
+
 /*
 ==============
 R_ClusterPVS
