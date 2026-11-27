@@ -711,9 +711,9 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 			if ( shares[i] <= 0.01f || fall <= 0.01f ) {
 				continue;
 			}
-			float near = Com_Clamp( 0.0f, 1.0f, ( 192.0f - at ) / ( 192.0f - 96.0f ) );
-			near = near * near * ( 3.0f - 2.0f * near );
-			const float fromAmbient = 0.6f * near * shares[i];
+			float closeness = Com_Clamp( 0.0f, 1.0f, ( 192.0f - at ) / ( 192.0f - 96.0f ) );
+			closeness = closeness * closeness * ( 3.0f - 2.0f * closeness );
+			const float fromAmbient = 0.6f * closeness * shares[i];
 			vec3_t *color = &ent->lampColor[ent->numLamps];
 
 			VectorCopy( lamps[i], ent->lampOrigin[ent->numLamps] );
