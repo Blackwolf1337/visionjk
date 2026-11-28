@@ -94,6 +94,7 @@ set(MPVulkanVisionSharedFiles
 	"${MPDir}/rd-vulkan-vision/vk_post.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_paint.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_prepare.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_stubs.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_world.cpp"
 	)

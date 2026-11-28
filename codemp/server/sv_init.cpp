@@ -950,6 +950,13 @@ static void SV_InitRef( void ) {
 	ri.LoadPush = Com_LoadPush;
 	ri.LoadPop = Com_LoadPop;
 	ri.FS_FileSource = FS_FileSource;
+	ri.JobThreads = Com_JobThreads;
+	ri.JobGroupNew = Com_JobGroupNew;
+	ri.JobAdd = Com_JobAdd;
+	ri.JobGroupDone = Com_JobGroupDone;
+	ri.JobGroupWait = Com_JobGroupWait;
+	ri.JobGroupFree = Com_JobGroupFree;
+	ri.JobFor = Com_JobFor;
 	G2VertSpaceServer = &IHeapAllocator_singleton;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );

@@ -384,14 +384,18 @@ void		VK_CountImages( int *numImages, int *numBlockImages );
 
 // vk_bc.cpp
 void		VK_BC_Init( void );
-void		VK_BC_Shutdown( void );
 vkSize_t	VK_BC_Size( vkFormat_t format, int width, int height );
 
 // vk_texcache.cpp: the packed textures that are kept in the profile. What tr_image.cpp calls is in vk_hooks.h.
 void		VK_TexCacheInit( void );
 byte		*VK_TexCacheLevel( int level, int mipLevels, vkFormat_t format, int width, int height, vkSize_t size );
+qboolean	VK_TexCacheKeyFor( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, char *key, int keySize );
+qboolean	VK_TexCacheHas( const char *key );
+void		VK_TexCacheWrite( const char *key, vkFormat_t format, int width, int height, int mipLevels, const vec3_t averageColor,
+				const byte *levels, size_t size );
 // vk_image.cpp
 void		VK_ImageBlocks( int level, int mipLevels, vkFormat_t format, int width, int height, const byte *blocks, vkSize_t size );
+vkFormat_t	VK_FormatFor( int internalFormat, int width, int height, const byte *rgba, int *storedFormat );
 void		VK_BC_Compress( vkFormat_t format, const byte *rgba, int width, int height, byte *out );
 
 // vk_gl.cpp

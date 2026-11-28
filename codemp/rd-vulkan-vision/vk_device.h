@@ -178,6 +178,12 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	qboolean					rayTracing;			// acceleration structures and ray queries are on (vk_rt.cpp)
 	qboolean					checkpoints;		// VK_NV_device_diagnostic_checkpoints: a lost device says where it was (VK_Checkpoint)
 	qboolean					deviceAddress;		// buffers have device addresses (the skinning of the players for their shadows, vk_rt.cpp)
+	// for the profiler of the client (RE_GpuProfile)
+	qboolean					memoryBudget;		// VK_EXT_memory_budget
+	qboolean					pciBusInfo;			// VK_EXT_pci_bus_info, the address below
+	uint32_t					pciDomain, pciBus, pciDevice, pciFunction;
+	uint8_t						deviceUUID[VK_UUID_SIZE];
+	VkPresentModeKHR			presentMode;		// of the swapchain
 	VkDescriptorSet				depthSet;
 	// v_wetMirror: the view mirrored at the floor of the puddles (VK_BeginPuddle), traded with color, colorMS, depth
 	// and depthMS while it is drawn; the wet places read reflect through reflectSet

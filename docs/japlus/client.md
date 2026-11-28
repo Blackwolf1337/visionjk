@@ -426,7 +426,7 @@ Smaller ones:
 |------|---------|---------|
 | `tay_crosshairColor` | empty | the colour of the crosshair with nothing under it, `r g b a` from 0 to 1 (`1 0.5 0 1` orange). Empty: white, as before. Over players and things it keeps the colours of the game (red, green, yellow), and `cg_crosshairHealth 1` still wins |
 | `tay_crosshairNamesOpacity` | 0.5 | how opaque the name of the player under the crosshair is, 0 to 1. The game had 0.5 |
-| `tay_chatLog` | 0 | every chat line the box shows, without colours and with the time, appended to `chatlogs/<date>.log` in the game's home folder (`~/.local/share/visionjk/japlus/chatlogs` on Linux). Lines of hidden players are not written |
+| `tay_chatLog` | 0 | every chat line the box shows, without colours and with the time, appended to `chatlogs/<date>.log` in `visionjk-data/files` of the game's home folder (`~/.local/share/visionjk/visionjk-data/files/chatlogs` on Linux). Lines of hidden players are not written |
 
 Emoji in the chat box (as TaystJK, `cgame/chat/cg_chat.c`): a code in a line is drawn as the picture
 `gfx/emoji/<file>.png`, as high as a row. The list is read from the paks at every start of the cgame, so a pak (also
@@ -1126,7 +1126,7 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `v_authKeyFile` | empty | the key file, `~/` is the home folder of the user. Empty: `admin_ed25519` in the home folder of the game |
+| `v_authKeyFile` | empty | the key file, `~/` is the home folder of the user. Empty: `admin_ed25519` in `visionjk-data` of the home folder of the game |
 | `v_authAgent` | 0 | 1: the Ed25519 keys of the ssh-agent are used too |
 | `v_authAgentPath` | empty | where the agent listens. Empty: `SSH_AUTH_SOCK` (Linux, macOS), the pipe of OpenSSH (Windows) |
 | `v_authAgentKey` | empty | only the key of the agent whose comment or line has this text. Empty: each in turn, eight at most |
@@ -1145,8 +1145,8 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 - The client signs only for a server the player named with `v_amkey login`, and only right after it asked
   itself. A server that sends a question nobody asked for gets no answer.
 - The server sends a host key with its question (`vs_auth nonce <nonce> <host key>`), and the client keeps the
-  host key of each server address in `admin_hosts.txt` in the home folder of the game (always `fs_homepath`,
-  next to `admin_ed25519` by default). One line each: `<address> <host key as base64>`. The file holds at most
+  host key of each server address in `admin_hosts.txt` in `visionjk-data` of the home folder of the game (always
+  `fs_datapath`, next to `admin_ed25519` by default). One line each: `<address> <host key as base64>`. The file holds at most
   8192 bytes, the oldest lines go first. The first login on an address keeps the key, like ssh `known_hosts`.
   After that a server at that address with another key is not signed for, and neither is a server whose key is
   kept for another address. The player gets a message, also after the login by itself. `v_amkey trust` logs in
@@ -1207,7 +1207,7 @@ ping column of the browser, one the client left itself a red one.
 Old configs leave cvars behind that nothing reads. The engine notes the day code last used each cvar: it was
 registered (`Cvar_Get` without `CVAR_USER_CREATED`), or a module read it by name. The traps `Cvar_VariableStringBuffer`,
 `Cvar_VariableIntegerValue` and `Cvar_VariableValue` of the game, cgame and ui count, and only for cvars the user made.
-The days are in `cvarseen.txt` in `fs_homepath`, for all mods together: `start <day>` and then `name day` a line. It is
+The days are in `cvarseen.txt` in `visionjk-data` of `fs_homepath`, for all mods together: `start <day>` and then `name day` a line. It is
 saved once a minute at most, when something changed, and at shutdown. It keeps 8192 names, and when it is full the
 oldest eighth is dropped.
 

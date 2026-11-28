@@ -45,6 +45,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkGetPhysicalDeviceProperties2 ) \
 	X( vkGetPhysicalDeviceFormatProperties ) \
 	X( vkGetPhysicalDeviceMemoryProperties ) \
+	X( vkGetPhysicalDeviceMemoryProperties2 ) \
 	X( vkGetPhysicalDeviceProperties ) \
 	X( vkGetPhysicalDeviceQueueFamilyProperties ) \
 	X( vkGetPhysicalDeviceSurfaceCapabilitiesKHR ) \

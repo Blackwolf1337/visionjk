@@ -900,6 +900,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	R_ShutdownWorldEffects();
 	R_ShutdownFonts();
 	R_MaterialGenShutdown();
+	VK_PrepareDrop();
 	if ( tr.registered ) {
 		R_IssuePendingRenderCommands();
 		if (destroyWindow)

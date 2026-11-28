@@ -1689,6 +1689,17 @@ void		R_MaterialGenShutdown( void );
 void		R_DefaultMaterialGen( materialGen_t *gen );
 void		R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height );
 image_t		*R_MadeImage( const char *name, byte *pic, int width, int height );
+// tr_image.cpp, for the textures made on worker threads (vk_prepare.cpp)
+typedef void ( *levelSink_t )( void *ctx, int level, int internalFormat, int width, int height, const byte *rgba );
+void		R_MakeLevels( unsigned *data, int width, int height, qboolean mipmap, qboolean picmip, qboolean isLightmap, qboolean allowTC,
+				int *pformat, int *pUploadWidth, int *pUploadHeight, levelSink_t sink, void *ctx );
+void		R_ImageFilters( qboolean mipmap, GLuint uiTarget );
+void		R_AverageColor( const byte *pic, int width, int height, vec3_t color );
+image_t		*R_NewImage( const char *name, int width, int height, qboolean mipmap, qboolean allowPicmip, int glWrapClampMode );
+qboolean	R_ImageLoaded( const char *name );
+qboolean	R_ImagesMayWait( qboolean mayWait );
+typedef void ( *imageFound_t )( const char *image, qboolean mipmap, qboolean picmip, qboolean allowTC, void *ctx );
+void		R_ShaderImageFiles( const char *name, qboolean mipRawImage, imageFound_t found, void *ctx );
 
 //
 // tr_material.cpp: the material debug menu (refexport_t ext.Material*)

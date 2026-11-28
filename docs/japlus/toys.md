@@ -63,8 +63,8 @@ and the arrows, whatever they are bound to.
 To spray a picture, use `v_spray` (Controls, Extras, "Spray"). It puts the picture of `v_sprayImage` on the wall or floor
 you look at, up to 128 units away. The default is `heart`. Any emoji of the chat will do: write its name without the
 colons, such as `thumbsup` or `fire`. The list is `gfx/vision/sprays.txt`. `v_sprayImage` also takes a chat emoji of
-the store, or a picture of your own: a file in the `sprays` folder of the home folder (`japlus/sprays`), png, jpg, tga
-or an animated gif, with or without the extension (`v_sprayImage star.gif`).
+the store, or a picture of your own: a file in the `sprays` folder of the mod folder in the home folder (`japlus/sprays`, it stays there, only
+`sprays/store` moved), png, jpg, tga or an animated gif, with or without the extension (`v_sprayImage star.gif`).
 
 A picture of your own is made into a sheet by the engine: a still picture of 512 pixels, or up to 16 frames of a gif in
 a grid, each shown as long as the frames it stands for. The first time you spray it, the sheet goes to the spray store
@@ -113,7 +113,7 @@ An emoji with a mood also lets the voice of your model say a line, if that voice
 (or a victory or taunt line). Thumbs up, clap, trophy and fire say a victory line, angry ones an anger line, thinking
 ones a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt. Players can also upload chat
 emojis of their own on jka.vision/models.html (section "Chat emojis"). The game fetches them in the background into
-`base/gfx/emoji/` of the home folder, so they can be thrown like the emojis of the game; the upload is described in
+`gfx/emoji/` of `visionjk-data/files` in the home folder, so they can be thrown like the emojis of the game; the upload is described in
 [models.md](models.md#chat-emojis-of-the-store). The interactive emojis and their own sounds are described in
 [models.md](models.md#interactive-emojis-of-the-store).
 
@@ -158,13 +158,14 @@ of others, as for tables.
 
 To draw, bind `v_board` (Controls, Extras, "Drawing Board") and press it. A window opens with a picture of 256 x 128
 pixels and 32 colours, which you paint with the mouse. There are brush sizes 1 to 4, Fill, Undo and Clear. Save 1 to 4
-and Load 1 to 4 keep four presets in `drawings/preset<n>.vjd` of the home folder. Three buttons hold the board up in
+and Load 1 to 4 keep four presets in `drawings/preset<n>.vjd` of `visionjk-data/files` in the home folder. Three buttons hold the board up in
 front of you, hold it over your head, or put it away. Esc or Close shuts the window, and the board stays where it is.
 Without the window, `v_board hold <0|1|2>`, `v_board save <1-4>`, `v_board load <1-4>`, `v_board import <file>` and
 `v_board paste` work from a bind.
 
 The Picture button, right of the brush sizes, lists the picture files (png, jpg, jpeg, tga) of the `drawings` folder:
-`japlus/drawings` of the home folder, and `base/drawings` and the paks. It shows up to 64 files, 10 to a page, with `<`
+`drawings` of `visionjk-data/files` in the home folder (the folder the window names when the list is empty), the
+`drawings` of the game folders and the paks. It shows up to 64 files, 10 to a page, with `<`
 and `>` when there are more. Click one and it goes on the board: fitted with its sides kept and centred, the rest white,
 transparent parts white, turned into the 32 colours with dithering. Undo takes it back. Click Picture again to close the
 list. When the folder has no pictures, the list shows the full path to put them in. `v_board import <file>` takes a file
@@ -379,7 +380,7 @@ own cgame draws the board on the player and shows the picture through a stream o
 streams 4 to 7, the TVs use 0 to 3). A held picture that changed goes to the store of jka.vision at most every 8
 seconds (`Sys_HttpPost`, `POST /models/drawings/api/upload`). The store gives it a number and the board says the number
 to the others as `TOY_BOARD` (13), through the game module or the masterserver, with how it is held. Their engine
-fetches `GET /models/drawings/files/<number>.vjd` into `base/drawings/` of the home folder and shows it. The code is
+fetches `GET /models/drawings/files/<number>.vjd` into `drawings/` of `visionjk-data/files` in the home folder and shows it. The code is
 `cg_board.c`, and `CL_VideoPicture` and the drawing part of `cl_models.cpp` in the engine. The store checks only the
 format: the exact size and that every pixel is one of the 32 colours. The limits are 60 uploads an hour and 300 a day
 per address, and the store keeps the newest 5000. `files/<number>.png` is the same picture to look at. The master and
@@ -395,7 +396,7 @@ The clipboard is read by the engine (`codemp/client/cl_clipboard.cpp`, `v_clipbo
 once a frame. Windows: the registered format PNG, else CF_DIBV5 or CF_DIB, written as a 32 bit TGA. X11 and XWayland: a
 connection of its own (libX11 is looked up at run time with `dlopen`), TARGETS, then image/png or image/jpeg, large ones
 by INCR, with a time-out of 3 s. macOS: `public.png` of the general pasteboard through the Objective-C runtime (not built
-or run). The file goes to `drawings/clipboard.png`, `.jpg` or `.tga`, and the cgame command `v_boardPasted` gets its
+or run). The file goes to `drawings/clipboard.png`, `.jpg` or `.tga` (of `visionjk-data/files`), and the cgame command `v_boardPasted` gets its
 name, or `""`. The cgame then loads it as it does an imported picture.
 
 The poses are made by each client from what it already hears (`TOY_BOARD`), nothing new goes over the network. In front,
@@ -406,7 +407,8 @@ presets, the pictures of the boards of others (`drawings/<number>.vjd`) and the 
 the drawing board did not work on pure servers since it came (0.2.9-dev.32). Now files directly in `drawings/` with
 .vjd, .png, .jpg, .jpeg or .tga are read from the folder and listed on a pure server too (`FS_IsToyPicture` in
 `qcommon/files.cpp`, which replaced `FS_IsDrawing`). Files of `sprays/` and `sprays/store/` are read from the folder on
-a pure server too, so sprays work there.
+a pure server too, so sprays work there. Since 2026-11-28 the drawings, `sprays/store` and the emojis are in
+`visionjk-data/files`, the head of the search path, see [datafolder.md](datafolder.md).
 
 The engine got three changes for it: `Sys_HttpPost` for curl and WinHTTP, a WinHTTP reader that no longer shares one
 static buffer between requests (it was wrong since the TV streams run beside other requests), and 8 video streams

@@ -482,22 +482,30 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		case CA_CONNECTED:
 			// connecting clients will only show the connection dialog
 			// refresh to update the time
+			Com_LoadPush( "frame: menus", NULL );
 			UIVM_Refresh( cls.realtime );
 			UIVM_DrawConnectScreen( qfalse );
+			Com_LoadPop();
 			break;
 		case CA_LOADING:
 		case CA_PRIMED:
 			// draw the game information screen and loading progress
+			Com_LoadPush( "frame: cgame", NULL );
 			CL_CGameRendering( stereoFrame );
+			Com_LoadPop();
 
 			// also draw the connection information, so it doesn't
 			// flash away too briefly on local or lan games
 			// refresh to update the time
+			Com_LoadPush( "frame: menus", NULL );
 			UIVM_Refresh( cls.realtime );
 			UIVM_DrawConnectScreen( qtrue );
+			Com_LoadPop();
 			break;
 		case CA_ACTIVE:
+			Com_LoadPush( "frame: cgame", NULL );
 			CL_CGameRendering( stereoFrame );
+			Com_LoadPop();
 			SCR_DrawDemoRecording();
 			break;
 		}
@@ -516,7 +524,9 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 			Cvar_Set( "v_uiPlane", plane ? "1" : "0" );
 		}
 		cls.uiPlaneOn = plane;
+		Com_LoadPush( "frame: menus", NULL );
 		UIVM_Refresh( cls.realtime );
+		Com_LoadPop();
 		cls.uiPlaneOn = qfalse;
 		if ( plane ) {
 			re->ext.Set2DPlane( NULL );
@@ -527,7 +537,9 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 	CL_DrawEngineMenus();
 
 	// the debug menus of the client (v_matdebug)
+	Com_LoadPush( "frame: debug menus", NULL );
 	CL_ImGui_Frame();
+	Com_LoadPop();
 
 	// console draws next
 	Con_DrawConsole ();

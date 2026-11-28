@@ -11,8 +11,9 @@ itself. The one stage that would be the first candidate is described at the end.
 ## How a frame runs
 
 `shared/sys/sys_main.cpp` `main`: platform and console setup, `Com_Init`, then an endless loop that calls
-`Com_Frame()`. The engine starts no thread of its own, there is no thread creation in `codemp/` or `shared/`.
-The only second thread is the audio callback that SDL starts.
+`Com_Frame()`. When this was written the engine started no thread of its own and the only second thread was
+the audio callback that SDL starts. Since 2026-11-28 there is a pool of worker threads for loading work, see
+the last section; the frame itself is still run by one thread.
 
 `codemp/qcommon/common.cpp` `Com_Frame`, one pass:
 
@@ -149,3 +150,25 @@ socket, the `CM_*` calls of the visibility check only read.
 
 Not worth it at any load: bot AI in parallel, entity thinks in parallel, loading the map on a second thread
 (hunk allocator), the web panel (it never blocks).
+
+## The job system, 2026-11-28
+
+The sections above describe the frame and stay as they were: the server tick, the game module, the client
+and the renderer still run on one thread, one after the other, and nothing in a frame was spread. What was
+added is a pool for loading work (`qcommon/com_jobs.cpp`), because decoding, mip mapping and packing of
+textures does not touch the engine state the frame shares. The numbers are in [loading.md](loading.md).
+
+The pool is shared with the renderer through `refimport_t` (`JobThreads`, `JobGroupNew`, `JobAdd`,
+`JobGroupDone`, `JobGroupWait`, `JobGroupFree`, `JobFor`). `v_jobThreads` (archived, latched, takes effect
+from the next start) is 0 for one less than the processor has threads (a dedicated server gets none), -1 for
+none, and then every job runs at once on the thread that adds it. A waiter runs queued jobs of its own group
+itself, so a job may wait for a sub group and a wait never picks up a long job of someone else. A job must not
+call engine code that is for the main thread only: the file system, the zone, `Com_Printf` and `Com_Error`.
+The workers are named `vjk job <n>` (`Sys_SetThreadName()`), `Com_JobStats()` counts the jobs they ran and their busy
+time for the full profiler panel (see [renderer.md](renderer.md#the-profiler-panel-v_profiler-2026-11-28)), which also
+reads the system every 500 ms as a job.
+
+Three users: the BC packer (`vk_bc.cpp`) no longer has its own seven threads and uses `JobFor()` for the
+bands of large levels; the pipeline prewarm (`vk_pipeline.cpp`) and the materials made at load
+(`tr_matgen.cpp`) no longer start threads of their own; and `vk_prepare.cpp` makes textures while a level
+loads, only between `RegisterMedia_LevelLoadBegin` and `LevelLoadEnd` and never inside a frame.

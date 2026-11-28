@@ -146,7 +146,7 @@ thread of the game since the command was last given: the frames, the sounds in t
 by what they went into, and the frame that took most.
 
 `v_spatialCapture <seconds>` writes what the sounds of the level give the mixer to `steamaudio/capture.wav` in
-the home path (16 bit, two channels), as it was heard. It is for measuring without ears, see "In a browser".
+`visionjk-data/files` of the home path (16 bit, two channels), as it was heard. It is for measuring without ears, see "In a browser".
 What the mixer plays itself is not in it: the sounds of the own player, the menus, the music.
 
 `v_spatialDebug` shows in the level what becomes of the sounds. It is the sum of 2 the sounds (a label over each),
@@ -158,7 +158,7 @@ mirror, where Steam Audio scatters some of them. They show which walls a sound c
 of, not what Steam Audio did with them. Sounds no voice was free for are shown too.
 
 `v_spatialSaveScene` writes the walls Steam Audio has, with the brush models where they are now, to
-`steamaudio/scene.obj` in the home path.
+`steamaudio/scene.obj` in `visionjk-data/files` of the home path.
 
 What changes: a sound behind a wall or a shut door is quieter and duller, by what it is made of. A sound has a
 direction that is more than left and right (with headphones). The room around the listener rings, a hall longer

@@ -32,18 +32,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
  * You may also wish to include "jerror.h".
  */
 
+#include <setjmp.h>
 #include <jpeglib.h>
+
+// VisionJK: libjpeg must not come back from error_exit (it went on with a broken state); it jumps back into
+// LoadJPG, which cleans up. Also on a worker thread (R_DecodeImageFile), where nothing is printed.
+typedef struct jpgErrorMgr_s {
+	struct jpeg_error_mgr	pub;
+	jmp_buf					back;
+} jpgErrorMgr_t;
 
 static void R_JPGErrorExit(j_common_ptr cinfo)
 {
 	char buffer[JMSG_LENGTH_MAX];
 
 	(*cinfo->err->format_message) (cinfo, buffer);
-
-	/* Let the memory manager delete any temp files before we die */
-	jpeg_destroy(cinfo);
-
-	Com_Printf("%s", buffer);
+	R_ImageWarn( PRINT_WARNING, "%s\n", buffer );
+	longjmp( ( (jpgErrorMgr_t *)cinfo->err )->back, 1 );
 }
 
 static void R_JPGOutputMessage(j_common_ptr cinfo)
@@ -54,7 +59,7 @@ static void R_JPGOutputMessage(j_common_ptr cinfo)
 	(*cinfo->err->format_message) (cinfo, buffer);
 
 	/* Send it to stderr, adding a newline */
-	Com_Printf("%s\n", buffer);
+	R_ImageWarn( PRINT_ALL, "%s\n", buffer );
 }
 
 void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height ) {
@@ -74,13 +79,13 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 	* Note that this struct must live as long as the main JPEG parameter
 	* struct, to avoid dangling-pointer problems.
 	*/
-	struct jpeg_error_mgr jerr;
+	jpgErrorMgr_t jerr;
 	/* More stuff */
 	JSAMPARRAY buffer;		/* Output row buffer */
 	unsigned int row_stride;  /* physical row width in output buffer */
 	unsigned int pixelcount, memcount;
 	unsigned int sindex, dindex;
-	byte *out;
+	byte * volatile out = NULL;	// (volatile: set after the setjmp, read when libjpeg jumps back)
 	fileBuffer_t fbuffer;
 	byte  *buf;
 	/* In this example we want to open the input file before doing anything else,
@@ -89,7 +94,7 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 	* requires it in order to read binary files.
 	*/
 
-	int len = ri.FS_ReadFile ( ( char * ) filename, &fbuffer.v);
+	int len = R_ImageReadFile( filename, &fbuffer.v );
 	if (!fbuffer.b || len < 0) {
 		return;
 	}
@@ -101,9 +106,18 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 	* This routine fills in the contents of struct jerr, and returns jerr's
 	* address which we place into the link field in cinfo.
 	*/
-	cinfo.err = jpeg_std_error(&jerr);
+	cinfo.err = jpeg_std_error(&jerr.pub);
 	cinfo.err->error_exit = R_JPGErrorExit;
 	cinfo.err->output_message = R_JPGOutputMessage;
+	if ( setjmp( jerr.back ) ) {
+		// a broken file: libjpeg came back from R_JPGErrorExit
+		jpeg_destroy_decompress( &cinfo );
+		R_ImageFree( out );
+		R_ImageFreeFile( fbuffer.v );
+		*pic = NULL;
+		*width = *height = 0;
+		return;
+	}
 
 	/* Now we can initialize the JPEG decompression object. */
 	jpeg_create_decompress(&cinfo);
@@ -150,10 +164,10 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 		)
 	{
 		// Free the memory to make sure we don't leak memory
-		ri.FS_FreeFile (fbuffer.v);
+		R_ImageFreeFile( fbuffer.v );
 		jpeg_destroy_decompress(&cinfo);
 
-		Com_Printf("LoadJPG: %s has an invalid image format: %dx%d*4=%d, components: %d", filename,
+		R_ImageWarn( PRINT_ALL, "LoadJPG: %s has an invalid image format: %dx%d*4=%d, components: %d", filename,
 			cinfo.output_width, cinfo.output_height, pixelcount * 4, cinfo.output_components);
 		return;
 	}
@@ -161,7 +175,7 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 	memcount = pixelcount * 4;
 	row_stride = cinfo.output_width * cinfo.output_components;
 
-	out = (byte *)Z_Malloc(memcount, TAG_TEMP_WORKSPACE, qfalse);
+	out = (byte *)R_ImageAlloc( memcount, TAG_TEMP_WORKSPACE );
 
 	*width = cinfo.output_width;
 	*height = cinfo.output_height;
@@ -213,7 +227,7 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 	* so as to simplify the setjmp error logic above.  (Actually, I don't
 	* think that jpeg_destroy can do an error exit, but why assume anything...)
 	*/
-	ri.FS_FreeFile (fbuffer.v);
+	R_ImageFreeFile( fbuffer.v );
 	/* At this point you may want to check to see whether any corrupt-data
 	* warnings occurred (test whether jerr.pub.num_warnings is nonzero).
 	*/
@@ -339,7 +353,7 @@ size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality,
 	int image_width, int image_height, byte *image_buffer, int padding)
 {
 	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
+	jpgErrorMgr_t jerr;
 	JSAMPROW row_pointer[1];	/* pointer to JSAMPLE row[s] */
 	my_dest_ptr dest;
 	int row_stride;		/* physical row width in image buffer */
@@ -347,9 +361,13 @@ size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality,
 
 	/* Step 1: allocate and initialize JPEG compression object */
 
-	cinfo.err = jpeg_std_error(&jerr);
+	cinfo.err = jpeg_std_error(&jerr.pub);
 	cinfo.err->error_exit = R_JPGErrorExit;
 	cinfo.err->output_message = R_JPGOutputMessage;
+	if ( setjmp( jerr.back ) ) {
+		jpeg_destroy_compress( &cinfo );
+		return 0;
+	}
 
 	/* Now we can initialize the JPEG compression object. */
 	jpeg_create_compress(&cinfo);

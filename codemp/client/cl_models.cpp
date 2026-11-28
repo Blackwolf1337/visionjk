@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // Anyone can upload a player model there (deploy/models/modelstore.py of the website). When a player on the
 // server uses a model this game does not have and the store has it, it is fetched in the background
-// (v_modelStore 1), into base/modelstore/<model>.pk3 of the home folder, and shown at once: the pak goes to the
+// (v_modelStore 1), into visionjk-data/files/modelstore/<model>.pk3 of the home folder, and shown at once: the pak goes to the
 // head of the path (FS_AddModelPak), the renderer looks again for what it did not find under the model
 // (re->ext.ForgetMissing), and the cgame loads the players with that model again (v_modelArrived). A pak is
 // taken only with the size and the SHA-256 of the list of the store (index.txt), and only with files of its own
@@ -31,7 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // such a pak is not used, so nothing is fetched there.
 //
 // The window of the store in the game (cgame/modelstore/cg_modelstore.c, v_modelbrowser) reads the list this file
-// keeps in base/modelstore/index.txt and the icons in base/modelstore/icons/, which this file fetches when the
+// keeps in modelstore/index.txt and the icons in modelstore/icons/ of FS_DATAGAME, which this file fetches when the
 // window asks (v_models icons). v_modelStoreChanged counts up whenever one of them, or a model, came;
 // v_modelStoreFetching names the model that is fetched now. What the player asks for himself (the window, v_models
 // get) is fetched also with v_modelStore 0, which only stops fetching the models of others by itself.
@@ -112,7 +112,7 @@ static qboolean MDL_NextOfPlayers( char *out, size_t outSize ) {
 =================
 MDL_Use
 
-The pak of model is in base/modelstore of the home folder: it goes to the head of the path, the renderer looks
+The pak of model is in FS_DATAGAME/modelstore of the home folder: it goes to the head of the path, the renderer looks
 again for what it did not find under the model, and the cgame loads the players with it again. qfalse: the file
 system does not take it (no pak, or files of something else).
 =================
@@ -148,7 +148,7 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_ICON_MOST		( 256 * 1024 )		// bytes of an icon at most
 #define MDL_EMOJI_MOST		( 64 * 1024 )		// bytes of a chat emoji at most (MAX_EMOJI of modelstore.py)
 #define MDL_EMOTE_SOUND_MOST	( 96 * 1024 )	// bytes of an own sound of an interactive emoji (2 s at 22050 Hz, 16 bit)
-#define MDL_EMOTE_LIST		"emotes/index.txt"	// in base of the home folder: the interactive emojis for the cgame
+#define MDL_EMOTE_LIST		"emotes/index.txt"	// in FS_DATAGAME of the home folder: the interactive emojis for the cgame
 #define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
 #define MDL_PICTURE_MOST	( 1500 * 1500 )		// numbers of pictures of a drawing board or a spray (TOY_BOARD_SPLIT squared)
 #define MDL_PICTURE_ASKS	8					// pictures of a kind the cgame asked for that wait
@@ -204,12 +204,12 @@ static char		mdlAnswer[512];				// what the store answered to an upload
 
 // the home path of the pak of a model, or of the part of it that comes in
 static const char *MDL_Local( const char *model, qboolean temp ) {
-	return va( "%s/%s/%s.%s", BASEGAME, FS_MODELSTORE, model, temp ? "tmp" : "pk3" );
+	return va( "%s/%s/%s.%s", FS_DATAGAME, FS_MODELSTORE, model, temp ? "tmp" : "pk3" );
 }
 
 // the home path of the icon of a model (the cgame reads it as modelstore/icons/<model>), or of the part that comes in
 static const char *MDL_IconLocal( const char *model, const char *icon, qboolean temp ) {
-	return va( "%s/%s/icons/%s.%s", BASEGAME, FS_MODELSTORE, model, temp ? "tmp" : icon );
+	return va( "%s/%s/icons/%s.%s", FS_DATAGAME, FS_MODELSTORE, model, temp ? "tmp" : icon );
 }
 
 static qboolean MDL_Sink( void *ctx, const void *data, size_t len ) {
@@ -400,9 +400,9 @@ cg_emote.c, which is told by v_emoteStoreChanged).
 typedef struct {
 	const char	*list;			// on the site
 	const char	*files;			//	and a file of it, %s the name
-	const char	*local;			// in base of the home folder, %s the name and %s png/wav or tmp
+	const char	*local;			// in FS_DATAGAME of the home folder, %s the name and %s png/wav or tmp
 	const char	*extension;
-	const char	*record;		// in base of the home folder: the names that came, a line each
+	const char	*record;		// in FS_DATAGAME of the home folder: the names that came, a line each
 	int			most;			// bytes of a file at most
 	const char	*changed;		// the cvar that counts up when one came or went
 } mdlNamedStore_t;
@@ -425,7 +425,7 @@ static struct {
 static int		mdlEmoteListTime = -1;
 
 static const char *MDL_NamedLocal( int store, const char *name, qboolean temp ) {
-	return va( mdlNamedStores[store].local, BASEGAME, name, temp ? "tmp" : mdlNamedStores[store].extension );
+	return va( mdlNamedStores[store].local, FS_DATAGAME, name, temp ? "tmp" : mdlNamedStores[store].extension );
 }
 
 // the size of a file of the home folder, -1 when there is none. (Not FS_SV_FOpenFileRead: that clears the buffer of
@@ -452,7 +452,7 @@ static void MDL_NamedRecordRead( int store ) {
 		return;
 	}
 	mdlNamed[store].read = qtrue;
-	len = FS_SV_FOpenFileRead( va( "%s/%s", BASEGAME, mdlNamedStores[store].record ), &f );
+	len = FS_SV_FOpenFileRead( va( "%s/%s", FS_DATAGAME, mdlNamedStores[store].record ), &f );
 	if ( !f ) {
 		return;
 	}
@@ -472,7 +472,7 @@ static void MDL_NamedRecordRead( int store ) {
 
 static void MDL_NamedRecordWrite( int store ) {
 	const mdlNames_t	*here = &mdlNamed[store].here;
-	fileHandle_t		f = FS_SV_FOpenFileWrite( va( "%s/%s", BASEGAME, mdlNamedStores[store].record ) );
+	fileHandle_t		f = FS_SV_FOpenFileWrite( va( "%s/%s", FS_DATAGAME, mdlNamedStores[store].record ) );
 	int					i;
 
 	if ( !f ) {
@@ -542,7 +542,7 @@ static void MDL_EmoteListDone( mdlJob_t *job ) {
 		Com_DPrintf( "The list of the interactive emojis of the store did not come: %s\n", job->error );
 		return;
 	}
-	f = FS_SV_FOpenFileWrite( va( "%s/%s", BASEGAME, MDL_EMOTE_LIST ) );
+	f = FS_SV_FOpenFileWrite( va( "%s/%s", FS_DATAGAME, MDL_EMOTE_LIST ) );
 	if ( f ) {
 		FS_Write( job->index, (int)job->bytes, f );
 		FS_FCloseFile( f );
@@ -721,7 +721,7 @@ reads it. A spray that came is said to the cgame (v_sprayArrived), a board looks
 
 typedef struct {
 	const char	*store;			// its part of the site, and the command of the console
-	const char	*folder;		// in base of the home folder
+	const char	*folder;		// in FS_DATAGAME of the home folder
 	const char	*extension;
 	int			most;			// bytes of a picture at most
 	const char	*answer;		// the cgame command that gets the number of the own picture
@@ -739,7 +739,7 @@ static qboolean	mdlPictureUpload[MDL_PICTURE_KINDS];		// the own picture of the 
 static int		mdlPictureGets[MDL_PICTURE_KINDS][MDL_PICTURE_ASKS], mdlNumPictureGets[MDL_PICTURE_KINDS];
 
 static const char *MDL_PictureLocal( int kind, int number, qboolean temp ) {
-	return va( "%s/%s/%i.%s", BASEGAME, mdlPictureKinds[kind].folder, number, temp ? "tmp" : mdlPictureKinds[kind].extension );
+	return va( "%s/%s/%i.%s", FS_DATAGAME, mdlPictureKinds[kind].folder, number, temp ? "tmp" : mdlPictureKinds[kind].extension );
 }
 
 // The own picture of a kind for the store, in mdlPictureBody: the drawing the cgame wrote, the sheet of the spray.
@@ -906,7 +906,7 @@ static void MDL_Done( void ) {
 		mdlIndexTime = cls.realtime;
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		if ( job->ok ) {
-			fileHandle_t f = FS_SV_FOpenFileWrite( va( "%s/%s/index.txt", BASEGAME, FS_MODELSTORE ) );
+			fileHandle_t f = FS_SV_FOpenFileWrite( va( "%s/%s/index.txt", FS_DATAGAME, FS_MODELSTORE ) );
 
 			// (what was not in the store, or did not come, is looked at again with the new list)
 			mdlSeen.num = 0;
@@ -1100,7 +1100,7 @@ void CL_ModelsShutdown( void ) {
 /*
 In a page (the TV of the site, shared/sys/web/page/boot.js) the page fetches: once a second the next model a
 player here uses that the game does not have goes to vjk.wantModel() of the page, which fetches it from the store
-of its own host, checks it against index.txt there, puts it into base/modelstore of the home folder and says so
+of its own host, checks it against index.txt there, puts it into FS_DATAGAME/modelstore of the home folder and says so
 with v_modelPak <model>. The TV plays as a demo, so a demo is no reason not to.
 */
 #include <emscripten.h>

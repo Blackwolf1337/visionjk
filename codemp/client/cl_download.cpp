@@ -21,8 +21,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cl_download.cpp -- what a player gets of the paks a server offers. Not from OpenJK, see docs/japlus/downloads.md.
 //
 // Before anything is downloaded a window lists the paks the server offers (v_downloadReview 1): the player
-// ticks the ones he wants and says whether they are kept (<game>/downloads) or are for this session only
-// (<game>/downloads/session, emptied when the game starts and ends, qcommon/files.cpp). The paks of both folders
+// ticks the ones he wants and says whether they are kept (visionjk-data/downloads/<game>) or are for this session only
+// (visionjk-data/downloads/<game>/session, emptied when the game starts and ends, qcommon/files.cpp). The paks of both folders
 // are loaded only while a server references them.
 //
 // A pak is sent whole, so what is in it is known only when it is here. Then, before anything of it is used, a
@@ -165,7 +165,7 @@ static void CL_DownloadReview_f( void ) {
 void CL_DownloadInit( void ) {
 	Cmd_AddCommand( "v_downloadReview_do", CL_DownloadReview_f, "What a click in the windows of a download does, for a key or a script" );
 	v_downloadReview = Cvar_Get( "v_downloadReview", "1", CVAR_ARCHIVE_ND, "Before a download: choose the paks of the server, and after it what of them is used. 0: all of them, programs in them stay blocked" );
-	v_downloadKeep = Cvar_Get( "v_downloadKeep", "0", CVAR_ARCHIVE_ND, "1: downloaded paks are kept in <game>/downloads. 0: in downloads/session, for this session only" );
+	v_downloadKeep = Cvar_Get( "v_downloadKeep", "0", CVAR_ARCHIVE_ND, "1: downloaded paks are kept in visionjk-data/downloads/<game>. 0: in its folder session, for this session only" );
 	v_downloadHttp = Cvar_Get( "v_downloadHttp", "1", CVAR_ARCHIVE_ND, "Paks of a server that names a web address for them (jp_DlBaseURL) come from there. 0: only from the server itself" );
 }
 
@@ -347,13 +347,15 @@ static dlPak_t *DL_PakFor( const char *local ) {
 // Where a pak goes: what FS_ComparePaks() named in the folder of downloads, or in its folder of the session.
 const char *CL_DownloadLocalName( const char *local ) {
 	static char	out[MAX_OSPATH];
-	const char	*in = Q_stristr( local, "/" FS_DOWNLOADS "/" );
+	const size_t start = strlen( FS_DOWNLOADS "/" );
+	// behind the game folder
+	const char	*in = !Q_stricmpn( local, FS_DOWNLOADS "/", (int)start ) ? strchr( local + start, '/' ) : NULL;
 	const qboolean keep = ( dl.stage != STAGE_NONE ) ? dl.keep : (qboolean)( v_downloadKeep->integer != 0 );
 
-	if ( keep || !in || Q_stristr( local, "/" FS_DOWNLOADS_SESSION "/" ) ) {
+	if ( keep || !in || !Q_stricmpn( in, "/" FS_DOWNLOADS_SESSION "/", (int)strlen( "/" FS_DOWNLOADS_SESSION "/" ) ) ) {
 		return local;
 	}
-	Com_sprintf( out, sizeof( out ), "%.*s/" FS_DOWNLOADS_SESSION "/%s", (int)( in - local ), local, in + strlen( "/" FS_DOWNLOADS "/" ) );
+	Com_sprintf( out, sizeof( out ), "%.*s/" FS_DOWNLOADS_SESSION "/%s", (int)( in - local ), local, in + 1 );
 	return out;
 }
 

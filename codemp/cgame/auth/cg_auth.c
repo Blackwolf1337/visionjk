@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // game/auth/bg_auth.h, the server part in game/auth/g_auth.c.
 //
 //   v_amkey new [comment]   makes a key and writes it to a file only the player can read (v_authKeyFile, by
-//                         default admin_ed25519 in the home folder of the game), in the format of OpenSSH
+//                         default admin_ed25519 in visionjk-data of the home folder), in the format of OpenSSH
 //   v_amkey show            prints the public lines of the keys there are: the owner of a server puts one into
 //                         his admin_keys.txt
 //   v_amkey login           logs in on this server, and from then on by itself whenever the player joins it
@@ -68,7 +68,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AUTH_FLOOD_MARGIN		300			// on top of the gap of the server: packets do not arrive as evenly as they leave
 #define AUTH_AGENT_MSEC			120000		// the player may have to unlock his agent and say yes
 #define AUTH_KEY_NAME			"admin_ed25519"
-#define AUTH_HOSTS_NAME			"admin_hosts.txt"		// next to it in the home folder of the game
+#define AUTH_HOSTS_NAME			"admin_hosts.txt"		// next to it
 
 typedef enum authStep_e {
 	AUTH_IDLE,
@@ -144,6 +144,15 @@ The key file
 ===============================================================================
 */
 
+// where the key and the host keys are: the folder of VisionJK (fs_datapath of the engine, which moved them there),
+// the home folder with an engine that has none
+static void Auth_Folder( char *out, int outSize ) {
+	trap->Cvar_VariableStringBuffer( "fs_datapath", out, outSize );
+	if ( !out[0] ) {
+		trap->Cvar_VariableStringBuffer( "fs_homepath", out, outSize );
+	}
+}
+
 static void Auth_KeyPath( char *out, int outSize ) {
 	char		home[MAX_OSPATH];
 	const char	*file = v_authKeyFile.string;
@@ -166,7 +175,7 @@ static void Auth_KeyPath( char *out, int outSize ) {
 		Q_strncpyz( out, file, outSize );
 		return;
 	}
-	trap->Cvar_VariableStringBuffer( "fs_homepath", home, sizeof( home ) );
+	Auth_Folder( home, sizeof( home ) );
 	if ( home[0] ) {
 		Com_sprintf( out, outSize, "%s/" AUTH_KEY_NAME, home );
 	} else {
@@ -219,7 +228,7 @@ admin_hosts.txt: the host key of every server address the client logged in on
 static void Auth_HostsPath( char *out, int outSize ) {
 	char home[MAX_OSPATH];
 
-	trap->Cvar_VariableStringBuffer( "fs_homepath", home, sizeof( home ) );
+	Auth_Folder( home, sizeof( home ) );
 	if ( home[0] ) {
 		Com_sprintf( out, outSize, "%s/" AUTH_HOSTS_NAME, home );
 	} else {

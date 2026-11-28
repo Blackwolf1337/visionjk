@@ -457,6 +457,26 @@ static void VK_CreateDevice( void ) {
 	}
 	qvkGetDeviceQueue( vk.device, vk.queueFamily, 0, &vk.queue );
 
+	// which card it is and how much of its memory the program has, for the profiler of the client; asked of the
+	// physical device, so the extensions need only be there, not switched on
+	{
+		VkPhysicalDevicePCIBusInfoPropertiesEXT	pci = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PCI_BUS_INFO_PROPERTIES_EXT };
+		VkPhysicalDeviceIDProperties			id = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES };
+		VkPhysicalDeviceProperties2				props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &id };
+
+		vk.memoryBudget = VK_DeviceHasExtension( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
+		vk.pciBusInfo = VK_DeviceHasExtension( VK_EXT_PCI_BUS_INFO_EXTENSION_NAME );
+		if ( vk.pciBusInfo ) {
+			id.pNext = &pci;
+		}
+		qvkGetPhysicalDeviceProperties2( vk.physicalDevice, &props );
+		memcpy( vk.deviceUUID, id.deviceUUID, sizeof( vk.deviceUUID ) );
+		vk.pciDomain = pci.pciDomain;
+		vk.pciBus = pci.pciBus;
+		vk.pciDevice = pci.pciDevice;
+		vk.pciFunction = pci.pciFunction;
+	}
+
 	pool.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	pool.queueFamilyIndex = vk.queueFamily;
 	VK_CHECK( qvkCreateCommandPool( vk.device, &pool, NULL, &vk.commandPool ) );
@@ -556,6 +576,7 @@ void VK_CreateSwapchain( void ) {
 	VK_DestroySwapSemaphores();
 	vk.swapFormat = info.imageFormat;
 	vk.swapExtent = info.imageExtent;
+	vk.presentMode = info.presentMode;
 	vk.numSwapImages = 0;
 	vk.swapStallTime = 0;
 	vk.statSwapchains++;

@@ -11,7 +11,9 @@ Both are off by default (`qcommon/com_load.cpp`).
   loaded, how long each kind took together, and how many there were. It runs from the start of the server of
   the level (if this program is that server) to the end of the first frame of the game.
 - `v_hitchLog <ms>`: a frame that took longer than that says what was loaded in it, the longest first, and
-  which part of the frame the rest went into (`frame: server`, `game`, `client`, `cgame`, `sound`, `drawn`).
+  which part of the frame the rest went into (`frame: server`, `game`, `client`, `cgame`, `sound`, `drawn`; since 2026-11-28 also `input`, `menus`, `debug menus`,
+  `renderer`, `vulkan` and the two waits `wait for gpu` and `wait for display`, which the profiler panel shows too, see
+  [renderer.md](renderer.md#the-profiler-panel-v_profiler-2026-11-28)).
   With `r_swapInterval 1` a frame waits for the screen, so a threshold below the time of a picture reports
   every frame.
 
@@ -65,17 +67,19 @@ Taking out and firing each weapon gave no long frame.
 
 **The packed textures are kept** (`rd-vulkan-vision/vk_texcache.cpp`, cvar `v_vkTexCache`, on by default).
 What is made from an image file, its mip levels packed into BC1 or BC3 blocks, only depends on the file and
-on a few settings. It is written to `vulkan/tex/` of the profile, a file per texture, and the next time the
+on a few settings. It is written to `vulkan/tex/` of the profile (since 2026-11-14 `textures/` in `cache/`, and since 2026-11-28 that is in
+`visionjk-data`, see [datafolder.md](datafolder.md)), a file per texture, and the next time the
 blocks are read and handed to the device: the image file is neither read nor decoded nor packed.
 
 A file of the cache is named after what it was made from: the path of the image file, its length, the
-checksum of the pak it is in and the settings (`r_picmip`, `r_simpleMipMaps`, `r_texturebits`,
-`r_intensity`, the overbright bits, the largest texture of the device). Another pak or another setting is
+CRC-32 of the file itself and the settings (`r_picmip`, `r_simpleMipMaps`, `r_texturebits`,
+`r_intensity`, the overbright bits, the largest texture of the device). Another file or another setting is
 another name: nothing is compared and nothing goes stale, an old file is merely left behind. An image file of
 a directory, as a mapper has them while he works, is never kept, because it can change under the same name.
-The checksum is the one of the pak file itself (`FS_FileSource()` of the engine), not the one a pure server
-compares, which is another number with every level. The files end in `.dat`, one of the few kinds the engine
-lets be read from a directory on a pure server.
+Until 2026-11-28 the key held the checksum of the pak the file is in (`FS_FileSource()` of the engine), not
+the one a pure server compares, which is another number with every level; see the section of that day for
+the change. The files end in `.dat`, one of the few kinds the engine lets be read from a directory on a pure
+server.
 
 | | before | kept textures |
 |---|---|---|
@@ -269,8 +273,8 @@ together, nothing to gain.
 **The unpacked sounds are kept** (`client/sound/snd_cache.cpp`, cvar `v_soundCache`, on by default). An MP3 outside
 `sound/chars` is unpacked to samples when it is registered: weapons, effects, the sounds of the players. On the
 server above that was 182 of the 256 ms of sounds, 288 files. The samples are written to `soundcache/` of the
-profile, a file per sound, named as the textures of `vk_texcache.cpp` are (the path of the MP3, its length, the
-checksum of its pak; never a file of a directory), before they are brought to the rate of the mixer.
+profile (later `sound/` in `cache/`, see above), a file per sound, named as the textures of `vk_texcache.cpp` are (the path of the MP3, its length, the
+CRC-32 of the file; never a file of a directory), before they are brought to the rate of the mixer.
 
 | | unpacking | load |
 |---|---|---|
@@ -281,12 +285,73 @@ What is left of the unpacking is the resampling to the rate of the mixer. The fi
 writes 16 ms more. The cache of mp/ffa1 with its players is 24 MB in 280 files; deleting it is safe at any time.
 The 280 kept sounds were compared once with a fresh unpack of their MP3: all the same.
 
+## Cache keys and worker threads, 2026-11-28
+
+The caches are keyed by the file (`client/cl_cache.cpp`, `FS_FileSource()` in `qcommon/files.cpp`,
+`vk_texcache.cpp`, `common/tr_matgen.cpp`, `client/sound/snd_cache.cpp`). The files of the texture, material
+and sound caches are now named after the CRC-32 of the file itself, which the zip directory has for every
+entry (`fileInPack_t::crc`), and no longer after the checksum of the whole pak. A new version of a pak, for
+example a new `zz_japlus_client_assets.pk3`, leaves the files that did not change under the names they had;
+before, every texture, material and sound of that pak was made again. Once after this change `Cache_Init()`
+empties the kinds textures, materials and sound, because nothing would find the old names again; the marker
+is the file `keys.txt` in the cache folder with the text `file-crc`. The cache folder is `visionjk-data/cache`
+of the home folder since 2026-11-28 (it was `cache` in the home folder; see [datafolder.md](datafolder.md)).
+
+The step "world" has markers inside it now (`common/tr_bsp.cpp`, `tr_matgen.cpp`). `v_loadReport` now names the parts of the
+step "world": shaders, lightmaps, surfaces, shader of a surface, patch stitching, probes, pbr grid, pipeline
+cache saved, materials and images read ahead, and for the generated materials "material kept", "material
+texture read", "material made" and "material image", plus "image made ahead" and "made images". On mp/ffa3
+with filled caches the 179 ms of "world" were nearly all "material image": 127 to 130 ms for the 83 automatic
+materials, whose maps are kept uncompressed (RGBA) and had their mip levels made on the main thread at every
+load.
+
+One pool of workers does the rest (`qcommon/com_jobs.cpp`, see [threading.md](threading.md)). With it, while a level loads
+(only between `RegisterMedia_LevelLoadBegin` and `LevelLoadEnd`, only with workers, never inside a frame),
+`rd-vulkan-vision/vk_prepare.cpp` makes textures on the workers:
+
+- World textures are loaded ahead. After the shader lump is read, `R_ShaderImageFiles()` guesses the images
+  each shader text names (map, clampmap, animMap, skyParms, or the shader name itself for an implicit
+  shader). Every one that is neither loaded nor in the texture cache is read on the main thread (at most
+  96 MB of files waiting) and decoded, mip mapped and packed on a worker. `R_FindImageFile()` takes the
+  result (`VK_PrefetchTake()`) and makes the image at once, because the shader parser reads the average colour
+  of lit textures (automatic materials).
+- Textures of shaders without a lightmap (models, effects, 2D) and the generated material maps
+  (`R_MadeImage()`) are made at once without contents and get their levels from a worker. They are uploaded at
+  the start of the next frame (`VK_PrepareFlush()` in `RE_BeginFrame()`) or at the end of the load. Inside a
+  frame everything is loaded as before, so what is drawn in that frame is whole.
+- The automatic materials of a texture seen for the first time are decoded and computed on the workers;
+  before, only the computing ran on one thread and the decode of the source texture was on the main thread.
+
+The image decoders (`rd-common/tr_image_load.cpp`, tga, jpg, png) run on any thread through `R_ImageReadFile()`,
+`R_ImageAlloc()` and `R_ImageWarn()`: on a worker they read the bytes they were given, take malloc memory and
+print nothing (`R_DecodeImageFile()`). `Upload32()` was split into `R_MakeLevels()` (the pixel steps, any
+thread) and the upload. Broken JPG and PNG files are handled cleanly now.
+
+RTX 4070 SUPER, Ryzen with 24 threads so 23 workers, 1920x1080:
+
+| | before | after |
+|---|---|---|
+| mp/ffa3, filled caches, first load of the program | 653 to 670 ms | 609 ms |
+| mp/siege_hoth, textures and materials caches emptied | 1325 ms (old build, 148 textures not cached) | 646 to 657 ms |
+| the same with `v_jobThreads -1` (everything on the main thread, new build) | 1906 to 2940 ms | |
+
+On mp/siege_hoth with empty caches 89 world textures came made ahead and the main thread waited 28 to 32 ms
+for them in total; "material texture read" went from 100 to 125 ms to 8 ms.
+
+Checked: the 154 texture cache files a cold load of mp/siege_hoth wrote were byte for byte the same with the
+workers and with `v_jobThreads -1`. A picture from a fixed spot in the Hoth medbay (models and world) differed
+in 0.013 % of its pixels by more than 8 of 255 between the two, which is JPEG noise. The Vulkan validation
+layer gave only the four messages it always gives.
+
 ## Not done yet
 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
-- The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
-  packer already has would shorten it.
+- A player who joins in the middle of a game still loads his skin on the main thread, the workers of
+  2026-11-28 only work while a level loads. Images the guess of the world textures misses, and the first
+  texture of a shader inside a frame, load as before.
+- Windows and macOS builds, the GLES device and rd-vanilla (which shares the changed loaders of `rd-common`)
+  of the work of 2026-11-28 were not built, a dedicated server was built and not started.
 - Every folder scan of `FS_GetFileList` (models/players, strings, ext_data) still tries the loose folders
   and does not go through the listings. On Windows the cost of a failed open was not measured (no Windows here).
 - The resampling of kept sounds: at most 15 ms, on the first join of a session only. The copy and the

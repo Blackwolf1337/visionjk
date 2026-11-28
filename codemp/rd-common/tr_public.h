@@ -502,9 +502,9 @@ typedef struct refimport_s {
 	void			(*LoadPush)							( const char *kind, const char *name );
 	void			(*LoadPop)							( void );
 
-	// Where a read of a file would get it from: 0 nowhere, 1 a pak (with the length of the file and the checksum
-	// of the pak), 2 a directory. FS_FileSource() of the engine, for the textures rd-vulkan-vision keeps.
-	int				(*FS_FileSource)					( const char *qpath, int *length, int *pakChecksum );
+	// Where a read of a file would get it from: 0 nowhere, 1 a pak (with the length of the file and the CRC-32 of
+	// its contents), 2 a directory. FS_FileSource() of the engine, for the textures rd-vulkan-vision keeps.
+	int				(*FS_FileSource)					( const char *qpath, int *length, int *fileCrc );
 
 	// A TrueType font of this tree, read and checked by the engine (client/cl_font.cpp): 0 the one for the
 	// characters the fonts of the game do not have, 1 the one with a fixed width. NULL when there is none. The
@@ -516,6 +516,17 @@ typedef struct refimport_s {
 	// At the end of the table.
 	long			(*Cache_Read)						( const char *name, void **buffer );
 	qboolean		(*Cache_Write)						( const char *name, const void *data, int size );
+	qboolean		(*Cache_Exists)						( const char *name );
+
+	// The worker threads of the engine (qcommon/com_jobs.cpp). A job must not call anything of this table but
+	// these. At the end of the table.
+	int				(*JobThreads)						( void );
+	jobGroup_t *	(*JobGroupNew)						( void );
+	void			(*JobAdd)							( jobGroup_t *group, jobFunc_t func, void *data );
+	qboolean		(*JobGroupDone)						( jobGroup_t *group );
+	void			(*JobGroupWait)						( jobGroup_t *group );
+	void			(*JobGroupFree)						( jobGroup_t *group );
+	void			(*JobFor)							( int count, void ( *func )( void *data, int index ), void *data );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

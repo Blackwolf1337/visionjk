@@ -46,6 +46,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "sys_memwatch.h"
 #ifdef __linux__
 #include <link.h>
+#include <sys/syscall.h>
+#endif
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <sys/sysctl.h>
 #endif
 #if defined(__GLIBC__) || defined(__APPLE__)
 #include <execinfo.h>
@@ -1001,3 +1006,159 @@ int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
 }
 #endif
 #endif // !DEDICATED
+
+/*
+==============================================================
+
+The threads of the program, for the profiler (v_profiler)
+
+==============================================================
+*/
+
+unsigned long long Sys_ThreadId( void ) {
+#if defined(__linux__)
+	return (unsigned long long)syscall( SYS_gettid );
+#elif defined(__APPLE__)
+	// (the name of its port in this task, as task_threads lists them)
+	return (unsigned long long)pthread_mach_thread_np( pthread_self() );
+#else
+	return 0;
+#endif
+}
+
+void Sys_SetThreadName( const char *name ) {
+#if defined(__linux__)
+	char shortName[16];		// (the kernel keeps 15 characters, a longer name is refused)
+
+	Q_strncpyz( shortName, name, sizeof( shortName ) );
+	pthread_setname_np( pthread_self(), shortName );
+#elif defined(__APPLE__)
+	pthread_setname_np( name );
+#endif
+}
+
+#ifdef __linux__
+// a small file of /proc whole, qfalse when it is not there
+static qboolean Sys_ReadProcFile( const char *path, char *text, int size ) {
+	const int	fd = open( path, O_RDONLY | O_CLOEXEC );
+	ssize_t		length;
+
+	if ( fd < 0 ) {
+		return qfalse;
+	}
+	length = read( fd, text, size - 1 );
+	close( fd );
+	if ( length <= 0 ) {
+		return qfalse;
+	}
+	text[length] = '\0';
+	return qtrue;
+}
+#endif
+
+int Sys_ThreadTimes( sysThread_t *threads, int max ) {
+	int count = 0;
+#if defined(__linux__)
+	DIR				*dir = opendir( "/proc/self/task" );
+	struct dirent	*entry;
+	char			path[300], text[512];	// (a name in the folder may be 255 long, the system says; those here are numbers)
+	const long		ticks = sysconf( _SC_CLK_TCK );
+
+	if ( !dir ) {
+		return 0;
+	}
+	while ( count < max && ( entry = readdir( dir ) ) != NULL ) {
+		sysThread_t *thread = &threads[count];
+
+		if ( entry->d_name[0] < '0' || entry->d_name[0] > '9' ) {
+			continue;
+		}
+		thread->id = strtoull( entry->d_name, NULL, 10 );
+		snprintf( path, sizeof( path ), "/proc/self/task/%s/comm", entry->d_name );
+		if ( !Sys_ReadProcFile( path, text, sizeof( text ) ) ) {
+			continue;		// (it ended meanwhile)
+		}
+		text[strcspn( text, "\n" )] = '\0';
+		Q_strncpyz( thread->name, text, sizeof( thread->name ) );
+		// schedstat has the nanoseconds on a processor; stat only ticks of the clock (10 ms), for a kernel without it
+		snprintf( path, sizeof( path ), "/proc/self/task/%s/schedstat", entry->d_name );
+		if ( Sys_ReadProcFile( path, text, sizeof( text ) ) ) {
+			thread->cpuNsec = strtoull( text, NULL, 10 );
+		} else {
+			const char			*afterName;
+			unsigned long long	user = 0, system = 0;
+
+			snprintf( path, sizeof( path ), "/proc/self/task/%s/stat", entry->d_name );
+			if ( ticks <= 0 || !Sys_ReadProcFile( path, text, sizeof( text ) ) || !( afterName = strrchr( text, ')' ) ) ) {
+				continue;
+			}
+			// after the name: state, ppid, pgrp, session, tty, tpgid, flags, four counts of faults, utime, stime
+			if ( sscanf( afterName + 1, " %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %llu %llu", &user, &system ) != 2 ) {
+				continue;
+			}
+			thread->cpuNsec = ( user + system ) * ( 1000000000ull / (unsigned long long)ticks );
+		}
+		count++;
+	}
+	closedir( dir );
+#elif defined(__APPLE__)
+	thread_act_array_t		list;
+	mach_msg_type_number_t	numThreads;
+
+	if ( task_threads( mach_task_self(), &list, &numThreads ) != KERN_SUCCESS ) {
+		return 0;
+	}
+	for ( mach_msg_type_number_t i = 0; i < numThreads; i++ ) {
+		thread_extended_info_data_t	info;
+		mach_msg_type_number_t		size = THREAD_EXTENDED_INFO_COUNT;
+
+		if ( count < max && thread_info( list[i], THREAD_EXTENDED_INFO, (thread_info_t)&info, &size ) == KERN_SUCCESS ) {
+			threads[count].id = (unsigned long long)list[i];
+			Q_strncpyz( threads[count].name, info.pth_name, sizeof( threads[count].name ) );
+			threads[count].cpuNsec = info.pth_user_time + info.pth_system_time;
+			count++;
+		}
+		mach_port_deallocate( mach_task_self(), list[i] );
+	}
+	vm_deallocate( mach_task_self(), (vm_address_t)list, numThreads * sizeof( list[0] ) );
+#endif
+	return count;
+}
+
+const char *Sys_ProcessorName( void ) {
+	static char name[64];
+
+	if ( name[0] ) {
+		return name;
+	}
+#if defined(__APPLE__)
+	size_t size = sizeof( name );
+
+	if ( sysctlbyname( "machdep.cpu.brand_string", name, &size, NULL, 0 ) != 0 ) {
+		name[0] = '\0';
+	}
+	name[sizeof( name ) - 1] = '\0';
+#elif defined(__linux__)
+	FILE *file = fopen( "/proc/cpuinfo", "r" );
+	char line[256];
+
+	while ( file && fgets( line, sizeof( line ), file ) ) {
+		const char *colon = strchr( line, ':' );
+
+		if ( !Q_strncmp( line, "model name", 10 ) && colon ) {
+			for ( colon++; *colon == ' ' || *colon == '\t'; colon++ ) {
+			}
+			Q_strncpyz( name, colon, sizeof( name ) );
+			name[strcspn( name, "\n" )] = '\0';
+			break;
+		}
+	}
+	if ( file ) {
+		fclose( file );
+	}
+#endif
+	if ( !name[0] ) {
+		Q_strncpyz( name, "processor", sizeof( name ) );
+	}
+	return name;
+}

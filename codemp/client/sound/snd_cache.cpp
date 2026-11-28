@@ -26,8 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // of the profile, and the next time they are read instead of unpacked.
 //
 // As the textures of rd-vulkan-vision (vk_texcache.cpp): a file is named after what it was made from, the path
-// of the MP3, its length and the checksum of the pak it is in (FS_FileSource()). Another pak or another length is
-// another name, an old file is merely left behind. An MP3 of a directory is never kept. The files end in .dat,
+// of the MP3, its length and the CRC-32 of its contents from the directory of its pak (FS_FileSource()). Another
+// file or another length is another name, an old file is merely left behind. An MP3 of a directory is never kept. The files end in .dat,
 // which the engine lets be read from a directory on a pure server. The samples are the ones of the unpacker,
 // before they are brought to the rate of the mixer, so s_khz is not in the name.
 
@@ -80,16 +80,16 @@ free with FS_FreeFile() after them. NULL: unpack it, and hand the samples to S_S
 const byte *S_SoundCacheFind( const char *file, wavinfo_t *info, void **kept ) {
 	sndCacheHeader_t	header;
 	char				path[MAX_QPATH];
-	int					length, checksum;
+	int					length, crc;
 	long				size;
 	void				*buffer;
 
 	*kept = NULL;
 	sndCache.pending = qfalse;
-	if ( !v_soundCache || !v_soundCache->integer || FS_FileSource( file, &length, &checksum ) != FS_SOURCE_PAK ) {
+	if ( !v_soundCache || !v_soundCache->integer || FS_FileSource( file, &length, &crc ) != FS_SOURCE_PAK ) {
 		return NULL;
 	}
-	Com_sprintf( sndCache.key, sizeof( sndCache.key ), "%s %i %08x v%i", file, length, checksum, SNDCACHE_VERSION );
+	Com_sprintf( sndCache.key, sizeof( sndCache.key ), "%s %i %08x v%i", file, length, (unsigned)crc, SNDCACHE_VERSION );
 	sndCache.pending = qtrue;
 
 	S_SoundCachePath( path, sizeof( path ) );

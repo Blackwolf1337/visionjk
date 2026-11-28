@@ -29,8 +29,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
-#include <atomic>
-#include <thread>
 #include <vector>
 
 // SPIR-V from shaders/*.vert and *.frag, glslc writes them as initializer lists while building
@@ -690,13 +688,26 @@ void VK_SavePipelineCache( void ) {
 	VK_WritePipelineCache( qfalse );
 }
 
-// the states of the file made now, by several threads (making pipelines is safe from several at once)
+typedef struct vkPrewarm_s {
+	const uint32_t	*keys;
+	VkPipeline		*made;
+} vkPrewarm_t;
+
+// one state of the file, a job of the engine (making pipelines is safe from several threads at once)
+static void VK_PrewarmOne( void *data, int i ) {
+	const vkPrewarm_t	*prewarm = (const vkPrewarm_t *)data;
+	const vkProgram_t	program = (vkProgram_t)( prewarm->keys[i] >> 24 );
+
+	prewarm->made[i] = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program], prewarm->keys[i] & VK_PIPELINE_BITS,
+		qfalse, program );
+}
+
+// the states of the file made now, on the worker threads of the engine
 static void VK_PrewarmPipelines( void ) {
 	uint32_t			keys[VK_MAX_PIPELINES];
 	VkPipeline			made[VK_MAX_PIPELINES];
-	std::atomic<int>	next( 0 );
-	std::thread			workers[7];
-	int					count = 0, numWorkers;
+	const vkPrewarm_t	prewarm = { keys, made };
+	int					count = 0;
 
 	for ( int i = 0; i < vk_numPipeKeys; i++ ) {
 		const uint32_t program = vk_pipeKeys[i] >> 24;
@@ -716,22 +727,7 @@ static void VK_PrewarmPipelines( void ) {
 	if ( !count ) {
 		return;
 	}
-	auto work = [&]() {
-		for ( int i; ( i = next++ ) < count; ) {
-			const vkProgram_t program = (vkProgram_t)( keys[i] >> 24 );
-
-			made[i] = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program], keys[i] & VK_PIPELINE_BITS, qfalse, program );
-		}
-	};
-	numWorkers = Com_Clampi( 0, (int)ARRAY_LEN( workers ), (int)std::thread::hardware_concurrency() / 2 - 1 );
-	numWorkers = Q_min( numWorkers, count - 1 );
-	for ( int i = 0; i < numWorkers; i++ ) {
-		workers[i] = std::thread( work );
-	}
-	work();
-	for ( int i = 0; i < numWorkers; i++ ) {
-		workers[i].join();
-	}
+	ri.JobFor( count, VK_PrewarmOne, (void *)&prewarm );
 	for ( int i = 0; i < count; i++ ) {
 		vk.pipelines[vk.numPipelines].key = keys[i];
 		vk.pipelines[vk.numPipelines++].pipeline = made[i];

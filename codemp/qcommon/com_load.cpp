@@ -77,6 +77,16 @@ static struct {
 static cvar_t	*v_loadReport;
 static cvar_t	*v_hitchLog;
 
+// the frames for the profiler (Com_FrameProfile)
+#define FRAME_PREFIX		"frame: "
+#define FRAME_PREFIX_LEN	7
+
+static struct {
+	qboolean		on;
+	frameProfile_t	sums;
+	int64_t			lastEnd;		// when the work of the frame before ended, 0: no frame yet
+} frameProf;
+
 static int64_t Com_LoadUsec( void ) {
 	return std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
 }
@@ -87,7 +97,40 @@ void Com_LoadInit( void ) {
 }
 
 static qboolean Com_LoadWanted( void ) {
-	return (qboolean)( v_loadReport && ( v_loadReport->integer || v_hitchLog->integer > 0 ) );
+	return (qboolean)( frameProf.on || ( v_loadReport && ( v_loadReport->integer || v_hitchLog->integer > 0 ) ) );
+}
+
+static void Com_FrameProfileAdd( const char *kind, int64_t usec ) {
+	frameProfile_t	*sums = &frameProf.sums;
+	const char		*name = kind + FRAME_PREFIX_LEN;
+	int				i;
+
+	for ( i = 0; i < sums->numParts; i++ ) {
+		if ( !strcmp( sums->names[i], name ) ) {
+			break;
+		}
+	}
+	if ( i == sums->numParts ) {
+		if ( i == FRAME_PROFILE_PARTS ) {
+			return;
+		}
+		Q_strncpyz( sums->names[i], name, sizeof( sums->names[i] ) );
+		sums->ms[i] = 0.0;
+		sums->numParts++;
+	}
+	sums->ms[i] += usec / 1000.0;
+}
+
+void Com_FrameProfileOn( qboolean on ) {
+	if ( on && !frameProf.on ) {
+		memset( &frameProf.sums, 0, sizeof( frameProf.sums ) );
+		frameProf.lastEnd = 0;
+	}
+	frameProf.on = on;
+}
+
+const frameProfile_t *Com_FrameProfile( void ) {
+	return &frameProf.sums;
 }
 
 static void Com_LoadRecord( const char *kind, const char *name, int64_t usec ) {
@@ -160,6 +203,9 @@ void Com_LoadPop( void ) {
 		load.stack[load.depth - 1].inside += took;
 	}
 	Com_LoadRecord( load.stack[load.depth].kind, load.stack[load.depth].name, took - load.stack[load.depth].inside );
+	if ( frameProf.on && !Q_strncmp( load.stack[load.depth].kind, FRAME_PREFIX, FRAME_PREFIX_LEN ) ) {
+		Com_FrameProfileAdd( load.stack[load.depth].kind, took - load.stack[load.depth].inside );
+	}
 }
 
 static int QDECL Com_LoadCompareKinds( const void *a, const void *b ) {
@@ -225,11 +271,24 @@ void Com_LoadFrameBegin( void ) {
 	load.numEvents = load.moreEvents = 0;
 	load.moreUsec = 0;
 	load.frameStart = Com_LoadUsec();
+	if ( frameProf.on && frameProf.lastEnd ) {
+		frameProf.sums.idleMs += ( load.frameStart - frameProf.lastEnd ) / 1000.0;
+	}
 }
 
 // once a frame, when its work is done
 void Com_LoadFrameEnd( void ) {
 	int64_t took, named = 0;
+
+	if ( frameProf.on ) {
+		const int64_t now = Com_LoadUsec();
+
+		if ( frameProf.lastEnd ) {
+			frameProf.sums.frameMs += ( now - frameProf.lastEnd ) / 1000.0;
+			frameProf.sums.frames++;
+		}
+		frameProf.lastEnd = now;
+	}
 
 	if ( load.loading ) {
 		if ( load.reportDue ) {

@@ -374,7 +374,8 @@ void FS_UpdateGamedir(void);
 // An fs_game of a server is the name of one folder: no part of a path, no other folder, no drive (it was only
 // checked for "../", so ".." and "x/.." were folders above the game folders).
 static qboolean CL_BadGameDir( const char *dir ) {
-	return ( FS_CheckDirTraversal( dir ) || strpbrk( dir, "/\\:" ) || !strcmp( dir, "." ) ) ? qtrue : qfalse;
+	// (nor the folder of VisionJK: the key of an admin login is in it, and it would become a search path)
+	return ( FS_CheckDirTraversal( dir ) || strpbrk( dir, "/\\:" ) || !strcmp( dir, "." ) || !Q_stricmp( dir, FS_DATAFOLDER ) ) ? qtrue : qfalse;
 }
 
 void CL_ParseSetGame( msg_t *msg )

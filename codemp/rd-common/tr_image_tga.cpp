@@ -74,7 +74,7 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 	// load the file
 	//
 	byte *pTempLoadedBuffer = 0;
-	const int iFileLen = (int)ri.FS_ReadFile ( ( char * ) name, (void **)&pTempLoadedBuffer);
+	const int iFileLen = R_ImageReadFile( name, (void **)&pTempLoadedBuffer );
 	if (!pTempLoadedBuffer) {
 		return;
 	}
@@ -212,7 +212,7 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 	if (height)
 		*height = pHeader->wImageHeight;
 
-	pRGBA	= (byte *) Z_Malloc (pHeader->wImageWidth * pHeader->wImageHeight * 4, TAG_TEMP_WORKSPACE, qfalse);
+	pRGBA	= (byte *) R_ImageAlloc( pHeader->wImageWidth * pHeader->wImageHeight * 4, TAG_TEMP_WORKSPACE );
 	*pic	= pRGBA;
 	pOut	= pRGBA;
 	pIn		= pTempLoadedBuffer + sizeof(*pHeader);
@@ -397,10 +397,16 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 
 TGADone:
 
-	ri.FS_FreeFile (pTempLoadedBuffer);
+	R_ImageFreeFile( pTempLoadedBuffer );
 
 	if (bFormatErrors)
 	{
+		// (a worker thread leaves it to the main thread, which loads it again and says so)
+		if ( R_ImageOnWorker() ) {
+			R_ImageFree( pRGBA );
+			*pic = NULL;
+			return;
+		}
 		Com_Error( ERR_DROP, "%s( File: \"%s\" )\n",sErrorString,name);
 	}
 }

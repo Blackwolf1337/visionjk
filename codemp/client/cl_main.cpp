@@ -2609,6 +2609,14 @@ void CL_InitRef( void ) {
 	ri.FontFile = CL_FontFile;
 	ri.Cache_Read = Cache_Read;
 	ri.Cache_Write = Cache_Write;
+	ri.Cache_Exists = Cache_Exists;
+	ri.JobThreads = Com_JobThreads;
+	ri.JobGroupNew = Com_JobGroupNew;
+	ri.JobAdd = Com_JobAdd;
+	ri.JobGroupDone = Com_JobGroupDone;
+	ri.JobGroupWait = Com_JobGroupWait;
+	ri.JobGroupFree = Com_JobGroupFree;
+	ri.JobFor = Com_JobFor;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 

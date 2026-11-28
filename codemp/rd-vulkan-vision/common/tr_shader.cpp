@@ -1188,6 +1188,22 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 
 
 /*
+===============
+StageImage
+
+VisionJK: R_FindImageFile() for the texture of a stage. Of a shader without a lightmap nothing reads the pixels while
+it is parsed, so while a level loads it may be made on a worker thread (vk_prepare.cpp).
+===============
+*/
+static image_t *StageImage( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrap ) {
+	const qboolean	was = R_ImagesMayWait( (qboolean)( shader.lightmapIndex[0] < 0 ) );
+	image_t			*image = R_FindImageFile( name, mipmap, allowPicmip, allowTC, wrap );
+
+	R_ImagesMayWait( was );
+	return image;
+}
+
+/*
 ===================
 ParseStage
 ===================
@@ -1591,7 +1607,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 			else
 			{
-				stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_REPEAT );
+				stage->bundle[0].image = StageImage( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_REPEAT );
 				if ( !stage->bundle[0].image )
 				{
 					ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -1661,7 +1677,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'clampmap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
-			stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_CLAMP );
+			stage->bundle[0].image = StageImage( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_CLAMP );
 			if ( !stage->bundle[0].image )
 			{
 				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -1697,7 +1713,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				}
 				num = stage->bundle[0].numImageAnimations;
 				if ( num < MAX_IMAGE_ANIMATIONS ) {
-					images[num] = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT );
+					images[num] = StageImage( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT );
 					if ( !images[num] )
 					{
 						ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -3934,6 +3950,83 @@ const char *R_ShaderTextOf( const char *name, const char **file )
 
 /*
 ===============
+R_ShaderImageFiles
+
+VisionJK: the images R_FindShader( name ) would ask R_FindImageFile for, with the settings it would ask with, for
+loading them ahead on worker threads (vk_prepare.cpp). A guess from the text: what it misses is loaded when the
+shader is made, what it names wrongly is made for nothing.
+===============
+*/
+void R_ShaderImageFiles( const char *name, qboolean mipRawImage, imageFound_t found, void *ctx )
+{
+	char		stripped[MAX_QPATH], images[16][MAX_QPATH], sky[6][MAX_QPATH];
+	const char	*text, *p;
+	char		*token;
+	int			numImages = 0, numSky = 0, depth = 0;
+	qboolean	noMipMaps = qfalse, noPicMip = qfalse, noTC = qfalse;
+
+	COM_StripExtension( name, stripped, sizeof( stripped ) );
+	text = FindShaderInShaderText( stripped );
+	if ( !text ) {
+		found( stripped, mipRawImage, mipRawImage, qtrue, ctx );
+		return;
+	}
+	p = text;
+	for ( ;; ) {
+		token = COM_ParseExt( &p, qtrue );
+		if ( !token[0] ) {
+			break;
+		}
+		if ( token[0] == '{' ) {
+			depth++;
+			continue;
+		}
+		if ( token[0] == '}' ) {
+			if ( --depth <= 0 ) {
+				break;
+			}
+			continue;
+		}
+		if ( !Q_stricmp( token, "nomipmaps" ) ) {
+			noMipMaps = noPicMip = qtrue;
+		} else if ( !Q_stricmp( token, "nopicmip" ) ) {
+			noPicMip = qtrue;
+		} else if ( !Q_stricmp( token, "noTC" ) ) {
+			noTC = qtrue;
+		} else if ( depth == 2 && ( !Q_stricmp( token, "map" ) || !Q_stricmp( token, "clampmap" ) ) ) {
+			token = COM_ParseExt( &p, qfalse );
+			if ( token[0] && token[0] != '$' && token[0] != '*' && numImages < (int)ARRAY_LEN( images ) ) {
+				Q_strncpyz( images[numImages++], token, sizeof( images[0] ) );
+			}
+		} else if ( depth == 1 && !Q_stricmp( token, "skyParms" ) ) {
+			static const char *const sides[6] = { "rt", "lf", "bk", "ft", "up", "dn" };
+
+			token = COM_ParseExt( &p, qfalse );
+			if ( token[0] && strcmp( token, "-" ) ) {
+				for ( int i = 0; i < 6 && numSky < 6; i++ ) {
+					Com_sprintf( sky[numSky++], sizeof( sky[0] ), "%s_%s", token, sides[i] );
+				}
+			}
+		} else if ( depth == 2 && ( !Q_stricmp( token, "animMap" ) || !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "oneshotanimMap" ) ) ) {
+			COM_ParseExt( &p, qfalse );		// the frequency
+			while ( ( token = COM_ParseExt( &p, qfalse ) )[0] ) {
+				if ( numImages < (int)ARRAY_LEN( images ) ) {
+					Q_strncpyz( images[numImages++], token, sizeof( images[0] ) );
+				}
+			}
+		}
+	}
+	for ( int i = 0; i < numImages; i++ ) {
+		found( images[i], (qboolean)!noMipMaps, (qboolean)!noPicMip, (qboolean)!noTC, ctx );
+	}
+	// (as ParseSkyParms asks for them)
+	for ( int i = 0; i < numSky; i++ ) {
+		found( sky[i], qtrue, qtrue, (qboolean)!noTC, ctx );
+	}
+}
+
+/*
+===============
 R_CheckShaderText
 
 VisionJK: the text of a shader (its name, then its braces) parsed as a shader of that lightmap would be, without
@@ -4310,7 +4403,7 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	// look for a single TGA, BMP, or PCX
 	//
 	COM_StripExtension( name, fileName, sizeof( fileName ) );
-	image = R_FindImageFile( fileName, mipRawImage, mipRawImage, qtrue, mipRawImage ? GL_REPEAT : GL_CLAMP );
+	image = StageImage( fileName, mipRawImage, mipRawImage, qtrue, mipRawImage ? GL_REPEAT : GL_CLAMP );
 	if ( !image ) {
 		ri.Printf( PRINT_DEVELOPER, S_COLOR_RED "Couldn't find image for shader %s\n", name );
 		shader.defaultShader = true;

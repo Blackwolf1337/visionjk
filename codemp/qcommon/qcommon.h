@@ -613,11 +613,19 @@ qboolean FS_Initialized();
 void	FS_InitFilesystem (void);
 void	FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles = qfalse );
 
-// Where a client puts what it downloads from a server, in a game folder of the home folder: kept, or for this
-// session only (client/cl_download.cpp). Their paks are loaded only while a server references them.
-#define FS_DOWNLOADS			"downloads"
-#define FS_DOWNLOADS_SESSION	"downloads/session"
-// The player models of the model store of the site (client/cl_models.cpp), in base of the home folder, one pak a
+// The folder of VisionJK in the home folder: what it makes for the player that belongs to no mod. What older
+// versions put elsewhere is moved there once (files.cpp). The cvar fs_datapath (ROM) has its whole path.
+// FS_DATAFOLDER itself is in no search path: the key of an admin login, the session and the caches are there, and
+// no module or command may read them through the file system. Only FS_DATAGAME below it is searched, before all
+// other folders, and files of certain names the game writes go there (FS_DataFolderOf()).
+#define FS_DATAFOLDER			"visionjk-data"
+#define FS_DATAGAME				FS_DATAFOLDER "/files"
+// Where a client puts what it downloads from a server, below the home folder: FS_DOWNLOADS/<game>/<pak> is kept,
+// FS_DOWNLOADS/<game>/FS_DOWNLOADS_SESSION/<pak> is for this session only (client/cl_download.cpp). Their paks are
+// loaded only while a server references them, and count as paks of their game folder. In no search path itself.
+#define FS_DOWNLOADS			FS_DATAFOLDER "/downloads"
+#define FS_DOWNLOADS_SESSION	"session"
+// The player models of the model store of the site (client/cl_models.cpp), in the folder of VisionJK, one pak a
 // model. Always loaded, but only with files of their model.
 #define FS_MODELSTORE			"modelstore"
 qboolean	FS_AddModelPak( const char *model, char *why, int whySize );
@@ -636,6 +644,7 @@ void	FS_FreeFileList( char **fileList );
 //rwwRMG - changed to fileList to not conflict with list type
 
 void FS_Remove( const char *osPath );
+qboolean FS_CreatePath( char *OSPath );		// the folders a file at that path needs, qtrue: refused
 void FS_HomeRemove( const char *homePath );
 
 void FS_Rmdir( const char *osPath, qboolean recursive );
@@ -671,7 +680,7 @@ int		FS_FileIsInPAK(const char *filename, int *pChecksum );
 #define FS_SOURCE_NONE		0
 #define FS_SOURCE_PAK		1
 #define FS_SOURCE_DIRECTORY	2
-int		FS_FileSource( const char *qpath, int *length, int *pakChecksum );
+int		FS_FileSource( const char *qpath, int *length, int *fileCrc );
 // returns 1 if a file is in the PAK file, otherwise -1
 
 qboolean FS_FindPureDLL(const char *name);
@@ -826,6 +835,19 @@ int			Com_Milliseconds( void );	// will be journaled properly
 uint32_t	Com_BlockChecksum( const void *buffer, int length );
 int      Com_HashKey(char *string, int maxlen);
 
+// com_jobs.cpp: one pool of worker threads (v_jobThreads); a job must not touch what is for the main thread only
+typedef struct jobGroup_s jobGroup_t;
+typedef void ( *jobFunc_t )( void *data );
+void		Com_JobsInit( void );
+int			Com_JobThreads( void );							// workers, 0: every job runs at once on who adds it
+void		Com_JobStats( int *jobsRun, double *busyMs );	// what the workers did so far (the profiler)
+jobGroup_t	*Com_JobGroupNew( void );
+void		Com_JobAdd( jobGroup_t *group, jobFunc_t func, void *data );
+qboolean	Com_JobGroupDone( jobGroup_t *group );			// never waits
+void		Com_JobGroupWait( jobGroup_t *group );			// runs queued jobs of the group itself until it is done
+void		Com_JobGroupFree( jobGroup_t *group );			// waits first
+void		Com_JobFor( int count, void ( *func )( void *data, int index ), void *data );
+
 // com_load.cpp: what the load of a level and a long frame were spent on (v_loadReport, v_hitchLog)
 void	Com_LoadInit( void );
 void	Com_LoadPush( const char *kind, const char *name );	// around something that is loaded
@@ -834,6 +856,19 @@ void	Com_LoadBegin( const char *what );					// a level begins to load
 void	Com_LoadDone( void );								//	and is loaded with the frame that runs
 void	Com_LoadFrameBegin( void );
 void	Com_LoadFrameEnd( void );
+// What the frames of the main thread went into, summed since Com_FrameProfileOn( qtrue ) (the profiler, v_profiler):
+// every push of a kind "frame: ..." with its own time (without what is pushed inside it), the wait before a frame
+// (com_maxfps) and the whole frames. The names are without the "frame: ".
+#define FRAME_PROFILE_PARTS	24
+typedef struct frameProfile_s {
+	int		frames;
+	double	frameMs, idleMs;
+	int		numParts;
+	char	names[FRAME_PROFILE_PARTS][24];
+	double	ms[FRAME_PROFILE_PARTS];
+} frameProfile_t;
+void	Com_FrameProfileOn( qboolean on );
+const frameProfile_t *Com_FrameProfile( void );
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
 int			Com_RealTime(qtime_t *qtime);

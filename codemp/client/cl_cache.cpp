@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cl_cache.cpp -- the one folder of everything the client makes again when it is gone: <fs_homepath>/cache/, a folder
-// a kind (cacheKinds), shared by all mod folders (the keys of the files carry the checksum of the pak they were made
+// a kind (cacheKinds), shared by all mod folders (the keys of the files carry the CRC of the file they were made
 // from). Until 2026-11-14 each kind wrote into the mod folder (vulkan/tex, vulkan/gen, vulkan/pipelines*.dat,
 // soundcache, steamaudio), without a limit: Cache_Init() moves those over once. v_cacheMaxMB keeps the folder under
 // a size, the files that were not used for the longest time go first. The window "Clear Caches" of Setup
@@ -50,7 +50,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // files.cpp: makes the folders a file path goes through
 qboolean FS_CreatePath( char *OSPath );
 
-#define CACHE_FOLDER		"cache"
+#define CACHE_FOLDER		FS_DATAFOLDER "/cache"
+#define CACHE_KEYS_FILE		"keys.txt"
+// how the writers name their files: when it changes, what was written under the names of before is never read again
+// (until 2026-11-28 the keys had the checksum of the whole pak instead of the CRC of the file)
+#define CACHE_KEYS			"file-crc"
 #define CACHE_TOUCH_SECONDS	( 24 * 60 * 60 )	// a file that is read gets the time of now when its time is older than this
 
 typedef struct cacheKind_s {
@@ -149,6 +153,18 @@ long Cache_Read( const char *name, void **buffer ) {
 	}
 	*buffer = data;
 	return (long)st.st_size;
+}
+
+// name: "<kind>/<file>". Whether it is there, without reading it or counting it as used.
+qboolean Cache_Exists( const char *name ) {
+	char		path[MAX_OSPATH];
+	struct stat	st;
+
+	if ( Cache_KindOf( name ) < 0 ) {
+		return qfalse;
+	}
+	Cache_OSPath( name, path, sizeof( path ) );
+	return (qboolean)( !stat( path, &st ) && ( st.st_mode & S_IFREG ) );
 }
 
 /*
@@ -288,6 +304,42 @@ qboolean Cache_Clear( const char *id ) {
 	return qtrue;
 }
 
+// Once after a change of CACHE_KEYS: the kinds named after their source file are emptied, nothing would find them
+// again and v_cacheMaxMB would only take them at 4 GB.
+static void Cache_Rekey( void ) {
+	static const char *const keyed[] = { "textures", "materials", "sound" };
+	char	path[MAX_OSPATH], have[32] = "";
+	FILE	*f;
+
+	Cache_OSPath( CACHE_KEYS_FILE, path, sizeof( path ) );
+	f = fopen( path, "rb" );
+	if ( f ) {
+		const size_t got = fread( have, 1, sizeof( have ) - 1, f );
+
+		have[got] = '\0';
+		fclose( f );
+	}
+	if ( !strcmp( have, CACHE_KEYS ) ) {
+		return;
+	}
+	for ( int i = 0; i < (int)ARRAY_LEN( keyed ); i++ ) {
+		long long	bytes;
+		int			count;
+
+		Cache_Scan( Cache_KindNamed( keyed[i] ), NULL, &bytes, &count );
+		if ( count ) {
+			Com_Printf( "cache: the files are named another way now, " );
+			Cache_Clear( keyed[i] );
+		}
+	}
+	FS_CreatePath( path );
+	f = fopen( path, "wb" );
+	if ( f ) {
+		fputs( CACHE_KEYS, f );
+		fclose( f );
+	}
+}
+
 // v_cacheMaxMB: the files that were not used for the longest time go until the folder is under it
 static void Cache_Limit( void ) {
 	std::vector<cacheFile_t>	files;
@@ -369,7 +421,7 @@ static void Cache_MoveOld( void ) {
 	for ( int i = 0; i < numMods; i++ ) {
 		char folder[MAX_OSPATH];
 
-		if ( !Q_stricmp( mods[i], "." ) || !Q_stricmp( mods[i], ".." ) || !Q_stricmp( mods[i], CACHE_FOLDER ) ) {
+		if ( !Q_stricmp( mods[i], "." ) || !Q_stricmp( mods[i], ".." ) || !Q_stricmp( mods[i], FS_DATAFOLDER ) ) {
 			continue;
 		}
 		Com_sprintf( folder, sizeof( folder ), "%s/%s/vulkan/tex", home, mods[i] );
@@ -427,5 +479,6 @@ void Cache_Init( void ) {
 	Cmd_AddCommand( "v_cacheList", Cache_List_f, "How large each kind of the cache folder is" );
 	Cmd_AddCommand( "v_cacheClear", Cache_Clear_f, "Empties a kind of the cache folder, or all" );
 	Cache_MoveOld();
+	Cache_Rekey();
 	Cache_Limit();
 }

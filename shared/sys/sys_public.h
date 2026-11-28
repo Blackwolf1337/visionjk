@@ -138,6 +138,18 @@ int		Sys_Milliseconds (bool baseTime = false);
 int		Sys_Milliseconds2(void);
 void	Sys_Sleep( int msec );
 
+// the threads of the program and the time each one has run on a processor so far (the profiler, v_profiler); any
+// thread may ask, a thread the system does not let us look at is left out
+typedef struct sysThread_s {
+	unsigned long long	id;				// of the system, as Sys_ThreadId gives it
+	char				name[32];
+	unsigned long long	cpuNsec;
+} sysThread_t;
+int		Sys_ThreadTimes( sysThread_t *threads, int max );
+unsigned long long Sys_ThreadId( void );			// of the thread that asks
+void	Sys_SetThreadName( const char *name );		// of the thread that asks, what the system tools show (15 characters on Linux)
+const char *Sys_ProcessorName( void );				// the main thread, the first time
+
 extern "C" void	Sys_SnapVector( float *v );
 
 bool Sys_RandomBytes( byte *string, int len );

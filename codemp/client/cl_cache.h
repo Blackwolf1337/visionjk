@@ -25,5 +25,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 void		Cache_Init( void );
 long		Cache_Read( const char *name, void **buffer );		// free with FS_FreeFile()
 qboolean	Cache_Write( const char *name, const void *data, int size );
+qboolean	Cache_Exists( const char *name );				// without reading it
 int			Cache_List( char *buf, int size );
 qboolean	Cache_Clear( const char *id );

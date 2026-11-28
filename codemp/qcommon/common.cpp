@@ -1375,6 +1375,7 @@ void Com_Init( char *commandLine ) {
 
 		com_speeds = Cvar_Get ("com_speeds", "0", 0);
 		Com_LoadInit();
+		Com_JobsInit();
 		com_timedemo = Cvar_Get ("timedemo", "0", 0);
 		com_cameraMode = Cvar_Get ("com_cameraMode", "0", CVAR_CHEAT);
 
@@ -1701,6 +1702,7 @@ void Com_Frame( void ) {
 		} while( (timeVal = Com_TimeVal(minMsec)) != 0 );
 		// what follows is the work of the frame
 		Com_LoadFrameBegin();
+		Com_LoadPush( "frame: input", NULL );
 		IN_Frame();
 
 		lastTime = com_frameTime;
@@ -1710,6 +1712,7 @@ void Com_Frame( void ) {
 
 		Cbuf_Execute ();
 		Cbuf_CheckPending ();
+		Com_LoadPop();
 
 		// mess with msec if needed
 		msec = Com_ModifyMsec( msec );
@@ -1752,9 +1755,10 @@ void Com_Frame( void ) {
 			if ( com_speeds->integer ) {
 				timeBeforeEvents = Sys_Milliseconds ();
 			}
+			Com_LoadPush( "frame: input", NULL );
 			Com_EventLoop();
 			Cbuf_Execute ();
-
+			Com_LoadPop();
 
 			//
 			// client side

@@ -120,8 +120,9 @@ The text comes from two files, both in the format of `changelog/<version>.md` of
 (front matter with `version:`, `date:` and `summary:`, then the entries):
 
 - `base/visionjk/changelog.md` came with the zip. `tools/build-game.sh` of the website puts it in.
-- `base/visionjk/changelog-fetched.md` in the folder of the player (`FS_SV_FOpenFileWrite`) is what the engine
-  fetched.
+- `visionjk/changelog-fetched.md` in `visionjk-data/files` of the home folder of the player (`FS_SV_FOpenFileWrite`)
+  is what the engine fetched (until 2026-11-28 it was `base/visionjk/changelog-fetched.md`, moved once at the start,
+  see [datafolder.md](datafolder.md)).
 
 The engine fetches `<v_updateURL>/changelog.md` on the stable channel and `<v_updateURL>/dev/changelog.md` on
 the dev channel, in the same thread as the file list and with the same checks. It takes at most 256 KB and keeps
@@ -251,7 +252,7 @@ system trusts, follow no redirect, and take nothing but an answer of 200.
 | `ui/ui_changelog.c`, `ui/ui_markdown.c` | the window "What's new" (`UI_CHANGELOG`, `FEEDER_CHANGELOG`) and the reader of its text |
 | `ui/jamp/changelog.menu`, `ui/vision/changelog.menu` | the menu of the window (the second one is made by `tools/menus`) |
 | `base/visionjk/changelog.md` | the changelog that came with the zip |
-| `base/visionjk/changelog-fetched.md` | the changelog the engine fetched, in the folder of the player |
+| `visionjk-data/files/visionjk/changelog-fetched.md` | the changelog the engine fetched, in the home folder of the player |
 
 ## Who is trusted
 

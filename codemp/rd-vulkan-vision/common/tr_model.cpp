@@ -538,6 +538,7 @@ void RE_RegisterMedia_LevelLoadBegin(const char *psMapName, ForceReload_e eForce
 	}
 
 	tr.numBSPModels = 0;
+	VK_PrepareLevelBegin();
 
 // not used in MP codebase...
 //
@@ -571,6 +572,8 @@ int RE_RegisterMedia_GetLevel(void)
 //
 void RE_RegisterMedia_LevelLoadEnd(void)
 {
+	// (before images of other levels go: what is made ahead for this one is uploaded or dropped)
+	VK_PrepareLevelEnd();
 	RE_RegisterModels_LevelLoadEnd(qfalse);
 
 	RE_RegisterImages_LevelLoadEnd();

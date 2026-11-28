@@ -141,9 +141,6 @@ is what it still calls.
 void VK_BC_Init( void ) {
 }
 
-void VK_BC_Shutdown( void ) {
-}
-
 vkSize_t VK_BC_Size( vkFormat_t, int, int ) {
 	return 0;
 }
