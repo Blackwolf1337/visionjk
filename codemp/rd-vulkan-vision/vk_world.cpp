@@ -427,13 +427,14 @@ qboolean VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones )
 	}
 	VectorSet4( row[8], fadedist * fadedist, 1.0f / ( cutdist * cutdist - fadedist * fadedist ),
 		Q_min( 250.0f / ( cutdist - fadedist ), 1.0f ), ss->fadeScale );		// FADE_RANGE of tr_surfacesprites.cpp
-	VectorSet4( row[9], ss->wind, ss->windIdle, (float)tr.refdef.numGrassPushes, 0.0f );
+	VectorSet4( row[9], ss->wind, ss->windIdle, (float)backEnd.refdef.numGrassPushes, 0.0f );
 	VectorSet4( row[10], ssViewRight[0], ssViewRight[1], ssViewRight[2], 0.0f );
 	VectorSet4( row[11], ssViewUp[0], ssViewUp[1], ssViewUp[2], 0.0f );
-	// what stands or blows in the grass (ext.AddGrassPushToScene), two rows each
+	// what stands or blows in the grass (ext.AddGrassPushToScene), two rows each; of the scene that is drawn, tr.refdef
+	// is the last one of the frame (a model in the HUD)
 	for ( int i = 0; i < MAX_GRASS_PUSHES; i++ ) {
-		if ( i < tr.refdef.numGrassPushes ) {
-			const grassPush_t *push = &tr.refdef.grassPushes[i];
+		if ( i < backEnd.refdef.numGrassPushes ) {
+			const grassPush_t *push = &backEnd.refdef.grassPushes[i];
 
 			VectorSet4( row[12 + i * 2], push->origin[0], push->origin[1], push->origin[2], push->radius );
 			VectorSet4( row[13 + i * 2], push->force, 0.0f, 0.0f, 0.0f );

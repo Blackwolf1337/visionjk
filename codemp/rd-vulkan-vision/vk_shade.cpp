@@ -40,7 +40,6 @@ static const vkStencil_t vk_distortionStencil = { qtrue, GL_ALWAYS, 1,
 	{ { GL_KEEP, GL_KEEP, GL_INCR }, { GL_KEEP, GL_KEEP, GL_INCR } } };
 
 extern int skyboxportal;
-extern int drawskyboxportal;
 
 void myGlMultMatrix( const float *a, const float *b, float *out );
 
@@ -1984,8 +1983,9 @@ void RB_EndSurface( void ) {
 				return;
 			}
 		}
-		// portal sky
-		else if ( !drawskyboxportal ) {
+		// portal sky (of the scene that is drawn: drawskyboxportal is of the last scene of the frame, a model in the HUD
+		// took what stands in the portal sky away)
+		else if ( !( backEnd.refdef.rdflags & RDF_DRAWSKYBOX ) ) {
 			if ( tess.currentStageIteratorFunc != RB_StageIteratorSky ) {
 				// /only/ process sky tris
 				tess.numIndexes = 0;

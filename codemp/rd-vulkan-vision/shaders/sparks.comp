@@ -13,7 +13,7 @@
 // it as a glowing dot and its glow on the floor).
 //   frame rows 0-10: the view of that depth as VK_ViewRows has it; 11: seconds since the last frame, 1 when the depth
 //   is there, the number of bursts, a seed; 12-43: the bodies of the frame (VK_SparksView: the middle of a character
-//   and how far round, 0 for none), nothing lies on them; then five rows a burst: origin and first slot, direction and count, colour
+//   and how far round, 0 for none), nothing lies on them; 44-75: how fast each of them moves and 1 where dust minds it; then six rows a burst: origin and first slot, direction and count, colour
 //   and life, speed spread size gravity, drag bounce cooling rest (seconds an ember lies, v_gpuSparksEmbers applied),
 //   swirl, streak and age (the part of its life that is over when it is made)
 // One that floats (sparkBurst_t swirl, the embers over lava): the fifth row has x its streak, y its swirl and z a
@@ -91,7 +91,8 @@ vec3 Air( vec3 p, float t ) {
 
 #define BODIES		12u
 #define NUM_BODIES	32u
-#define BURSTS		( BODIES + NUM_BODIES )
+#define MOVES		( BODIES + NUM_BODIES )
+#define BURSTS		( MOVES + NUM_BODIES )
 
 // on or in a character (a player, a bot, a part of a cut body): they move away, so nothing may lie there
 bool OnBody( vec3 p ) {
@@ -102,6 +103,48 @@ bool OnBody( vec3 p ) {
 		}
 	}
 	return false;
+}
+
+// The air the characters move at p, for dust: only one that moves moves any, one that stands none. It is the flow
+// round a cylinder that goes through still air (a dipole): what is in front of it is pushed on, what is beside it
+// goes back past it, all of it falling off with the square of the distance. Behind it the air is drawn along in a
+// wake that widens and swings from side to side. stir: how much of that reaches p, 0 to 1.
+vec3 Moved( vec3 p, float t, out float stir ) {
+	const float R = 18.0;
+	vec3 flow = vec3( 0.0 );
+
+	for ( uint k = 0u; k < NUM_BODIES; k++ ) {
+		vec4 b = W( BODIES + k ), move = W( MOVES + k );
+		float speed = length( move.xyz );
+
+		if ( move.w == 0.0 || speed < 12.0 ) {
+			continue;
+		}
+		vec3 off = p - vec3( b.xy, clamp( p.z, b.z - 24.0, b.z + 40.0 ) );
+		float d = length( off );
+		if ( d > 260.0 ) {
+			continue;
+		}
+		vec3 way = move.xyz / speed;
+		vec3 away = d > 0.01 ? off / d : way;
+		// (air does not take all of the speed of somebody who runs or is thrown)
+		float pull = 220.0 * ( 1.0 - exp( -speed / 220.0 ) );
+		float near = R / max( d, R );
+
+		flow += ( away * 2.0 * dot( way, away ) - way ) * pull * 0.8 * near * near * smoothstep( 110.0, 50.0, d );
+		float behind = -dot( off, way );
+		if ( behind > 0.0 ) {
+			vec3 level = cross( way, abs( way.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) );
+			vec3 beside = off + way * behind;
+			float wide = R * ( 1.0 + behind / 70.0 );
+			float wake = exp( -dot( beside, beside ) / ( wide * wide ) - behind / 80.0 ) * smoothstep( 0.0, R, behind );
+			float swing = sin( behind / 26.0 + t * 5.0 + float( k ) );
+
+			flow += ( way * 0.5 + normalize( level ) * swing * 0.4 + vec3( 0.0, 0.0, 0.12 ) ) * pull * wake;
+		}
+	}
+	stir = clamp( length( flow ) / 60.0, 0.0, 1.0 );
+	return flow;
 }
 
 void main() {
@@ -185,24 +228,21 @@ void main() {
 		// it floats: lifted while it is hot, and the air takes it along
 		float left = clamp( a.w / max( v.w, 0.001 ), 0.0, 1.0 );
 		vec3 air = Air( a.xyz + vec3( lie.z * 13.0 ), u.time ) * lie.y;
+		float drag = m.y;
 
-		v.z -= m.x * left * dt;
-		v.xyz += ( air - v.xyz ) * ( 1.0 - exp( -m.y * dt ) );
 		if ( m.w == 0.0 ) {
-			// dust: somebody who walks through it parts it and leaves it turning (the characters of the frame)
-			for ( uint k = 0u; k < NUM_BODIES; k++ ) {
-				vec4 b = W( BODIES + k );
-				vec3 off = a.xyz - vec3( b.xy, clamp( a.z, b.z - 24.0, b.z + 40.0 ) );
-				float d = length( off );
+			// Dust: somebody who goes through it moves the air it floats in, and leaves that air turning for some
+			// seconds. (it has no bounce: the row's z holds how stirred its air still is)
+			float stir;
+			vec3 moved = Moved( a.xyz, u.time, stir );
 
-				if ( b.w > 0.0 && d < 56.0 ) {
-					float near = 1.0 - d / 56.0;
-					vec3 away = d > 0.01 ? off / d : vec3( 0.0, 0.0, 1.0 );
-
-					v.xyz += ( away * 55.0 + cross( away, vec3( 0.0, 0.0, 1.0 ) ) * 35.0 ) * near * dt * 4.0;
-				}
-			}
+			m.z = max( m.z * exp( -0.55 * dt ), stir );
+			u.sparks.rows[row + 3u].z = m.z;
+			air += moved + Air( a.xyz * 4.0 + vec3( lie.z * 31.0 ), u.time * 2.5 ) * 16.0 * m.z;
+			drag += 9.0 * stir;
 		}
+		v.z -= m.x * left * dt;
+		v.xyz += ( air - v.xyz ) * ( 1.0 - exp( -drag * dt ) );
 	} else {
 		v.z -= m.x * dt;
 		v.xyz *= exp( -m.y * dt );
@@ -228,7 +268,7 @@ void main() {
 						n = -n;
 					}
 					bool floor = n.z > 0.6;
-					v.xyz = reflect( v.xyz, n ) * m.z;
+					v.xyz = reflect( v.xyz, n ) * ( m.w == 0.0 ? 0.0 : m.z );
 					// (along the surface it keeps more of its speed than off it, but a floor rubs it: it slides a little)
 					v.xyz -= n * dot( v.xyz, n ) * 0.3;
 					if ( floor ) {

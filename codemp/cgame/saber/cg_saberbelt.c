@@ -19,17 +19,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_saberbelt.c -- a saber that is switched off hangs on the belt (issue #20), on the hip bolts the JA+ holster code
-// draws on (cg_jpplayer.c), and swings with the walk as a pendulum driven by how the hip moves. The game has no
-// animation for putting it there, so the arm is moved by bone overrides: down to the hip while the blade goes in, and
-// from the hip when it comes out, which never delays the saber. Not for a staff, which stays as it is.
+// draws on (cg_jpplayer.c), and swings with the walk as a pendulum driven by how the hip moves. It goes there once the
+// blade is in, the arm does not move for it. Not for a staff, which stays as it is.
 
 #include "cgame/cg_local.h"
 #include "cgame/saber/cg_saberbelt.h"
-#include "ghoul2/G2.h"
 
-#define BELT_SWITCH_MSEC	360			// after switching off: the hand is at the hip and lets go
-#define BELT_BACK_MSEC		260			// and is back
-#define BELT_TAKE_MSEC		300			// the hand coming up from the hip with the saber
+#define BELT_SWITCH_MSEC	360			// after switching off: the blade is in, the hilt goes to the belt
 #define BELT_SPRING			95.0f		// of the pendulum, about 1.5 swings a second
 #define BELT_DAMP			4.6f
 #define BELT_PUSH			0.11f		// degrees a second a second per unit a second a second of the hip
@@ -44,8 +40,8 @@ typedef struct {
 } beltHilt_t;
 
 typedef struct {
-	qboolean	known, off, holds, armSet;
-	int			offTime, onTime;
+	qboolean	known, off, holds;
+	int			offTime;
 	beltHilt_t	hilts[MAX_SABERS];
 } saberBelt_t;
 
@@ -74,48 +70,10 @@ static qboolean Belt_Off( const centity_t *cent, const clientInfo_t *ci ) {
 	return qtrue;
 }
 
-// how far the arm is on its way to the hip, 0 to 1
-static float Belt_Arm( const saberBelt_t *b ) {
-	float t;
-
-	if ( b->off ) {
-		const int age = cg.time - b->offTime;
-
-		if ( age < BELT_SWITCH_MSEC ) {
-			t = age / (float)BELT_SWITCH_MSEC;
-		} else if ( age < BELT_SWITCH_MSEC + BELT_BACK_MSEC ) {
-			t = 1.0f - ( age - BELT_SWITCH_MSEC ) / (float)BELT_BACK_MSEC;
-		} else {
-			return 0.0f;
-		}
-	} else {
-		const int age = cg.time - b->onTime;
-
-		if ( !b->onTime || age >= BELT_TAKE_MSEC ) {
-			return 0.0f;
-		}
-		t = 1.0f - age / (float)BELT_TAKE_MSEC;
-	}
-	t = Com_Clamp( 0.0f, 1.0f, t );
-	return t * t * ( 3.0f - 2.0f * t );
-}
-
-static void Belt_SetArm( centity_t *cent, const char *upper, const char *lower, float side, float arm ) {
-	// (the hand of the arm hanging down is at the hip: in a little, the elbow bent up to the hilt; seen on the humanoid)
-	const vec3_t upperAngles = { 5.0f * arm, 0.0f, -7.0f * side * arm };
-	const vec3_t lowerAngles = { 17.0f * arm, 0.0f, 0.0f };
-
-	trap->G2API_SetBoneAngles( cent->ghoul2, 0, upper, upperAngles, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z,
-		cgs.gameModels, 0, cg.time );
-	trap->G2API_SetBoneAngles( cent->ghoul2, 0, lower, lowerAngles, BONE_ANGLES_POSTMULT, POSITIVE_X, NEGATIVE_Y, NEGATIVE_Z,
-		cgs.gameModels, 0, cg.time );
-}
-
 void CG_SaberBeltUpdate( centity_t *cent, const clientInfo_t *ci ) {
 	const int	num = cent->currentState.number;
 	saberBelt_t	*b;
 	qboolean	off;
-	float		arm;
 
 	if ( num < 0 || num >= MAX_CLIENTS || !cent->ghoul2 ) {
 		return;
@@ -126,28 +84,12 @@ void CG_SaberBeltUpdate( centity_t *cent, const clientInfo_t *ci ) {
 		// (first seen with it off: it hangs there already)
 		b->known = qtrue;
 		b->off = off;
-		b->offTime = cg.time - BELT_SWITCH_MSEC - BELT_BACK_MSEC;
-		b->onTime = 0;
+		b->offTime = cg.time - BELT_SWITCH_MSEC;
 	} else if ( off != b->off ) {
 		b->off = off;
-		if ( off ) {
-			b->offTime = cg.time;
-		} else if ( b->holds ) {
-			b->onTime = cg.time;	// (only taken from the belt if it was there)
-		}
+		b->offTime = cg.time;
 	}
 	b->holds = (qboolean)( off && cg.time - b->offTime >= BELT_SWITCH_MSEC );
-
-	// a real draw animation or an attack has the arm
-	arm = ( cent->currentState.torsoAnim >= BOTH_STAND1TO2_NEW && cent->currentState.torsoAnim <= BOTH_S1_S6_2ARMS )
-		|| BG_SaberInAttack( cent->currentState.saberMove ) ? 0.0f : Belt_Arm( b );
-	if ( arm > 0.0f || b->armSet ) {
-		Belt_SetArm( cent, "rhumerus", "rradius", 1.0f, arm );
-		if ( ci->saber[1].model[0] ) {
-			Belt_SetArm( cent, "lhumerus", "lradius", -1.0f, arm );
-		}
-		b->armSet = (qboolean)( arm > 0.0f );
-	}
 }
 
 qboolean CG_SaberBeltHolds( const centity_t *cent ) {

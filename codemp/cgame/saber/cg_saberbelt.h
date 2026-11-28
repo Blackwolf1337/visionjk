@@ -21,7 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 void CG_SaberBeltInit( void );
-// once a frame of a player, before the holster code: follows the saber going on and off and moves the arms
+// once a frame of a player, before the holster code: follows the saber going on and off
 void CG_SaberBeltUpdate( centity_t *cent, const clientInfo_t *ci );
 // the switched off sabers of this player hang on the belt now, not in the hands
 qboolean CG_SaberBeltHolds( const centity_t *cent );
