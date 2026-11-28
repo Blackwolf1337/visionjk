@@ -481,6 +481,7 @@ typedef struct clientSession_s {
 	int			duelTeam;
 	int			siegeDesiredTeam;
 	jpAdminLevel_t	jpAdminLevel;		// JA+ admin rank, kept across map changes
+	qboolean	portalGun;			// VisionJK: an admin gave him the portal gun (amportalgun), kept across map changes
 
 	char		IP[NET_ADDRSTRMAXLEN];
 } clientSession_t;
