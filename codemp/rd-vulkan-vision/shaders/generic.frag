@@ -109,6 +109,30 @@ vec3 FlatNormal( vec3 toEye ) {
 // light of the room the coat throws back at a flat angle (Fresnel with F0 0.04). Light that wraps into the shadow,
 // as it scatters through snow (GPU Gems 1, chapter 16: N.L + wrap over 1 + wrap), with the cool of the sky where it
 // does (as the snow of Batman: Arkham Origins), and the glints of its crystals.
+// A lightmap filtered with a cubic B-spline from four bilinear taps (Sigg and Hadwiger, GPU Gems 2 ch. 20): a lightmap
+// of the stock levels is 128 pixels for a whole room, bilinear filtering shows its pixels as steps along every shadow
+// edge, the cubic one makes them round and soft.
+vec4 LightmapTexture( sampler2D tex, vec2 uv ) {
+	vec2 size = vec2( textureSize( tex, 0 ) );
+	vec2 p = uv * size - 0.5;
+	vec2 f = fract( p );
+	vec2 f2 = f * f, f3 = f2 * f;
+	vec2 w0 = ( -f3 + 3.0 * f2 - 3.0 * f + 1.0 ) / 6.0;
+	vec2 w1 = ( 3.0 * f3 - 6.0 * f2 + 4.0 ) / 6.0;
+	vec2 w2 = ( -3.0 * f3 + 3.0 * f2 + 3.0 * f + 1.0 ) / 6.0;
+	vec2 w3 = f3 / 6.0;
+	vec2 g0 = w0 + w1, g1 = w2 + w3;
+	vec2 base = p - f + 0.5;
+	vec2 h0 = ( base - 1.0 + w1 / g0 ) / size;
+	vec2 h1 = ( base + 1.0 + w3 / g1 ) / size;
+	return g0.y * ( g0.x * texture( tex, h0 ) + g1.x * texture( tex, vec2( h1.x, h0.y ) ) )
+		+ g1.y * ( g0.x * texture( tex, vec2( h0.x, h1.y ) ) + g1.x * texture( tex, h1 ) );
+}
+
+bool IsLightmapGen( uint tcGen ) {
+	return tcGen >= TCGEN_LIGHTMAP && tcGen <= TCGEN_LIGHTMAP3;
+}
+
 vec3 MaterialLight( Draw d, vec3 albedo ) {
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
@@ -124,7 +148,8 @@ vec3 MaterialLight( Draw d, vec3 albedo ) {
 	float facing = max( dot( n, l ), 0.0 );
 	float wrap = d.material2.x;
 	float wrapped = max( ( dot( n, l ) + wrap ) / ( 1.0 + wrap ), 0.0 );
-	vec3 color = albedo * min( t.ambientLight.rgb + wrapped * t.directedLight.rgb, vec3( 1.0 ) );
+	float wrapped2 = max( ( dot( n, normalize( t.lightDir2.xyz + vec3( 0.0, 0.0, 1e-5 ) ) ) + wrap ) / ( 1.0 + wrap ), 0.0 );
+	vec3 color = albedo * min( t.ambientLight.rgb + wrapped * t.directedLight.rgb + wrapped2 * t.directedLight2.rgb, vec3( 1.0 ) );
 
 	if ( wrap > 0.0 ) {
 		color += albedo * t.ambientLight.rgb * wrap * 0.3 * vec3( 0.55, 0.75, 1.0 ) * ( 1.0 - facing );
@@ -1434,7 +1459,7 @@ vec4 PbrStage( Draw d ) {
 		base.a = 1.0;		// (it is opaque now)
 	}
 
-	vec3 albedo, ambient, directed, l;
+	vec3 albedo, ambient, directed, l, directed2 = vec3( 0.0 ), l2 = vec3( 0.0, 0.0, 1.0 );
 	float alpha;
 	if ( ( d.pbrFlags & PBR_ENTITY ) != 0u ) {
 		albedo = pow( base.rgb * v_color.rgb, vec3( 2.2 ) );
@@ -1442,8 +1467,12 @@ vec4 PbrStage( Draw d ) {
 		ambient = pow( t.ambientLight.rgb, vec3( 2.2 ) );
 		directed = pow( t.directedLight.rgb, vec3( 2.2 ) );
 		l = normalize( t.lightDir.xyz );
+		if ( t.directedLight2.rgb != vec3( 0.0 ) ) {
+			directed2 = pow( t.directedLight2.rgb, vec3( 2.2 ) );
+			l2 = normalize( t.lightDir2.xyz );
+		}
 	} else {
-		vec3 light = ( d.pbrFlags & PBR_LIGHTMAP ) != 0u ? texture( TEX1( d ), v_texCoord1 ).rgb * v_color.rgb : v_color.rgb;
+		vec3 light = ( d.pbrFlags & PBR_LIGHTMAP ) != 0u ? LightmapTexture( TEX1( d ), v_texCoord1 ).rgb * v_color.rgb : v_color.rgb;
 		light = pow( light, vec3( 2.2 ) );
 		albedo = pow( base.rgb, vec3( 2.2 ) );
 		alpha = base.a * ( ( d.pbrFlags & PBR_LIGHTMAP ) != 0u ? v_color.a : 1.0 );
@@ -1503,6 +1532,9 @@ vec4 PbrStage( Draw d ) {
 	// a lamp of a size), else a smooth bumpy floor glitters with highlights everywhere.
 	vec3 color = s.albedo * ( 1.0 - metalness ) * ambient * occlusion;
 	vec3 shine = SurfaceLight( s, l, directed, 0.4, color );
+	if ( directed2 != vec3( 0.0 ) ) {
+		shine += SurfaceLight( s, l2, directed2, 0.4, color );
+	}
 #ifndef VK_GLES
 	shine += DebugLights( t, s, color );
 #endif
@@ -1944,6 +1976,8 @@ void main() {
 		if ( ( d.pbrFlags & PBR_FOLLOW ) != 0u ) {
 			// (the mip level of the coordinates before the shift, which jumps from pixel to pixel at the edges of bumps)
 			color = textureGrad( TEX0( d ), FollowParallax( d, uv0 ), dFdx( uv0 ), dFdy( uv0 ) ) * v_color;
+		} else if ( IsLightmapGen( TCGEN0( d.flags ) ) ) {
+			color = LightmapTexture( TEX0( d ), uv0 ) * v_color;
 		} else {
 			color = texture( TEX0( d ), uv0 ) * v_color;
 		}
@@ -1954,7 +1988,7 @@ void main() {
 
 	// the second texture of a stage, combined the way glTexEnv did it
 	if ( env != 0u ) {
-		vec4 second = texture( TEX1( d ), v_texCoord1 );
+		vec4 second = IsLightmapGen( TCGEN1( d.flags ) ) ? LightmapTexture( TEX1( d ), v_texCoord1 ) : texture( TEX1( d ), v_texCoord1 );
 
 		if ( env == 1u ) {				// modulate
 			color *= second;

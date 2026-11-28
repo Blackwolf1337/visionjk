@@ -165,6 +165,11 @@ typedef struct trRefEntity_s {
 	vec3_t		ambientLight;	// color normalized to 0-255
 	int			ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
+	// VisionJK: light of the grid from a second direction (R_SetupEntityLightingGrid): the cells around him whose light
+	// comes from far off the main direction keep it, so a side the main light misses is lit by them (local space at
+	// the end, as lightDir; directedLight2 zero: none)
+	vec3_t		lightDir2;
+	vec3_t		directedLight2;
 	int			dlightBits;
 	// VisionJK (v_panelLight): the lamps of the level that light this player by pixel, his share of the light of the
 	// grid taken from directedLight (R_SetupEntityLighting); in the world, the colour as a moving light has it

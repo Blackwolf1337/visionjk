@@ -110,6 +110,8 @@ uint32_t VK_CurrentTransform( void ) {
 			t.lightDir[3] = ( ent->e.hModel || ent->e.ghoul2 ) ? 1.0f : 0.0f;
 			VectorScale( ent->ambientLight, 1.0f / 255.0f, t.ambientLight );
 			VectorScale( ent->directedLight, 1.0f / 255.0f, t.directedLight );
+			VectorCopy( ent->lightDir2, t.lightDir2 );
+			VectorScale( ent->directedLight2, 1.0f / 255.0f, t.directedLight2 );
 		}
 		vk_transform = VK_AddTransform( &t );
 	}
