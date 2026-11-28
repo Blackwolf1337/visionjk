@@ -57,7 +57,6 @@ static const char *const portalFxNames[3] = { "mp/spawn", "mp/jedispawn", "spark
 
 static gentity_t	*portalEnts[MAX_CLIENTS][2];	// his portals, by colour
 static int			portalTeams[MAX_CLIENTS];		// the team he was in when he set them
-static qboolean		portalGuns[MAX_CLIENTS];		// an admin gave him the gun (amportalgun)
 static int			portalFx[3];					// G_EffectIndex of portalFxNames, 0 until first used
 static int			portalMarkTime;
 // the portals as bgPortal_t, made again after every change
@@ -206,7 +205,6 @@ void G_PortalInit( void ) {
 
 	memset( portalEnts, 0, sizeof( portalEnts ) );
 	memset( portalTeams, 0, sizeof( portalTeams ) );
-	memset( portalGuns, 0, sizeof( portalGuns ) );
 	memset( portalFx, 0, sizeof( portalFx ) );
 	portalMarkTime = 0;
 	portalCount = 0;
@@ -222,7 +220,8 @@ void G_PortalClientGone( int clientNum ) {
 		return;
 	}
 	G_PortalRemoveBoth( clientNum );
-	portalGuns[clientNum] = qfalse;
+	// (who has the gun is in his session, clientSession_t portalGun: kept over a change of the map, cleared with the
+	// rest of it when the next one takes the slot)
 }
 
 /*
@@ -277,7 +276,7 @@ void G_PortalFrame( void ) {
 		if ( !G_PortalOf( i, PORTAL_BLUE ) && !G_PortalOf( i, PORTAL_ORANGE ) ) {
 			continue;
 		}
-		if ( !vs_portalGun.integer || !portalGuns[i] || !owner->inuse || !owner->client
+		if ( !vs_portalGun.integer || !owner->inuse || !owner->client || !owner->client->sess.portalGun
 			|| owner->client->pers.connected != CON_CONNECTED || (int)owner->client->sess.sessionTeam != portalTeams[i] ) {
 			G_PortalRemoveBoth( i );
 			continue;
@@ -502,7 +501,7 @@ The gun
 */
 
 qboolean G_PortalGunReady( const gentity_t *ent ) {
-	return (qboolean)( vs_portalGun.integer && ent->client && ent->s.number < MAX_CLIENTS && portalGuns[ent->s.number] );
+	return (qboolean)( vs_portalGun.integer && ent->client && ent->s.number < MAX_CLIENTS && ent->client->sess.portalGun );
 }
 
 void G_PortalGunSpawn( gentity_t *ent ) {
@@ -841,13 +840,13 @@ void Cmd_amportalgun_f( gentity_t *ent, qboolean rcon ) {
 		JP_Reply( ent, rcon, va( "^1No player %s.\n", arg ) );
 		return;
 	}
-	give = !portalGuns[target->s.number];
+	give = !target->client->sess.portalGun;
 	if ( trap->Argc() > 2 ) {
 		trap->Argv( 2, arg, sizeof( arg ) );
 		give = (qboolean)( atoi( arg ) != 0 );
 	}
 
-	portalGuns[target->s.number] = give;
+	target->client->sess.portalGun = give;
 	if ( give ) {
 		if ( target->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 			target->client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_BRYAR_OLD );
