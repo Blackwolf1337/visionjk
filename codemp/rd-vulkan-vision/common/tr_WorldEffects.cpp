@@ -1393,8 +1393,10 @@ void R_ShutdownWorldEffects(void)
 ////////////////////////////////////////////////////////////////////////////////////////
 void RB_RenderWorldEffects(void)
 {
+	// (VisionJK: of the scene that is drawn. tr.refdef is the last scene of the frame, and with a model in the HUD that
+	// one has no level: no weather while the HUD showed its weapon, only in the menu, which hides the HUD)
 	if (!tr.world ||
-		(tr.refdef.rdflags & RDF_NOWORLDMODEL) ||
+		(backEnd.refdef.rdflags & RDF_NOWORLDMODEL) ||
 		(backEnd.refdef.rdflags & RDF_SKYBOXPORTAL) ||
 		!mParticleClouds.size())
 	{	//  no world rendering or no world or no particle clouds
