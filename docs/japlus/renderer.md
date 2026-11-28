@@ -355,6 +355,12 @@ wind, respawn around the camera, the checks for being outside. Each particle is 
 through `vk_gl.cpp` (`VK_GL_Quad`, `VK_GL_QuadFlush`) instead of `glBegin` and four `glVertex3f`. The same cvar
 switches it.
 
+A frame has several scenes: a sky portal, the level, and the models of the HUD (the weapon with `v_hud 1`), each
+with its own `refdef`. Back end code must read `backEnd.refdef`, the scene being drawn, and not `tr.refdef` or the
+front end state, which hold the last scene of the frame. That scene is the HUD one, without a level, and with it
+the weather, what stands in the sky portal and the bending of grass round players were gone (fixed in
+`tr_WorldEffects.cpp`, `vk_shade.cpp` and `vk_world.cpp`, 2026-11-28).
+
 The surface sprites of the level (grass, the vertical, flattened and oriented types) have a program of their own,
 `VKP_GRASS` (`shaders/grass.vert`), with the vertex `vkGrassVertex_t` (48 bytes, four a sprite) and their own
 static vertex and index buffers. When the level is loaded `VK_BuildGrass()` places every sprite once, with the
