@@ -132,6 +132,10 @@ XCVAR_DEF( vs_maxCmdMsec,				"100",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_logClientCmds,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 // vs_sandbox 1: every player may use amsandbox (physgun, toolgun, gravity gun), not only the admins (g_props.c)
 XCVAR_DEF( vs_sandbox,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_forceMoves 1: what the Force does to bodies (force/g_forcemoves.c): grip holds smoothly, push or pull while gripping
+// throws or drags down, bare hands push with both, who is sent flying is hurt by walls, lightning shocks who is in the
+// water it strikes; 0 the stock game
+XCVAR_DEF( vs_forceMoves,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 // vs_portalGun 1: the players an admin gave the portal gun (amportalgun) fire portals with the old bryar pistol
 // (portal/g_portal.c); 0 closes every portal and the old bryar fires as it always did
 XCVAR_DEF( vs_portalGun,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )

@@ -71,6 +71,7 @@ static const char *const clCapabilities[] = {
 	"v_cgameTraceHoles",	// ext.CM_TraceHoles: traces with holes where the portals of the portal gun are (cgame/cg_predict.c)
 	"v_cgameFeed",			// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
 	"v_cgamePortals",		// ext.R_AddPortal: the portals of the portal gun drawn by the renderer (cgame/portal/cg_portal_draw.c; NULL with a renderer that has none)
+	"v_cgameShadowLight",	// ext.R_AddShadowLight: a light with a say in its shadows (cgame/force/cg_forceaura.c; NULL with a renderer that has none)
 	"v_cgameVoteKeys",		// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
 	"v_screenFxDrops",		// drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	"v_screenFxSnow",		// clumps of snow on the view (SCREENFX_SNOW, the snowball)

@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/npc/b_local.h"
 #include "w_saber.h"
 #include "game/bots/ai_main.h"
+#include "game/force/g_forcemoves.h"
 #include "ghoul2/G2.h"
 
 #define METROID_JUMP 1
@@ -1527,6 +1528,8 @@ void ForceGrip( gentity_t *self )
 	else
 	{
 		self->client->ps.fd.forceGripEntityNum = ENTITYNUM_NONE;
+		// VisionJK: no player there, a prop maybe (props/g_props.c)
+		G_PropForceGrip( self );
 		return;
 	}
 }
@@ -1975,6 +1978,19 @@ void ForceShootLightning( gentity_t *self )
 		traceEnt = &g_entities[tr.entityNum];
 		ForceLightningDamage( self, traceEnt, forward, tr.endpos );
 	}
+}
+
+// VisionJK: and who stands in the water it strikes (force/g_forcemoves.c)
+static void ForceShootLightningWater( gentity_t *self )
+{
+	vec3_t forward;
+
+	if ( self->health <= 0 )
+	{
+		return;
+	}
+	AngleVectors( self->client->ps.viewangles, forward, NULL, NULL );
+	G_ForceMovesLightningWater( self, forward );
 }
 
 /*
@@ -3455,8 +3471,15 @@ static void ForceThrow_Real( gentity_t *self, qboolean pull )
 			breakStab = qtrue;
 	}
 
+	// VisionJK: a push while Force Grip holds a player throws him, a pull drags him down (force/g_forcemoves.c)
+	if ( G_ForceMovesGripThrow( self, pull ) )
+	{
+		return;
+	}
+
+	// VisionJK: the hand that holds a prop with Force Grip is out too, the push throws that prop (props/g_props.c)
 	if (self->client->ps.forceHandExtend != HANDEXTEND_NONE && (self->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN || !G_InGetUpAnim(&self->client->ps))
-		&& !breakGrab)
+		&& !breakGrab && !G_PropGripHeld( self ))
 	{
 		return;
 	}
@@ -3542,7 +3565,13 @@ static void ForceThrow_Real( gentity_t *self, qboolean pull )
 	else
 	{
 		G_Sound( self, CHAN_BODY, G_SoundIndex( "sound/weapons/force/push.wav" ) );
-		if (self->client->ps.forceHandExtend == HANDEXTEND_NONE || breakGrab)
+		if ( ( self->client->ps.forceHandExtend == HANDEXTEND_NONE || breakGrab ) && G_ForceMovesTwoHandPush( self ) )
+		{ // VisionJK: bare hands push with both (the game has no two-handed push: the two-handed lightning)
+			self->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			self->client->ps.forceDodgeAnim = BOTH_FORCE_2HANDEDLIGHTNING;
+			self->client->ps.forceHandExtendTime = level.time + 700;
+		}
+		else if (self->client->ps.forceHandExtend == HANDEXTEND_NONE || breakGrab)
 		{
 			self->client->ps.forceHandExtend = HANDEXTEND_FORCEPUSH;
 			self->client->ps.forceHandExtendTime = level.time + 1000;
@@ -4086,6 +4115,11 @@ static void ForceThrow_Real( gentity_t *self, qboolean pull )
 					{
 						pushPowerMod = 16;
 					}
+					// VisionJK: the two-handed push shoves harder (force/g_forcemoves.c)
+					if ( !pull && modPowerLevel > otherPushPower && G_ForceMovesTwoHandPush( self ) )
+					{
+						pushPowerMod = (int)( pushPowerMod * 1.6f ) + 100;
+					}
 
 					//fullbody push effect
 					push_list[x]->client->pushEffectTime = level.time + 600;
@@ -4105,6 +4139,27 @@ static void ForceThrow_Real( gentity_t *self, qboolean pull )
 					else
 					{
 						push_list[x]->client->ps.velocity[2] = pushDir[2]*pushPowerMod;
+					}
+
+					// VisionJK: who a two-handed push or one of level 3 sends away is knocked down by the first and hurt by
+					// a wall he hits hard (force/g_forcemoves.c)
+					if ( G_ForceMovesOn() && !pull && modPowerLevel > otherPushPower )
+					{
+						if ( G_ForceMovesTwoHandPush( self ) )
+						{
+							if ( BG_KnockDownable( &push_list[x]->client->ps ) )
+							{
+								push_list[x]->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+								push_list[x]->client->ps.forceHandExtendTime = level.time + 1100;
+								push_list[x]->client->ps.forceDodgeAnim = 0;
+								push_list[x]->client->ps.quickerGetup = qfalse;
+							}
+							G_ForceMovesFlying( push_list[x], self, 1.0f, 1500 );
+						}
+						else if ( modPowerLevel == FORCE_LEVEL_3 )
+						{
+							G_ForceMovesFlying( push_list[x], self, 0.6f, 1200 );
+						}
 					}
 				}
 			}
@@ -4575,7 +4630,11 @@ void DoGripAction(gentity_t *self, forcePowers_t forcePower)
 
 		gripEnt->client->ps.forceGripChangeMovetype = PM_FLOAT;
 
-		if (gripEnt->client->ps.forceGripMoveInterval < level.time)
+		if ( G_ForceMovesOn() )
+		{ // VisionJK: held in front every frame (force/g_forcemoves.c)
+			G_ForceMovesGrip( self, gripEnt );
+		}
+		else if (gripEnt->client->ps.forceGripMoveInterval < level.time)
 		{
 			float nvLen = 0;
 
@@ -5037,7 +5096,10 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 				if ( JP_FlameActive( self ) )
 					JP_ForceFlame( self );
 				else
+				{
 					ForceShootLightning( self );
+					ForceShootLightningWater( self );
+				}
 				BG_ForcePowerDrain( &self->client->ps, forcePower, 0 );
 				self->client->force.lightningDebounce += FORCE_DEBOUNCE_TIME;
 			}

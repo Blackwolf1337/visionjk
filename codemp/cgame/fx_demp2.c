@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // DEMP2 Weapon
 
 #include "cg_local.h"
+#include "cgame/force/cg_lightning.h"
 
 /*
 ---------------------------
@@ -40,6 +41,8 @@ void FX_DEMP2_ProjectileThink( centity_t *cent, const struct weaponInfo_s *weapo
 	}
 
 	trap->FX_PlayEffectID( cgs.effects.demp2ProjectileEffect, cent->lerpOrigin, forward, -1, -1, qfalse );
+	// VisionJK: small arcs crackle round it
+	CG_LightningOrb( cent->lerpOrigin, cent->currentState.number, 34.0f );
 }
 
 /*
@@ -278,4 +281,7 @@ void FX_DEMP2_AltDetonate( vec3_t org, float size )
 	VectorCopy( org, ex->refEntity.origin );
 
 	ex->color[0] = ex->color[1] = ex->color[2] = 255.0f;
+
+	// VisionJK: bolts out to the walls in its reach
+	CG_LightningBurst( org, size );
 }

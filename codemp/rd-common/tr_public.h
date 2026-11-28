@@ -375,8 +375,10 @@ typedef struct refexport_s {
 		void				(*AddBandLightToScene)					( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
 		// A point light for the scene of this frame with a say in whose shadows it has where the renderer traces the
 		// shadows of the moving lights: shadows 0 the players and the level, 1 none, 2 the players alone, 3 the level
-		// alone. The lights of effects of the level (client/cl_fxlight.cpp). NULL: the renderer has none.
-		void				(*AddShadowLightToScene)				( const vec3_t origin, float radius, float r, float g, float b, int shadows );
+		// alone. The lights of effects of the level (client/cl_fxlight.cpp). owner: the Ghoul2 model (refEntity_t ghoul2)
+		// whose body casts no shadow in it, NULL: none (a light in a body, the aura of a Force power). NULL: the
+		// renderer has none.
+		void				(*AddShadowLightToScene)				( const vec3_t origin, float radius, float r, float g, float b, int shadows, const void *owner );
 		// Somebody stands in the grass of the level at origin, or a push of air goes over it: the surface sprites within
 		// radius lean away from the spot and lie down, by force (0 to 1). Eight a scene; NULL: the renderer has none.
 		void				(*AddGrassPushToScene)					( const vec3_t origin, float radius, float force );

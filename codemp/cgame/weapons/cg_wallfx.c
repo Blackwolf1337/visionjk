@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cgame/cg_local.h"
 #include "cgame/weapons/cg_wallfx.h"
+#include "cgame/force/cg_lightning.h"
 
 #define ARC_PATCHES			8
 #define ARC_MSEC			1000
@@ -78,7 +79,7 @@ static int			nextPatch;
 static shard_t		shards[SHARDS];
 static int			nextShard;
 static shardTrack_t	tracks[SHARD_TRACKS];
-static qhandle_t	coreShader, glowShader, flashShader, flareShader;
+static qhandle_t	flashShader, flareShader;
 
 void CG_WallFxInit( void ) {
 	memset( patches, 0, sizeof( patches ) );
@@ -89,8 +90,6 @@ void CG_WallFxInit( void ) {
 
 void CG_WallFxRegister( void ) {
 	// (all of the game, additive)
-	coreShader = trap->R_RegisterShader( "gfx/misc/whiteLine2" );
-	glowShader = trap->R_RegisterShader( "gfx/misc/blueLine" );
 	flashShader = trap->R_RegisterShader( "gfx/misc/lightningFlash" );
 	flareShader = trap->R_RegisterShader( "gfx/effects/whiteFlare" );
 }
@@ -108,25 +107,6 @@ static qboolean WallFx_Surface( const vec3_t at, const vec3_t normal, qboolean *
 	}
 	*world = (qboolean)( tr.entityNum == ENTITYNUM_WORLD );
 	return qtrue;
-}
-
-static void WallFx_Line( qhandle_t shader, const vec3_t from, const vec3_t to, float radius, const vec3_t color, float level ) {
-	refEntity_t	re;
-	int			i;
-
-	memset( &re, 0, sizeof( re ) );
-	re.reType = RT_LINE;
-	VectorCopy( from, re.origin );
-	VectorCopy( to, re.oldorigin );
-	re.radius = radius;
-	re.customShader = shader;
-	re.shaderTexCoord[0] = re.shaderTexCoord[1] = 1.0f;
-	for ( i = 0; i < 3; i++ ) {
-		re.shaderRGBA[i] = (byte)Com_Clamp( 0.0f, 255.0f, color[i] * level * 255.0f );
-	}
-	re.shaderRGBA[3] = 255;
-	re.renderfx = RF_NOSHADOW;
-	trap->R_AddRefEntityToScene( &re );
 }
 
 static void WallFx_Sprite( qhandle_t shader, const vec3_t at, float radius, const vec3_t color, float level ) {
@@ -188,12 +168,25 @@ static void Arc_Reach( arcPatch_t *patch ) {
 	}
 }
 
-static void WallFx_Arcs( const vec3_t at, const vec3_t normal, qboolean altFire ) {
-	arcPatch_t *patch = &patches[nextPatch];
+static void WallFx_Arcs( const vec3_t hit, const vec3_t hitNormal, qboolean altFire ) {
+	arcPatch_t	*patch = &patches[nextPatch];
+	trace_t		tr;
+	vec3_t		start, end, at, normal;
 
 	nextPatch = ( nextPatch + 1 ) % ARC_PATCHES;
 	patch->birth = cg.time;
 	patch->life = altFire ? ARC_ALT_MSEC : ARC_MSEC;
+	// onto the surface: a shot ends a few units in front of it, and from there Arc_Reach found no surface under its
+	// steps, so the arcs stayed a speck in the middle
+	VectorCopy( hit, at );
+	VectorCopy( hitNormal, normal );
+	VectorMA( hit, 8.0f, hitNormal, start );
+	VectorMA( hit, -16.0f, hitNormal, end );
+	CG_Trace( &tr, start, NULL, NULL, end, ENTITYNUM_NONE, MASK_SOLID );
+	if ( tr.fraction < 1.0f && !tr.startsolid ) {
+		VectorCopy( tr.endpos, at );
+		VectorCopy( tr.plane.normal, normal );
+	}
 	// (off the wall, or the lines that face the view cut into it)
 	VectorMA( at, 1.2f, normal, patch->origin );
 	VectorCopy( normal, patch->normal );
@@ -215,14 +208,16 @@ static void Arc_Point( const arcPatch_t *patch, float r, float a, float lift, ve
 	VectorMA( out, lift, patch->normal, out );
 }
 
+// drawn as the bolts of force lightning (force/cg_lightning.c CG_LightningStrand): white core, blue glow
+#define ARC_SPLIT			4			// pieces between two points of an arc, each moved aside a little: jagged at every size
+
 static void Arc_Draw( const arcPatch_t *patch, int arc, float t, float level ) {
-	static const vec3_t	core = { 0.75f, 0.85f, 1.0f };
-	static const vec3_t	glow = { 0.3f, 0.45f, 1.0f };
+	ribbon_t			r;
+	vec3_t				points[ARC_POINTS];
 	// the same shape until the next step: random from a seed of the patch, the arc and the step
 	int					seed = patch->seed + arc * 7919 + ( cg.time / ARC_STEP_MSEC ) * 104729;
 	float				a0, a1, r0, r1;
-	vec3_t				from, to;
-	int					i;
+	int					i, k;
 
 	if ( Q_random( &seed ) < 0.25f ) {
 		return;		// (out for a moment)
@@ -232,7 +227,7 @@ static void Arc_Draw( const arcPatch_t *patch, int arc, float t, float level ) {
 	a1 = a0 + Q_crandom( &seed ) * 0.9f;
 	r0 = patch->radius * 0.15f * Q_random( &seed );
 	r1 = patch->radius * ( 0.5f + 0.5f * Q_random( &seed ) ) * ( 0.7f + 0.3f * t );
-	Arc_Point( patch, r0, a0, 0.4f, from );
+	Arc_Point( patch, r0, a0, 0.4f, points[0] );
 	for ( i = 1; i < ARC_POINTS; i++ ) {
 		const float f = i / (float)( ARC_POINTS - 1 );
 		float		jag = 0.0f;
@@ -240,11 +235,33 @@ static void Arc_Draw( const arcPatch_t *patch, int arc, float t, float level ) {
 		if ( i < ARC_POINTS - 1 ) {
 			jag = Q_crandom( &seed ) * patch->radius * 0.12f;
 		}
-		Arc_Point( patch, r0 + ( r1 - r0 ) * f + jag * 0.5f, a0 + ( a1 - a0 ) * f + jag / Q_max( 4.0f, r1 ), 0.4f + Q_random( &seed ) * 0.8f, to );
-		WallFx_Line( glowShader, from, to, 2.2f, glow, 0.7f * level );
-		WallFx_Line( coreShader, from, to, 0.55f, core, level );
-		VectorCopy( to, from );
+		Arc_Point( patch, r0 + ( r1 - r0 ) * f + jag * 0.5f, a0 + ( a1 - a0 ) * f + jag / Q_max( 4.0f, r1 ), 0.4f + Q_random( &seed ) * 0.8f, points[i] );
 	}
+	// drawn as the bolts of force lightning (force/cg_lightning.c): white core, blue glow, thinner to its end
+	r.numPoints = ( ARC_POINTS - 1 ) * ARC_SPLIT + 1;
+	r.kind = 0;
+	for ( i = 0; i < ARC_POINTS - 1; i++ ) {
+		const float length = Distance( points[i], points[i + 1] );
+
+		for ( k = 0; k < ARC_SPLIT; k++ ) {
+			const int	n = i * ARC_SPLIT + k;
+			const float	f = k / (float)ARC_SPLIT;
+			vec3_t		*p = &r.p[n];
+
+			VectorSubtract( points[i + 1], points[i], *p );
+			VectorMA( points[i], f, *p, *p );
+			if ( k ) {
+				VectorMA( *p, Q_crandom( &seed ) * length * 0.15f, patch->right, *p );
+				VectorMA( *p, Q_crandom( &seed ) * length * 0.15f, patch->up, *p );
+			}
+		}
+	}
+	VectorCopy( points[ARC_POINTS - 1], r.p[r.numPoints - 1] );
+	for ( i = 0; i < r.numPoints; i++ ) {
+		r.width[i] = 0.55f - 0.35f * i / (float)( r.numPoints - 1 );
+		r.bright[i] = 1.0f;
+	}
+	CG_LightningStrand( &r, Q_min( level * 1.3f, 1.0f ), 1.6f );
 }
 
 static void WallFx_ArcsScene( void ) {
@@ -295,6 +312,7 @@ static void WallFx_ArcsScene( void ) {
 			lights++;
 		}
 	}
+	CG_RibbonFlush();
 }
 
 /*

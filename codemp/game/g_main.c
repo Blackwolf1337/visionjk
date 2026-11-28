@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 
 #include "g_local.h"
+#include "game/force/g_forcemoves.h"
 #include "g_ICARUScb.h"
 #include "g_nav.h"
 #include "game/bg/bg_saga.h"
@@ -218,6 +219,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	WebAdmin_Init();
 	G_VoiceInit( restart ? qtrue : qfalse );
 	G_BoomboxInit( restart ? qtrue : qfalse );
+	G_ForceMovesInit();
 	G_PortalInit();
 
 	G_InitMemory();

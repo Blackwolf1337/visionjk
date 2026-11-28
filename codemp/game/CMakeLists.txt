@@ -295,6 +295,8 @@ set(MPGamePropsFiles
 	"${MPDir}/game/props/bg_props.c"
 	"${MPDir}/game/props/g_blackhole.c"
 	"${MPDir}/game/props/g_props.c"
+	"${MPDir}/game/force/g_forcemoves.c"
+	"${MPDir}/game/force/g_forcemoves.h"
 	"${MPDir}/game/props/g_tools.c"
 	"${MPDir}/game/props/bg_props.h"
 	"${MPDir}/game/props/bg_props_math.h"

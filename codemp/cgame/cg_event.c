@@ -3480,6 +3480,10 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		trap->S_StartSound (NULL, es->owner, CHAN_AUTO, cgs.media.drainSound );
 		cg_entities[es->owner].teamPowerEffectTime = cg.time + 1000;
 		cg_entities[es->owner].teamPowerType = 2;
+		// VisionJK: the one drained sees it (screenfx/cg_screenfx.c)
+		if ( cg.snap && es->owner == cg.snap->ps.clientNum && v_fxForce.integer ) {
+			CG_ScreenFxDrained();
+		}
 		break;
 
 	case EV_GIB_PLAYER:

@@ -387,7 +387,7 @@ void CL_FxLight_AddToScene( void ) {
 		}
 		VectorMA( s->origin, e->offset, s->dir, place );
 		if ( re->ext.AddShadowLightToScene ) {
-			re->ext.AddShadowLightToScene( place, e->radius * flicker, e->color[0] * fade, e->color[1] * fade, e->color[2] * fade, e->shadows );
+			re->ext.AddShadowLightToScene( place, e->radius * flicker, e->color[0] * fade, e->color[1] * fade, e->color[2] * fade, e->shadows, NULL );
 		} else {
 			re->AddLightToScene( place, e->radius * flicker, e->color[0] * fade, e->color[1] * fade, e->color[2] * fade );
 		}

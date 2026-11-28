@@ -197,6 +197,9 @@ static struct {
 	float				tinnitus;		// and v_tinnitus
 	float				dream;			// and v_dreamReverb
 	float				rage, rageRecovery, absorb, protect, speed, sight;	// the Force looks, 0 to 1
+	float				choke;			// held by somebody's Force Grip, 0 to 1
+	float				drained;		// somebody's Force Drain takes from us, 0 to 1
+	int					drainedUntil;	// (the game tells it by EV_FORCE_DRAINED, about every 400 ms while it lasts)
 	fxRipple_t			ripples[FX_RIPPLES];
 	int					nextRipple;
 	int					pushAnim[MAX_GENTITIES];	// the torso animation of that player the frame before
@@ -373,6 +376,11 @@ void CG_ScreenFxWeaponBlast( int weapon, qboolean altFire, const vec3_t origin )
 
 // A ring of bent air at origin for this frame, radius and width units, strength 0 to 1: the pressure of a charged shot
 // or of the beam of the concussion rifle (weapons/cg_airring.c). With the rings of the explosions (v_fxBlast).
+// somebody's Force Drain took from the player we view (EV_FORCE_DRAINED)
+void CG_ScreenFxDrained( void ) {
+	sfx.drainedUntil = cg.time + 600;
+}
+
 void CG_ScreenFxRing( const vec3_t origin, float radius, float width, float strength ) {
 	screenFxSource_t	*src;
 	float				frac[2], depth;
@@ -1257,6 +1265,9 @@ static void CG_ScreenFxForce( void ) {
 	sfx.protect = CG_ScreenFxEase( sfx.protect, (qboolean)( own && ( active & ( 1 << FP_PROTECT ) ) ) );
 	sfx.speed = CG_ScreenFxEase( sfx.speed, (qboolean)( own && ( active & ( 1 << FP_SPEED ) ) ) );
 	sfx.sight = CG_ScreenFxEase( sfx.sight, (qboolean)( own && ( active & ( 1 << FP_SEE ) ) ) );
+	// (the hand of the game at the throat: HANDEXTEND_CHOKE, the move code plays the choke then)
+	sfx.choke = CG_ScreenFxEase( sfx.choke, (qboolean)( own && cg.predictedPlayerState.forceHandExtend == HANDEXTEND_CHOKE ) );
+	sfx.drained = CG_ScreenFxEase( sfx.drained, (qboolean)( own && cg.time < sfx.drainedUntil ) );
 
 	// a hit on the shield of protect, the Force taken in by absorb
 	if ( ( active & ( 1 << FP_PROTECT ) ) && cg.damageTime > sfx.protectHitTime && cg.damageTime <= cg.time ) {
@@ -1322,6 +1333,9 @@ static void CG_ScreenFxMuffle( void ) {
 
 	muffle = Q_max( muffle, sfx.water * 0.85f );
 	muffle = Q_max( muffle, sfx.sight * 0.35f );
+	// Speed: the world goes by dull, a grip at the throat drowns it out more (issue #19)
+	muffle = Q_max( muffle, sfx.speed * 0.45f );
+	muffle = Q_max( muffle, sfx.choke * 0.7f );
 	if ( sfx.deaf > 0.0f && cg.time >= sfx.deafTime && cg.time - sfx.deafTime < DEAF_MSEC ) {
 		const float left = 1.0f - ( cg.time - sfx.deafTime ) / (float)DEAF_MSEC;
 
@@ -1461,6 +1475,20 @@ void CG_ScreenFxScene( void ) {
 	}
 	CG_ScreenFxRim( &fx, 0.35f, 0.9f, 0.45f, 0.15f * sfx.protect );
 	fx.protect = sfx.protect;
+	// held by a grip: the edges go dark and close in with every gasp
+	if ( sfx.choke > 0.0f ) {
+		const float gasp = 0.5f + 0.5f * sinf( cg.time * 0.006f );
+
+		CG_ScreenFxRim( &fx, 0.0f, 0.0f, 0.0f, sfx.choke * ( 0.6f + 0.2f * gasp ) );
+		fx.desaturate = Q_max( fx.desaturate, 0.3f * sfx.choke );
+	}
+	// drained: the colour runs out of the picture and its edges beat dark red, as a pulse that weakens
+	if ( sfx.drained > 0.0f ) {
+		const float beat = powf( 0.5f + 0.5f * sinf( cg.time * 0.009f ), 3.0f );
+
+		CG_ScreenFxRim( &fx, 0.35f, 0.0f, 0.04f, sfx.drained * ( 0.3f + 0.25f * beat ) );
+		fx.desaturate = Q_max( fx.desaturate, 0.45f * sfx.drained );
+	}
 	fx.radialBlur = 0.45f * sfx.speed;
 	fx.sight = sfx.sight;
 	// how far the picture moved on the view as the eye turned since the frame before: turned left, the level moves
