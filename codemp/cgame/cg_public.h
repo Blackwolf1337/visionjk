@@ -894,6 +894,12 @@ typedef struct cgameImport_s {
 		// none. Between R_ClearScene and R_RenderScene: a portal of the portal gun (portalView_t, rd-common/tr_types.h),
 		// drawn with the view through it from its partner.
 		void			(*R_AddPortal)							( const portalView_t *portal );
+		// Only where the ROM cvar v_cgameShadowLight is 1, an older engine ends this table before; NULL: the renderer
+		// has none. A point light like R_AddLightToScene with a say in its shadows: 0 the players and the level, 1 none
+		// (it takes none of the few places for lights with shadows), 2 the players alone, 3 the level alone; owner the
+		// Ghoul2 model (cent->ghoul2) whose body casts no shadow in it, NULL: none (cgame/force/cg_forceaura.c: the light
+		// of an aura sits in the body, which would block it).
+		void			(*R_AddShadowLight)						( const vec3_t origin, float radius, float r, float g, float b, int shadows, const void *owner );
 	} ext;
 } cgameImport_t;
 

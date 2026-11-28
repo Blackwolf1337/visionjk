@@ -120,6 +120,10 @@ Not from JA+ and not from JKAdmin.
 #define PHYSGUN_NEAR		48.0f		//	the point it holds the prop at is never closer than this,
 #define PHYSGUN_STEP		0.1f		//	and a press of +button14 or +button15 moves it by this part of the distance,
 #define PHYSGUN_MIN_STEP	16.0f		//	by this at least
+#define GRIP_REACH			256.0f		// Force Grip takes a prop from this far, more with every level of it (GRIP_REACH_LEVEL),
+#define GRIP_REACH_LEVEL	128.0f
+#define GRIP_LIFT			24.0f		//	lifts it that far above the line of his view, and its radius,
+#define GRIP_DRAIN			10.0f		//	and costs this many force points a second at level 1, 2 less a level
 #define GRAV_REACH			384.0f		// the gravity gun (the concussion rifle after amsandbox): it takes a prop from this far,
 #define GRAV_MAX_MASS		25.0f		//	none heavier than this,
 #define GRAV_HOLD			64.0f		//	and holds it that far in front of the eye, further for a large one,
@@ -217,6 +221,9 @@ static float	shoveScale[MAX_CLIENTS];	//	and that much of his speed is left
 static qboolean	gunOn[MAX_CLIENTS];			// he has the sandbox (amsandbox): physgun, toolgun, gravity gun
 static int		gunGave[MAX_CLIENTS];		// the weapons amsandbox gave him that he did not have, taken back after it
 static qboolean	gravHold[MAX_CLIENTS];		// what is in his beam is in the gravity gun, not in the physgun
+static qboolean	gripHold[MAX_CLIENTS];		//	or held by his Force Grip (G_PropForceGrip): no beam, no sandbox
+static float	gripDrain[MAX_CLIENTS];		//	the force points the grip owes, below 1
+static qboolean	gripWait[MAX_CLIENTS];		//	he pushed away what he held: no new grip before he lets go of the button
 static int		waveTime[MAX_CLIENTS];		// no shockwave of the gravity gun before
 static gentity_t	*gunProp[MAX_CLIENTS];	// the prop or the player in its beam
 static gentity_t	*gunBeam[MAX_CLIENTS];	// the entity that tells the clients about the beam
@@ -1062,8 +1069,22 @@ static qboolean Prop_GravOK( const gentity_t *ent ) {
 	return Prop_SandboxWeapon( ent, WP_CONCUSSION );
 }
 
-// does the one who holds a prop still hold it: the grab button, attack with the physgun, the gravity gun in hand
+// he still holds his Force Grip: its own button, or the force button with grip selected, and force left for it
+static qboolean Prop_GripOK( const gentity_t *ent ) {
+	const gclient_t *client = ent->client;
+	const int		buttons = client->pers.cmd.buttons;
+
+	if ( !Prop_PlayerOK( ent ) || client->ps.fd.forcePower <= 0 || client->ps.fd.forcePowerLevel[FP_GRIP] < FORCE_LEVEL_1 )
+		return qfalse;
+	return ( (buttons & BUTTON_FORCEGRIP) || ( (buttons & BUTTON_FORCEPOWER) && client->ps.fd.forcePowerSelected == FP_GRIP ) )
+		? qtrue : qfalse;
+}
+
+// does the one who holds a prop still hold it: the grab button, attack with the physgun, the gravity gun in hand,
+// his Force Grip
 static qboolean Prop_Held( const prop_t *p ) {
+	if ( p->gun && p->holder->s.number < MAX_CLIENTS && gripHold[p->holder->s.number] )
+		return Prop_GripOK( p->holder );
 	if ( p->gun && p->holder->s.number < MAX_CLIENTS && gravHold[p->holder->s.number] )
 		return Prop_GravOK( p->holder );
 	if ( p->gun )
@@ -1315,9 +1336,24 @@ static void Prop_GunFrame( int n ) {
 	if ( prop && ( ( !Prop_Is( prop ) && !prop->client ) || Prop_State( prop )->holder != ent || !Prop_State( prop )->gun ) )
 		prop = gunProp[n] = NULL;
 	if ( !prop )
-		gravHold[n] = qfalse;
+		gravHold[n] = gripHold[n] = qfalse;
 
-	if ( Prop_GunOK( ent ) && !gravHold[n] ) {
+	if ( gripWait[n] && ( !ent->inuse || !ent->client || !Prop_GripOK( ent ) ) )
+		gripWait[n] = qfalse;
+	// Force Grip: it costs force while it holds, and his hand stays out
+	if ( gripHold[n] ) {
+		gclient_t *client = ent->client;
+
+		gripDrain[n] += Q_max( 2.0f, GRIP_DRAIN - 2.0f * ( client->ps.fd.forcePowerLevel[FP_GRIP] - 1 ) ) * ( level.time - level.previousTime ) * 0.001f;
+		if ( gripDrain[n] >= 1.0f ) {
+			client->ps.fd.forcePower = Q_max( 0, client->ps.fd.forcePower - (int)gripDrain[n] );
+			gripDrain[n] -= (int)gripDrain[n];
+		}
+		client->ps.forceHandExtend = HANDEXTEND_FORCE_HOLD;
+		client->ps.forceHandExtendTime = level.time + 200;
+	}
+
+	if ( Prop_GunOK( ent ) && !gravHold[n] && !gripHold[n] ) {
 		if ( !prop && (pressed & BUTTON_ATTACK) )
 			Prop_GunTake( ent );
 		// a player is not frozen
@@ -1342,7 +1378,7 @@ static void Prop_GunFrame( int n ) {
 
 	// The beam: an entity that names its two ends, the cgame of the port draws a line between them. The entities
 	// of a map that is started again are gone without a word, so the one that is remembered is looked at first.
-	prop = gunProp[n];
+	prop = gripHold[n] ? NULL : gunProp[n];
 	if ( beam && ( !beam->inuse || beam->s.eType != ET_INVISIBLE || beam->s.generic1 != PROP_BEAM || beam->s.otherEntityNum != n ) )
 		beam = gunBeam[n] = NULL;
 	if ( prop ) {
@@ -3125,6 +3161,66 @@ static void prop_use( gentity_t *self, gentity_t *other, gentity_t *activator ) 
 
 /*
 =================
+G_PropForceGrip
+
+From ForceGrip, when its trace found no player: the prop he looks at within the reach of his level comes up into
+the air in front of him and stays there while he holds the grip, at the distance it was taken at; letting go drops
+it, a push throws it (G_PropForceThrow). Level 1 lifts a cube, level 3 a large crate; a frozen one stays, and so
+does one somebody else holds. Every client sees it, it is the prop that moves.
+=================
+*/
+void G_PropForceGrip( gentity_t *self ) {
+	static const float	maxMass[NUM_FORCE_POWER_LEVELS] = { 0.0f, 8.0f, 20.0f, 60.0f };
+	const int			n = self->s.number;
+	const int			power = self->client->ps.fd.forcePowerLevel[FP_GRIP];
+	const float			reach = GRIP_REACH + GRIP_REACH_LEVEL * power;
+	gentity_t			*prop;
+	prop_t				*p;
+	vec3_t				eye;
+	trace_t				tr;
+
+	if ( n >= MAX_CLIENTS || gunProp[n] || gripWait[n] || power < FORCE_LEVEL_1 || power >= NUM_FORCE_POWER_LEVELS || !Prop_GripOK( self ) )
+		return;
+	if ( !( prop = Prop_GunAim( self, reach, &tr ) ) || !Prop_Is( prop ) )
+		return;
+	p = Prop_State( prop );
+	if ( p->holder || p->frozen || prop->mass > maxMass[power] )
+		return;
+	VectorCopy( self->client->ps.origin, eye );
+	eye[2] += self->client->ps.viewheight;
+	p->holder = self;
+	p->gun = qtrue;
+	VectorClear( p->grab );
+	VectorClear( p->gunSpin );
+	VectorClear( p->gunOffset );
+	p->gunOffset[2] = GRIP_LIFT + prop->radius;
+	p->gunDist = Com_Clamp( GRAV_HOLD + prop->radius, reach, Distance( eye, prop->r.currentOrigin ) );
+	p->gunYaw = self->client->ps.viewangles[YAW];
+	if ( !p->box ) {
+		vec3_t angles;
+
+		BG_EvaluateTrajectory( &prop->s.apos, level.time, angles );
+		AnglesToAxis( angles, p->axis );
+	}
+	VectorClear( p->spin );
+	Prop_GunHand( self, p, p->hand );
+	gunProp[n] = prop;
+	gravHold[n] = qfalse;
+	gripHold[n] = qtrue;
+	gripDrain[n] = 0.0f;
+	Prop_Wake( prop );
+	G_Sound( self, CHAN_AUTO, G_SoundIndex( "sound/weapons/force/grip.mp3" ) );
+}
+
+// whether he holds a prop with his Force Grip (ForceThrow: his hand is out for it, a push may still throw it)
+qboolean G_PropGripHeld( const gentity_t *ent ) {
+	const int n = ent->s.number;
+
+	return ( n >= 0 && n < MAX_CLIENTS && gripHold[n] && gunProp[n] ) ? qtrue : qfalse;
+}
+
+/*
+=================
 G_PropForceThrow
 
 From ForceThrow: every ball and cube in front of the player and in his sight is pushed along his view or
@@ -3160,8 +3256,12 @@ void G_PropForceThrow( gentity_t *self, qboolean pull ) {
 		if ( tr.fraction < 1.0f )
 			continue;
 
-		if ( p->holder == self )
+		if ( p->holder == self ) {
+			// (held by his grip: the push throws it, and the grip that is still held does not take it back)
+			if ( p->gun && gripHold[self->s.number] )
+				gripWait[self->s.number] = qtrue;
 			Prop_Release( prop );
+		}
 		Prop_Thrown( p, self );
 
 		// the cube is taken a bit above its middle, that makes it tumble

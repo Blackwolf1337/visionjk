@@ -351,3 +351,166 @@ gfx/vision/leaves
 		rgbGen vertex
 	}
 }
+
+// Force lightning (codemp/cgame/force/cg_lightning.c and cg_burnmark.c, pictures by tools/textures/make_burn_lines.py).
+// The bolts: ribbons that face the eye, s across them, coloured by the vertices, added, bloom. Sorted after the
+// glass of the level (blended shaders without a sort come before, in the order they were loaded): thick glass draws
+// what was drawn before it bent and blurred over it, also what lies in front of it (tr_main.cpp R_SortGlass).
+gfx/vision/arc_core
+{
+	cull none
+	sort additive
+	nopicmip
+	surfaceparm	nomarks
+	surfaceparm	trans
+	{
+		clampmap gfx/vision/arc_core
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+gfx/vision/arc_glow
+{
+	cull none
+	sort additive
+	nopicmip
+	surfaceparm	nomarks
+	surfaceparm	trans
+	{
+		clampmap gfx/vision/arc_glow
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+// The temper colours a strike leaves on steel and the soot of its figure: premultiplied as the char of the saber
+// scars, the wall times rgb + 1 - alpha, so the vertices (rgb and alpha together) fade them to the surface.
+gfx/vision/heattint
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/heattint
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/burnline1
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnline1
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/burnline2
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnline2
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/burnline3
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnline3
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/burnline4
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnline4
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+// the figure while it is hot: added, coloured by the vertices as it cools
+gfx/vision/burnglow1
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnglow1
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+gfx/vision/burnglow2
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnglow2
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+gfx/vision/burnglow3
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnglow3
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+gfx/vision/burnglow4
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/burnglow4
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}

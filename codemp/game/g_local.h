@@ -1365,6 +1365,8 @@ void G_PropRemove( gentity_t *prop );
 void G_PropGunCmd( gentity_t *ent, const usercmd_t *ucmd );
 void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
+void G_PropForceGrip( gentity_t *self );
+qboolean G_PropGripHeld( const gentity_t *ent );
 float G_PropPlayerSpeed( const gentity_t *ent );
 
 // g_schizo.c: hallucinations only one player gets

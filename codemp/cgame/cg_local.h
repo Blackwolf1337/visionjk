@@ -1818,6 +1818,7 @@ void		CG_ScreenFxBlast( const vec3_t origin, float radius );
 void		CG_ScreenFxWeaponBlast( int weapon, qboolean altFire, const vec3_t origin );
 void		CG_ScreenFxRing( const vec3_t origin, float radius, float width, float strength );
 void		CG_ScreenFxEmit( int id, const vec3_t origin, const vec3_t dir, float radius, float strength, float smoke );
+void		CG_ScreenFxDrained( void );
 void		CG_ScreenFxFired( int weapon );
 qboolean	CG_ScreenFxHitDrawn( void );
 qboolean	CG_ScreenFxWaterDrawn( void );
@@ -2395,6 +2396,8 @@ void	CG_ImpactMark( qhandle_t markShader,
 					float radius, qboolean temporary );
 void	CG_ImpactMarkFrame( qhandle_t markShader, const vec3_t origin, const vec3_t dir, float orientation, const vec3_t light,
 					float radius, const float *part );
+int		CG_MarkPolys( const vec3_t origin, const vec3_t dir, float orientation, float radius, polyVert_t *verts, int maxVerts,
+					int *counts, int maxPolys );
 
 //
 // cg_localents.c

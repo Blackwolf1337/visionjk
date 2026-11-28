@@ -169,10 +169,12 @@ typedef struct vkRtLight_s {		// a moving light whose players' shadows are trace
 												// level has its light from (a fire), rtshadow.frag GridShadow
 	vec3_t						start, end;		// a point light has both at its place
 	float						range;			// how far it reaches from that point or tube
+	const void					*owner;			// dlight_t owner: the Ghoul2 model that casts no shadow in it, NULL: none
 } vkRtLight_t;
 
 typedef struct vkCaster_s {
 	int							entityNum;
+	const void					*ghoul2;		// refEntity_t ghoul2 of it, for the owner of a light (dlight_t owner)
 	vec3_t						origin;
 	vec3_t						axis[3];
 	int							numSurfaces;
@@ -1598,6 +1600,7 @@ static void VK_RT_CasterSurface( const trRefEntity_t *ent, CBoneCache *bones, co
 		}
 		caster = &rt.casters[rt.numCasters++];
 		caster->entityNum = entityNum;
+		caster->ghoul2 = ent->e.ghoul2;
 		caster->numSurfaces = 0;
 		VectorCopy( ent->e.origin, caster->origin );
 		VectorCopy( ent->e.axis[0], caster->axis[0] );
@@ -2652,6 +2655,11 @@ tiles into rows (the rt globals of the frame). After
 VK_RT_SkinCasters and VK_RT_PickLights. No target is begun before and after.
 ===============
 */
+// the body that carries the light casts no shadow in it (dlight_t owner: the aura of a Force power sits in it)
+static qboolean VK_SM_Owner( const vkRtLight_t *light, int c ) {
+	return (qboolean)( light->owner && rt.casters[c].ghoul2 == light->owner );
+}
+
 static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 	VkRenderingAttachmentInfo	depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingInfo				info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
@@ -2742,7 +2750,7 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 				for ( int c = 0; c < rt.numCasters; c++ ) {
 					const float away = Distance( rt.casters[c].origin, center );
 
-					if ( away < nearest ) {
+					if ( away < nearest && !VK_SM_Owner( light, c ) ) {
 						nearest = away;
 						own = c;
 					}
@@ -2759,7 +2767,7 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 				memcpy( rows[VK_SM_FIRST_ROW + tile * 4], view, sizeof( view ) );
 				VK_SM_Tile( cmd, tile );
 				for ( int c = 0; c < rt.numCasters; c++ ) {
-					if ( c != own && Distance( rt.casters[c].origin, center ) < zFar ) {
+					if ( c != own && !VK_SM_Owner( light, c ) && Distance( rt.casters[c].origin, center ) < zFar ) {
 						VK_SM_DrawCaster( cmd, c, view );
 					}
 				}
@@ -2861,6 +2869,7 @@ static void VK_RT_PickLights( void ) {
 		light.shadowMode = dl->shadowMode & DLIGHT_SHADOW_MODE;
 		light.fixed = (qboolean)( ( dl->shadowMode & DLIGHT_SHADOW_FIRST ) && light.shadowMode == 0 );
 		light.tube = (qboolean)( dl->lineRange > 0.0f );
+		light.owner = dl->owner;
 		if ( light.tube ) {
 			VectorCopy( dl->lineStart, light.start );
 			VectorCopy( dl->lineEnd, light.end );

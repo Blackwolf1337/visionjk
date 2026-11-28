@@ -435,6 +435,7 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	dl->lineRange = 0.0f;
 	dl->bandWidth = 0.0f;
 	dl->shadowMode = 0;
+	dl->owner = NULL;
 }
 
 /*
@@ -443,16 +444,18 @@ RE_AddShadowLightToScene
 
 VisionJK: a point light with a say in whose shadows it has (ext.AddShadowLightToScene): shadows 0 the players and the
 level, 1 none (it never takes one of the few places for lights with shadows), 2 the players alone, 3 the level alone.
-The lights of effects of the level, set in the material tool of the client (cl_fxlight.cpp).
+The lights of effects of the level, set in the material tool of the client (cl_fxlight.cpp). owner: the Ghoul2 model
+(refEntity_t ghoul2) whose body casts no shadow in it, NULL: none (the aura of a Force power, in that body).
 =====================
 */
-void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float g, float b, int shadows ) {
+void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float g, float b, int shadows, const void *owner ) {
 	const int before = r_numdlights;
 
 	RE_AddDynamicLightToScene( origin, radius, r, g, b, qfalse );
 	if ( r_numdlights > before ) {
 		const int mode = Com_Clampi( 0, 3, shadows );
 
+		backEndData->dlights[before].owner = owner;
 		backEndData->dlights[before].shadowMode = mode | ( mode != 1 ? DLIGHT_SHADOW_FIRST : 0 );
 	}
 }
@@ -486,6 +489,7 @@ void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, 
 	VectorCopy( end, dl->lineEnd );
 	dl->bandWidth = 0.0f;
 	dl->shadowMode = 0;
+	dl->owner = NULL;
 }
 
 /*
@@ -514,6 +518,7 @@ void RE_AddBandLightToScene( const vec3_t origin, const vec3_t axis, float width
 	dl->lineRange = 0.0f;
 	dl->bandWidth = Com_Clamp( 0.02f, 1.0f, width );
 	dl->shadowMode = 0;
+	dl->owner = NULL;
 	VectorCopy( dir, dl->bandAxis );
 }
 

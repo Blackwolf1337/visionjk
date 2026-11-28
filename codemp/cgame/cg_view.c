@@ -33,6 +33,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/weapons/cg_boltlight.h"
 #include "cgame/weapons/cg_explosion.h"
 #include "cgame/level/cg_doors.h"
+#include "cgame/force/cg_lightning.h"
+#include "cgame/force/cg_drain.h"
 #include "cgame/level/cg_gust.h"
 #include "cgame/level/cg_ripples.h"
 #include "cgame/level/cg_smoke.h"
@@ -2778,6 +2780,10 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_MotesFrame();
 		// heavy doors that open (level/cg_doors.c)
 		CG_DoorsFrame();
+		// the arcs that stay on metal after force lightning, water that lit up (force/cg_lightning.c)
+		CG_LightningFrame();
+		// a drain that ended fades (force/cg_drain.c)
+		CG_DrainFrame();
 		// rings on the water of the level (level/cg_ripples.c)
 		CG_RipplesFrame();
 		// smoke that hangs in the room and moves with pushes, blasts and blades (level/cg_smoke.c)

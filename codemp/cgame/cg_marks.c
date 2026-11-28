@@ -128,40 +128,29 @@ passed to the renderer.
 #define	MAX_MARK_FRAGMENTS	128
 #define	MAX_MARK_POINTS		384
 
-// part: the part of the picture of the shader the mark shows (left, top, width, height, 0 to 1), NULL all of it
-static void CG_ImpactMarkPart( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
-				   float orientation, float red, float green, float blue, float alpha,
-				   qboolean alphaFade, float radius, qboolean temporary, const float *part ) {
+/*
+=================
+CG_MarkPolys
+
+VisionJK: the polygons a square mark of radius round origin on the plane with normal dir, turned by orientation,
+lays onto the level, with the texture coordinates of the whole picture (0 to 1); colours left 0. counts[i]: the
+corners of polygon i, one after the other in verts. Returns how many polygons, none past maxPolys or maxVerts. For
+one who keeps a mark and colours it each frame himself (force/cg_burnmark.c).
+=================
+*/
+int CG_MarkPolys( const vec3_t origin, const vec3_t dir, float orientation, float radius, polyVert_t *verts, int maxVerts,
+				  int *counts, int maxPolys ) {
 	matrix3_t		axis;
 	float			texCoordScale;
 	vec3_t			originalPoints[4];
-	byte			colors[4];
-	int				i, j, k;
-	int				numFragments;
+	int				i, j, numFragments, numPolys = 0, numVerts = 0;
 	markFragment_t	markFragments[MAX_MARK_FRAGMENTS], *mf;
 	vec3_t			markPoints[MAX_MARK_POINTS];
 	vec3_t			projection;
 
-	assert(markShader);
-
-	if ( !cg_marks.integer ) {
-		return;
-	}
-	else if (cg_marks.integer == 2)
-	{
-		trap->R_AddDecalToScene(markShader, origin, dir, orientation, red, green, blue, alpha,
-			alphaFade, radius, temporary);
-		return;
-	}
-
 	if ( radius <= 0 ) {
-		trap->Error( ERR_DROP, "CG_ImpactMark called with <= 0 radius" );
+		return 0;
 	}
-
-	//if ( markTotal >= MAX_MARK_POLYS ) {
-	//	return;
-	//}
-
 	// create the texture axis
 	VectorNormalize2( dir, axis[0] );
 	PerpendicularVector( axis[1], axis[0] );
@@ -182,40 +171,77 @@ static void CG_ImpactMarkPart( qhandle_t markShader, const vec3_t origin, const 
 	VectorScale( dir, -20, projection );
 	numFragments = trap->R_MarkFragments( 4, (const vec3_t *) originalPoints, projection, MAX_MARK_POINTS, markPoints[0], MAX_MARK_FRAGMENTS, markFragments );
 
+	for ( i = 0, mf = markFragments ; i < numFragments && numPolys < maxPolys ; i++, mf++ ) {
+		// we have an upper limit on the complexity of polygons
+		const int count = Q_min( mf->numPoints, MAX_VERTS_ON_POLY );
+
+		if ( numVerts + count > maxVerts ) {
+			break;
+		}
+		for ( j = 0 ; j < count ; j++ ) {
+			polyVert_t	*v = &verts[numVerts + j];
+			vec3_t		delta;
+
+			VectorCopy( markPoints[mf->firstPoint + j], v->xyz );
+			VectorSubtract( v->xyz, origin, delta );
+			v->st[0] = 0.5 + DotProduct( delta, axis[1] ) * texCoordScale;
+			v->st[1] = 0.5 + DotProduct( delta, axis[2] ) * texCoordScale;
+			v->modulate[0] = v->modulate[1] = v->modulate[2] = v->modulate[3] = 0;
+		}
+		counts[numPolys++] = count;
+		numVerts += count;
+	}
+	return numPolys;
+}
+
+// part: the part of the picture of the shader the mark shows (left, top, width, height, 0 to 1), NULL all of it
+static void CG_ImpactMarkPart( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
+				   float orientation, float red, float green, float blue, float alpha,
+				   qboolean alphaFade, float radius, qboolean temporary, const float *part ) {
+	static polyVert_t	verts[MAX_MARK_POINTS];
+	int					counts[MAX_MARK_FRAGMENTS];
+	byte				colors[4];
+	int					i, j, k, numPolys, first;
+
+	assert(markShader);
+
+	if ( !cg_marks.integer ) {
+		return;
+	}
+	else if (cg_marks.integer == 2)
+	{
+		trap->R_AddDecalToScene(markShader, origin, dir, orientation, red, green, blue, alpha,
+			alphaFade, radius, temporary);
+		return;
+	}
+
+	if ( radius <= 0 ) {
+		trap->Error( ERR_DROP, "CG_ImpactMark called with <= 0 radius" );
+	}
+
+	numPolys = CG_MarkPolys( origin, dir, orientation, radius, verts, MAX_MARK_POINTS, counts, MAX_MARK_FRAGMENTS );
+
 	colors[0] = red * 255;
 	colors[1] = green * 255;
 	colors[2] = blue * 255;
 	colors[3] = alpha * 255;
 
-	for ( i = 0, mf = markFragments ; i < numFragments ; i++, mf++ ) {
-		polyVert_t	*v;
-		polyVert_t	verts[MAX_VERTS_ON_POLY];
+	for ( i = 0, first = 0 ; i < numPolys ; first += counts[i], i++ ) {
+		polyVert_t	*v = &verts[first];
 		markPoly_t	*mark;
 
-		// we have an upper limit on the complexity of polygons
-		// that we store persistantly
-		if ( mf->numPoints > MAX_VERTS_ON_POLY ) {
-			mf->numPoints = MAX_VERTS_ON_POLY;
-		}
-		for ( j = 0, v = verts ; j < mf->numPoints ; j++, v++ ) {
-			vec3_t		delta;
-
-			VectorCopy( markPoints[mf->firstPoint + j], v->xyz );
-
-			VectorSubtract( v->xyz, origin, delta );
-			v->st[0] = 0.5 + DotProduct( delta, axis[1] ) * texCoordScale;
-			v->st[1] = 0.5 + DotProduct( delta, axis[2] ) * texCoordScale;
+		for ( j = 0 ; j < counts[i] ; j++ ) {
 			if ( part ) {
-				v->st[0] = part[0] + v->st[0] * part[2];
-				v->st[1] = part[1] + v->st[1] * part[3];
+				v[j].st[0] = part[0] + v[j].st[0] * part[2];
+				v[j].st[1] = part[1] + v[j].st[1] * part[3];
 			}
 			for ( k=0; k<4; k++ )
-				v->modulate[k] = colors[k];
+				v[j].modulate[k] = colors[k];
 		}
 
 		// if it is a temporary (shadow) mark, add it immediately and forget about it
 		if ( temporary ) {
-			trap->R_AddPolysToScene( markShader, mf->numPoints, verts, 1 );
+			trap->R_AddPolysToScene( markShader, counts[i], v, 1 );
 			continue;
 		}
 
@@ -224,16 +250,15 @@ static void CG_ImpactMarkPart( qhandle_t markShader, const vec3_t origin, const 
 		mark->time = cg.time;
 		mark->alphaFade = alphaFade;
 		mark->markShader = markShader;
-		mark->poly.numVerts = mf->numPoints;
+		mark->poly.numVerts = counts[i];
 		mark->color[0] = red;
 		mark->color[1] = green;
 		mark->color[2] = blue;
 		mark->color[3] = alpha;
-		memcpy( mark->verts, verts, mf->numPoints * sizeof( verts[0] ) );
+		memcpy( mark->verts, v, counts[i] * sizeof( v[0] ) );
 		markTotal++;
 	}
 }
-
 
 void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 				   float orientation, float red, float green, float blue, float alpha,

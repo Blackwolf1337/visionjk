@@ -139,6 +139,9 @@ typedef struct dlight_s {
 	int				shadowMode;
 #define DLIGHT_SHADOW_MODE		3
 #define DLIGHT_SHADOW_FIRST		16
+	// VisionJK: the Ghoul2 model (refEntity_t ghoul2) whose body casts no shadow in this light, NULL: none. A light in
+	// a body (the aura of a Force power) has the shadows of the level and the other players, not of that body.
+	const void		*owner;
 } dlight_t;
 
 
@@ -1902,7 +1905,7 @@ void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, fl
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 void RE_AddBandLightToScene( const vec3_t origin, const vec3_t axis, float width, float radius, float r, float g, float b );
-void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float g, float b, int shadows );
+void RE_AddShadowLightToScene( const vec3_t origin, float radius, float r, float g, float b, int shadows, const void *owner );
 void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
 void RE_AddGrassPushToScene( const vec3_t origin, float radius, float force );
 void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );

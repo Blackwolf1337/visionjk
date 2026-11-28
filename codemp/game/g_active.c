@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "game/props/bg_props.h"
 #include "game/bg/bg_saga.h"
+#include "game/force/g_forcemoves.h"
 
 extern void Jedi_Cloak( gentity_t *self );
 extern void Jedi_Decloak( gentity_t *self );
@@ -3136,7 +3137,14 @@ void ClientThink_real( gentity_t *ent ) {
 		pmove.portals = portals;
 		pmNumHoles = BG_PortalHolesNear( portals, pmove.numPortals, ent->client->ps.origin, pmHoles, MAX_TRACE_HOLES );
 	}
-	Pmove (&pmove);
+	{
+		vec3_t preMoveVelocity;
+
+		VectorCopy( ent->client->ps.velocity, preMoveVelocity );
+		Pmove (&pmove);
+		// VisionJK: who the Force sent flying and a wall stopped (force/g_forcemoves.c)
+		G_ForceMovesAfterMove( ent, preMoveVelocity );
+	}
 	pmNumHoles = 0;
 
 	if ( clientThinkFromCmd && !isNPC ) {

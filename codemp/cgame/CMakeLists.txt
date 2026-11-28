@@ -281,6 +281,16 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameToysFiles})
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
+	"${MPDir}/cgame/force/cg_burnmark.c"
+	"${MPDir}/cgame/force/cg_drain.c"
+	"${MPDir}/cgame/force/cg_drain.h"
+	"${MPDir}/cgame/force/cg_burnmark.h"
+	"${MPDir}/cgame/force/cg_forceaura.c"
+	"${MPDir}/cgame/force/cg_forceaura.h"
+	"${MPDir}/cgame/force/cg_lightning.c"
+	"${MPDir}/cgame/force/cg_lightning.h"
+	"${MPDir}/cgame/force/cg_ribbon.c"
+	"${MPDir}/cgame/force/cg_ribbon.h"
 	"${MPDir}/cgame/level/cg_doors.c"
 	"${MPDir}/cgame/level/cg_doors.h"
 	"${MPDir}/cgame/level/cg_gust.c"

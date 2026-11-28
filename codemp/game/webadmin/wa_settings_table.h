@@ -362,6 +362,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	// VisionJK
 	{ "vs_afkTime",						WA_CAT_VISIONJK,	WA_SET_INT,		0, 0,	NULL,	0,		"Seconds without a key or a turn after which a player counts as away. 0: never." },
 	{ "vs_sandbox",						WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: every player may use amsandbox (physgun, toolgun, gravity gun). 0: only the admins." },
+	{ "vs_forceMoves",					WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: Force Grip holds players smoothly in front, a push while gripping throws them and a pull drags them down, bare hands push with both, who is sent flying is hurt by walls, lightning shocks everybody in the water it strikes. 0: the stock game." },
 	{ "vs_portalGun",					WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: players an admin gave the portal gun (amportalgun) shoot portals with the old bryar pistol. 0: no portals, the old bryar fires as always." },
 	{ "tay_unlagged",					WA_CAT_VISIONJK,	WA_SET_BITS,	0, 0,	"0=Hitscan weapons|1=Projectiles|2=Force push and pull",	0,		"Lag compensation: the others are moved back to the time of the shooter for these." },
 	{ "tay_unlaggedMax",				WA_CAT_VISIONJK,	WA_SET_INT,		0, 0,	NULL,	0,		"The most milliseconds lag compensation goes back." },

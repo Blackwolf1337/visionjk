@@ -39,6 +39,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/saber/cg_saberbelt.h"
 #include "cgame/weapons/cg_impact.h"
 #include "cgame/level/cg_doors.h"
+#include "cgame/force/cg_lightning.h"
+#include "cgame/force/cg_drain.h"
+#include "cgame/force/cg_forceaura.h"
 #include "cgame/level/cg_gust.h"
 #include "cgame/level/cg_motes.h"
 #include "cgame/level/cg_ripples.h"
@@ -2722,6 +2725,9 @@ Ghoul2 Insert End
 	CG_GustRegister();
 	CG_MotesRegister();
 	CG_DoorsRegister();
+	CG_LightningRegister();
+	CG_DrainRegister();
+	CG_ForceAuraRegister();
 	CG_SmokeRegister();
 	CG_BoltSoundRegister();
 	CG_AirRingsRegister();
@@ -2825,6 +2831,8 @@ Ghoul2 Insert End
 	CG_GustInit();
 	CG_MotesInit();
 	CG_DoorsInit();
+	CG_LightningInit();
+	CG_DrainInit();
 	CG_RipplesInit();
 	CG_SmokeInit();
 	CG_BoltSoundInit();

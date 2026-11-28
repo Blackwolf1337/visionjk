@@ -26,6 +26,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "ui/ui_saberfx.h"
 #include "cgame/saber/cg_saberscar.h"
+#include "cgame/force/cg_lightning.h"
+#include "cgame/force/cg_drain.h"
+#include "cgame/force/cg_forceaura.h"
 #include "cgame/saber/cg_sabersound.h"
 #include "cgame/saber/cg_saberignite.h"
 #include "cgame/saber/cg_saberdrawn.h"
@@ -34,6 +37,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/level/cg_ripples.h"
 #include "ghoul2/G2.h"
 #include "game/bg/bg_saga.h"
+
+// VisionJK: force drain drawn by force/cg_drain.c, from the left hand, from both when the game shows both
+// (BOTH_FORCE_2HANDEDLIGHTNING_HOLD; the game's effect jumped between them at random)
+static qboolean CG_DrainCastPlayer( centity_t *cent, clientInfo_t *ci, const vec3_t dir, int level ) {
+	mdxaBone_t	matrix;
+	vec3_t		left, right;
+
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_lhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+	VectorSet( left, matrix.matrix[0][3], matrix.matrix[1][3], matrix.matrix[2][3] );
+	if ( cent->currentState.torsoAnim != BOTH_FORCE_2HANDEDLIGHTNING_HOLD ) {
+		return CG_DrainCast( cent, left, NULL, dir, level );
+	}
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_rhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+	VectorSet( right, matrix.matrix[0][3], matrix.matrix[1][3], matrix.matrix[2][3] );
+	return CG_DrainCast( cent, left, right, dir, level );
+}
+
 
 extern vmCvar_t	cg_thirdPersonAlpha;
 
@@ -10804,6 +10824,9 @@ void CG_Player( centity_t *cent ) {
 		{// JA+ client plugin: the drain grab
 			trap->FX_PlayEntityEffectID(cgs.effects.jpDrainHand, efOrg, axis, -1, -1, -1, -1);
 		}
+		else if ( CG_DrainCastPlayer( cent, ci, fxDir, realForceLev ) )
+		{// VisionJK: streams of life from the drained into the hand (force/cg_drain.c)
+		}
 		else if ( realForceLev > FORCE_LEVEL_2 )
 		{//arc
 			//trap->FX_PlayEffectID( cgs.effects.forceLightningWide, efOrg, fxDir );
@@ -10832,7 +10855,8 @@ void CG_Player( centity_t *cent ) {
 	{//doing the electrocuting
 		matrix3_t axis;
 		vec3_t tAng, fAng, fxDir;
-		vec3_t efOrg;
+		vec3_t efOrg, rOrg;
+		qboolean twoHands;
 
 		VectorSet( tAng, cent->turAngles[PITCH], cent->turAngles[YAW], cent->turAngles[ROLL] );
 
@@ -10851,6 +10875,18 @@ void CG_Player( centity_t *cent ) {
 		efOrg[1] = lHandMatrix.matrix[1][3];
 		efOrg[2] = lHandMatrix.matrix[2][3];
 
+		// VisionJK: bare hands at level 3 is the two-handed lightning of the game (bg_pmove.c, double damage in
+		// w_force.c): the right hand casts too
+		twoHands = (qboolean)( cent->currentState.weapon == WP_MELEE && cent->currentState.activeForcePass > FORCE_LEVEL_2 );
+		if ( twoHands ) {
+			mdxaBone_t rHandMatrix;
+
+			trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_rhand, &rHandMatrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+			rOrg[0] = rHandMatrix.matrix[0][3];
+			rOrg[1] = rHandMatrix.matrix[1][3];
+			rOrg[2] = rHandMatrix.matrix[2][3];
+		}
+
 		AnglesToAxis( fAng, axis );
 
 		if ( cent->currentState.eFlags & EF_FLAME )
@@ -10860,6 +10896,9 @@ void CG_Player( centity_t *cent ) {
 			trap->FX_PlayEntityEffectID(cgs.effects.jpFlameJet, efOrg, axis, -1, -1, -1, -1);
 			VectorScale( axis[0], 300.0f, flameEnd );
 			CG_ScreenFxEmit( cent->currentState.number * 4 + 2, efOrg, flameEnd, 12.0f, 1.0f, 0.0f );
+		}
+		else if ( CG_LightningCast( cent, efOrg, twoHands ? rOrg : NULL, fxDir, cent->currentState.activeForcePass ) )
+		{// VisionJK: forked bolts that light the level (force/cg_lightning.c), from both hands when the game shows both
 		}
 		else if ( cent->currentState.activeForcePass > FORCE_LEVEL_2 )
 		{//arc
@@ -12336,6 +12375,10 @@ stillDoSaber:
 
 		trap->R_AddRefEntityToScene( &legs );
 	}
+	// VisionJK: the lights of the powers on the body, the grip at the throat (force/cg_forceaura.c)
+	if ( !slicedBody ) {
+		CG_ForceAuraPlayer( cent, ci );
+	}
 	//For now, these two are using the old shield shader. This is just so that you
 	//can tell it apart from the JM/duel shaders, but it's still very obvious.
 	if (!slicedBody && (cent->currentState.forcePowersActive & (1 << FP_PROTECT)))
@@ -12488,6 +12531,9 @@ stillDoSaber:
 	{
 		int	dif = cent->currentState.emplacedOwner - cg.time;
 		vec3_t tempAngles;
+
+		// VisionJK: arcs jump over the body and to the floor (force/cg_lightning.c), fading over the last 500 ms
+		CG_LightningShocked( cent, ci, dif < 500 ? dif / 500.0f : 1.0f );
 
 		if ( dif > 0 && Q_flrand(0.0f, 1.0f) > 0.4f )
 		{
