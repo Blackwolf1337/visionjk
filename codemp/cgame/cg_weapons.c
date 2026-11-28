@@ -191,6 +191,12 @@ static int CG_MapTorsoToWeaponFrame( clientInfo_t *ci, int frame, int animNum ) 
 	}
 #endif
 
+	// VisionJK: each weapon is put away and drawn with a move of its own (weapons/cg_viewweapon.c); the shared dip of the
+	// hands would take it out of view at once and hide that
+	if ( ( animNum == TORSO_DROPWEAP1 || animNum == TORSO_RAISEWEAP1 ) && CG_ViewWeaponOwnSwitch() ) {
+		return 0;
+	}
+
 	switch( animNum )
 	{
 	case TORSO_DROPWEAP1:

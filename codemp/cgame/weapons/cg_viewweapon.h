@@ -18,7 +18,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cg_viewweapon.h -- the weapon in first person kicks back, sways and is lowered at a wall (cg_viewweapon.c, issue #22)
+// cg_viewweapon.h -- the weapon in first person kicks back, sways, is lowered at a wall, put away and drawn
+// (cg_viewweapon.c, issue #22)
 
 #pragma once
 
@@ -27,3 +28,5 @@ void CG_ViewWeaponInit( void );
 void CG_ViewWeaponFired( int weapon, qboolean altFire );
 // once a frame, on the place and angles of the weapon in first person (CG_CalculateWeaponPosition)
 void CG_ViewWeaponMove( vec3_t origin, vec3_t angles );
+// whether the weapon is put away and drawn by its own move here (the frames of the hands then keep still)
+qboolean CG_ViewWeaponOwnSwitch( void );
