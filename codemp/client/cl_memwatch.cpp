@@ -35,7 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the intrusion detection left. The rest is a line in ids.log and a notice. What was there before the first look
 // counts as the start of the game and is not written down, except the strong ones.
 //
-// A crash while on a server: the address of the server is in ids_session of the home folder from the connect to
+// A crash while on a server: the address of the server is in visionjk-data/ids_session of the home folder from the connect to
 // the disconnect. Is it still there at the next start, that start writes the crash down and the next connect to
 // that server is refused once.
 //
@@ -59,7 +59,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MEMW_CHUNK			( 64 * 1024 )
 #define MEMW_CHUNKS			4096		// 256 MB of code at most
 #define MEMW_WEAK_LINES		8			// lines of a weak kind a run
-#define MEMW_SESSION		"ids_session"
+#define MEMW_SESSION		FS_DATAFOLDER "/ids_session"
 
 #if defined(VISIONJK_HOTPATCH) || defined(__SANITIZE_ADDRESS__)
 #define MEMW_DEFAULT		"0"

@@ -9,7 +9,8 @@
 #
 # usage: tools/materials/export.sh [--done] [PROFILE]
 #   --done    only what is done
-#   PROFILE   the mod folder of the profile, default ~/.local/share/visionjk/japlus
+#   PROFILE   the folder with shaders/ and materials/ of the profile, default ~/.local/share/visionjk/visionjk-data/files
+#             (before visionjk-data it was the mod folder)
 set -euo pipefail
 
 done_only=false
@@ -17,7 +18,7 @@ if [ "${1:-}" = "--done" ]; then
 	done_only=true
 	shift
 fi
-profile=${1:-$HOME/.local/share/visionjk/japlus}
+profile=${1:-$HOME/.local/share/visionjk/visionjk-data/files}
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 target=$repo/assets/japlus_client/shaders
 

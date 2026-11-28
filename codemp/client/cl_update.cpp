@@ -83,7 +83,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The changelog of the channel (tools/changelog.py of the website), fetched with the list and kept in the folder of
 // the player for the page "What's new" of the ui (ui/ui_changelog.c). The zip has one of its own version in
 // base/visionjk/changelog.md, which the ui reads when this one is older or missing.
-#define UPDATE_LOG_FILE			"base/visionjk/changelog-fetched.md"
+#define UPDATE_LOG_FILE			FS_DATAGAME "/visionjk/changelog-fetched.md"
 #define UPDATE_MAX_LOG			( 256 * 1024 )
 #define UPDATE_TEXT_MSEC		250		// how often the line on the menu is written anew while files come in
 #define UPDATE_PATH				( MAX_OSPATH + UPD_MAX_PATH + 16 )

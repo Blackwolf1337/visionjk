@@ -345,7 +345,8 @@ static void R_MipMap2( unsigned *in, int inWidth, int inHeight ) {
 
 	outWidth = inWidth >> 1;
 	outHeight = inHeight >> 1;
-	temp = (unsigned int *)Hunk_AllocateTempMemory( outWidth * outHeight * 4 );
+	// (malloc: worker threads make levels too, R_MakeLevels)
+	temp = (unsigned int *)malloc( (size_t)outWidth * outHeight * 4 + 4 );
 
 	inWidthMask = inWidth - 1;
 	inHeightMask = inHeight - 1;
@@ -380,7 +381,7 @@ static void R_MipMap2( unsigned *in, int inWidth, int inHeight ) {
 	}
 
 	memcpy( in, temp, outWidth * outHeight * 4 );
-	Hunk_FreeTempMemory( temp );
+	free( temp );
 }
 
 /*
@@ -532,6 +533,182 @@ Upload32
 
 ===============
 */
+// the filters of the bound image once its levels are uploaded (Upload32, vk_prepare.cpp)
+void R_ImageFilters( qboolean mipmap, GLuint uiTarget ) {
+	if (mipmap)
+	{
+		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+		if(r_ext_texture_filter_anisotropic->integer>1 && glConfig.maxTextureFilterAnisotropy>0)
+		{
+			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
+		}
+	}
+	else
+	{
+		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	}
+}
+
+/*
+===============
+R_MakeLevels
+
+What Upload32() does to 32 bit pixels before they go to the device: picmip, the largest size of the device, the
+format by the alpha, the intensity and the mip levels, each level handed to sink in its order. data is changed in
+place. No call of the engine and no state but settings, so a worker thread runs it for an image the main thread
+uploads later (vk_prepare.cpp).
+===============
+*/
+void R_MakeLevels( unsigned *data, int width, int height, qboolean mipmap, qboolean picmip, qboolean isLightmap, qboolean allowTC,
+	int *pformat, int *pUploadWidth, int *pUploadHeight, levelSink_t sink, void *ctx )
+{
+	int			samples;
+	int			i, c;
+	byte		*scan;
+
+	//
+	// perform optional picmip operation
+	//
+	if ( picmip ) {
+		for(i = 0; i < r_picmip->integer; i++) {
+			R_MipMap( (byte *)data, width, height );
+			width >>= 1;
+			height >>= 1;
+			if (width < 1) {
+				width = 1;
+			}
+			if (height < 1) {
+				height = 1;
+			}
+		}
+	}
+
+	//
+	// clamp to the current upper OpenGL limit
+	// scale both axis down equally so we don't have to
+	// deal with a half mip resampling
+	//
+	while ( width > glConfig.maxTextureSize	|| height > glConfig.maxTextureSize ) {
+		R_MipMap( (byte *)data, width, height );
+		width >>= 1;
+		height >>= 1;
+	}
+
+	//
+	// verify if the alpha channel is being used or not
+	//
+	c = width*height;
+	scan = ((byte *)data);
+	samples = 3;
+	for ( i = 0; i < c; i++ )
+	{
+		if ( scan[i*4 + 3] != 255 )
+		{
+			samples = 4;
+			break;
+		}
+	}
+
+	// select proper internal format
+	if ( samples == 3 )
+	{
+		if ( glConfig.textureCompression == TC_S3TC && allowTC )
+		{
+			*pformat = GL_RGB4_S3TC;
+		}
+		else if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC )
+		{	// Compress purely color - no alpha
+			if ( r_texturebits->integer == 16 ) {
+				*pformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;	//this format cuts to 16 bit
+			}
+			else {//if we aren't using 16 bit then, use 32 bit compression
+				*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			}
+		}
+		else if ( isLightmap && r_texturebitslm->integer > 0 )
+		{
+			int lmBits = r_texturebitslm->integer & 0x30; // 16 or 32
+			// Allow different bit depth when we are a lightmap
+			if ( lmBits == 16 )
+				*pformat = GL_RGB5;
+			else
+				*pformat = GL_RGB8;
+		}
+		else if ( r_texturebits->integer == 16 )
+		{
+			*pformat = GL_RGB5;
+		}
+		else if ( r_texturebits->integer == 32 )
+		{
+			*pformat = GL_RGB8;
+		}
+		else
+		{
+			*pformat = 3;
+		}
+	}
+	else if ( samples == 4 )
+	{
+		if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC)
+		{	// Compress both alpha and color
+			*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		}
+		else if ( r_texturebits->integer == 16 )
+		{
+			*pformat = GL_RGBA4;
+		}
+		else if ( r_texturebits->integer == 32 )
+		{
+			*pformat = GL_RGBA8;
+		}
+		else
+		{
+			*pformat = 4;
+		}
+	}
+
+	*pUploadWidth = width;
+	*pUploadHeight = height;
+
+	// copy or resample data as appropriate for first MIP level
+	if (!mipmap)
+	{
+		sink( ctx, 0, *pformat, width, height, (const byte *)data );
+		return;
+	}
+
+	R_LightScaleTexture (data, width, height, (qboolean)!mipmap );
+
+	sink( ctx, 0, *pformat, width, height, (const byte *)data );
+
+	int miplevel = 0;
+	while (width > 1 || height > 1)
+	{
+		R_MipMap( (byte *)data, width, height );
+		width >>= 1;
+		height >>= 1;
+		if (width < 1)
+			width = 1;
+		if (height < 1)
+			height = 1;
+		miplevel++;
+
+		if ( r_colorMipLevels->integer )
+		{
+			R_BlendOverTexture( (byte *)data, width * height, mipBlendColors[miplevel] );
+		}
+
+		sink( ctx, miplevel, *pformat, width, height, (const byte *)data );
+	}
+}
+
+// a level of R_MakeLevels() to the bound image (Upload32)
+static void Upload32_Level( void *ctx, int level, int internalFormat, int width, int height, const byte *rgba ) {
+	qglTexImage2D( *(const GLuint *)ctx, level, internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba );
+}
+
 static void Upload32( unsigned *data,
 						 GLenum format,
 						 qboolean mipmap,
@@ -561,187 +738,16 @@ static void Upload32( unsigned *data,
 
 	if (format == GL_RGBA)
 	{
-		int			samples;
-		int			i, c;
-		byte		*scan;
-		float		rMax = 0, gMax = 0, bMax = 0;
-		int			width = *pUploadWidth;
-		int			height = *pUploadHeight;
+		int width, height;
 
-		//
-		// perform optional picmip operation
-		//
-		if ( picmip ) {
-			for(i = 0; i < r_picmip->integer; i++) {
-				R_MipMap( (byte *)data, width, height );
-				width >>= 1;
-				height >>= 1;
-				if (width < 1) {
-					width = 1;
-				}
-				if (height < 1) {
-					height = 1;
-				}
-			}
-		}
-
-		//
-		// clamp to the current upper OpenGL limit
-		// scale both axis down equally so we don't have to
-		// deal with a half mip resampling
-		//
-		while ( width > glConfig.maxTextureSize	|| height > glConfig.maxTextureSize ) {
-			R_MipMap( (byte *)data, width, height );
-			width >>= 1;
-			height >>= 1;
-		}
-
-		//
-		// scan the texture for each channel's max values
-		// and verify if the alpha channel is being used or not
-		//
-		c = width*height;
-		scan = ((byte *)data);
-		samples = 3;
-		for ( i = 0; i < c; i++ )
-		{
-			if ( scan[i*4+0] > rMax )
-			{
-				rMax = scan[i*4+0];
-			}
-			if ( scan[i*4+1] > gMax )
-			{
-				gMax = scan[i*4+1];
-			}
-			if ( scan[i*4+2] > bMax )
-			{
-				bMax = scan[i*4+2];
-			}
-			if ( scan[i*4 + 3] != 255 )
-			{
-				samples = 4;
-				break;
-			}
-		}
-
-		// select proper internal format
-		if ( samples == 3 )
-		{
-			if ( glConfig.textureCompression == TC_S3TC && allowTC )
-			{
-				*pformat = GL_RGB4_S3TC;
-			}
-			else if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC )
-			{	// Compress purely color - no alpha
-				if ( r_texturebits->integer == 16 ) {
-					*pformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;	//this format cuts to 16 bit
-				}
-				else {//if we aren't using 16 bit then, use 32 bit compression
-					*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-				}
-			}
-			else if ( isLightmap && r_texturebitslm->integer > 0 )
-			{
-				int lmBits = r_texturebitslm->integer & 0x30; // 16 or 32
-				// Allow different bit depth when we are a lightmap
-				if ( lmBits == 16 )
-					*pformat = GL_RGB5;
-				else
-					*pformat = GL_RGB8;
-			}
-			else if ( r_texturebits->integer == 16 )
-			{
-				*pformat = GL_RGB5;
-			}
-			else if ( r_texturebits->integer == 32 )
-			{
-				*pformat = GL_RGB8;
-			}
-			else
-			{
-				*pformat = 3;
-			}
-		}
-		else if ( samples == 4 )
-		{
-			if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC)
-			{	// Compress both alpha and color
-				*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-			}
-			else if ( r_texturebits->integer == 16 )
-			{
-				*pformat = GL_RGBA4;
-			}
-			else if ( r_texturebits->integer == 32 )
-			{
-				*pformat = GL_RGBA8;
-			}
-			else
-			{
-				*pformat = 4;
-			}
-		}
-
+		R_MakeLevels( data, *pUploadWidth, *pUploadHeight, mipmap, picmip, isLightmap, allowTC, pformat, &width, &height,
+			Upload32_Level, &uiTarget );
 		*pUploadWidth = width;
 		*pUploadHeight = height;
-
-		// copy or resample data as appropriate for first MIP level
-		if (!mipmap)
-		{
-			qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-			goto done;
-		}
-
-		R_LightScaleTexture (data, width, height, (qboolean)!mipmap );
-
-		qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-
-		if (mipmap)
-		{
-			int		miplevel;
-
-			miplevel = 0;
-			while (width > 1 || height > 1)
-			{
-				R_MipMap( (byte *)data, width, height );
-				width >>= 1;
-				height >>= 1;
-				if (width < 1)
-					width = 1;
-				if (height < 1)
-					height = 1;
-				miplevel++;
-
-				if ( r_colorMipLevels->integer )
-				{
-					R_BlendOverTexture( (byte *)data, width * height, mipBlendColors[miplevel] );
-				}
-
-				qglTexImage2D( uiTarget, miplevel, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-			}
-		}
-	}
-	else
-	{
 	}
 
 done:
-
-	if (mipmap)
-	{
-		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-		if(r_ext_texture_filter_anisotropic->integer>1 && glConfig.maxTextureFilterAnisotropy>0)
-		{
-			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
-		}
-	}
-	else
-	{
-		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	}
-
+	R_ImageFilters( mipmap, uiTarget );
 	GL_CheckErrors();
 }
 
@@ -953,6 +959,69 @@ R_CreateImage
 This is the only way any image_t are created
 ================
 */
+// the colour of the pixels on average, by the alpha too: an additive stage adds the colour as its alpha lets it, a cut
+// out one shows only that (any thread)
+void R_AverageColor( const byte *pic, int width, int height, vec3_t color ) {
+	double sum[3] = { 0.0, 0.0, 0.0 };
+
+	for ( int i = 0; i < width * height; i++ ) {
+		const byte *p = pic + i * 4;
+
+		for ( int c = 0; c < 3; c++ ) {
+			sum[c] += p[c] * p[3] / ( 255.0 * 255.0 );
+		}
+	}
+	for ( int c = 0; c < 3; c++ ) {
+		color[c] = (float)( sum[c] / ( width * height ) );
+	}
+}
+
+/*
+===============
+R_NewImage
+
+The image_t of a new image by that name, in the list of images, without contents: R_CreateImage() uploads them at
+once, vk_prepare.cpp when a worker thread has made them.
+===============
+*/
+image_t *R_NewImage( const char *name, int width, int height, qboolean mipmap, qboolean allowPicmip, int glWrapClampMode ) {
+	image_t *image = (image_t*) Z_Malloc( sizeof( image_t ), TAG_IMAGE_T, qtrue );
+
+	image->texnum = 1024 + giTextureBindNum++;	// ++ is of course staggeringly important...
+
+	// record which map it was used on...
+	//
+	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
+
+	image->mipmap = !!mipmap;
+	image->allowPicmip = !!allowPicmip;
+	image->width = width;
+	image->height = height;
+	image->wrapClampMode = glWrapClampMode;
+
+	const char *psNewName = GenerateImageMappingName(name);
+	Q_strncpyz(image->imgName, psNewName, sizeof(image->imgName));
+	AllocatedImages[ image->imgName ] = image;
+	return image;
+}
+
+// tr_shader.cpp around the image of a stage of a shader nothing reads the pixels of while it is parsed (no lightmap:
+// the automatic materials look at the colour of the texture of lit surfaces): that image may be made on a worker and
+// uploaded before the next frame (vk_prepare.cpp). Answers what it was.
+static qboolean r_imagesMayWait;
+
+qboolean R_ImagesMayWait( qboolean mayWait ) {
+	const qboolean was = r_imagesMayWait;
+
+	r_imagesMayWait = mayWait;
+	return was;
+}
+
+// an image of that name is loaded (vk_prepare.cpp does not make it again)
+qboolean R_ImageLoaded( const char *name ) {
+	return (qboolean)( AllocatedImages.find( GenerateImageMappingName( name ) ) != AllocatedImages.end() );
+}
+
 image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
 					   GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode, bool bRectangle )
 {
@@ -985,37 +1054,9 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 		return image;
 	}
 
-	image = (image_t*) Z_Malloc( sizeof( image_t ), TAG_IMAGE_T, qtrue );
-//	memset(image,0,sizeof(*image));	// qtrue above does this
-
-	image->texnum = 1024 + giTextureBindNum++;	// ++ is of course staggeringly important...
-
-	// record which map it was used on...
-	//
-	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
-
-	image->mipmap = !!mipmap;
-	image->allowPicmip = !!allowPicmip;
-
-	Q_strncpyz(image->imgName, name, sizeof(image->imgName));
-
-	image->width = width;
-	image->height = height;
-	image->wrapClampMode = glWrapClampMode;
+	image = R_NewImage( name, width, height, mipmap, allowPicmip, glWrapClampMode );
 	if ( pic ) {
-		double sum[3] = { 0.0, 0.0, 0.0 };
-
-		// (by the alpha too: an additive stage adds the colour as its alpha lets it, a cut out one shows only that)
-		for ( int i = 0; i < width * height; i++ ) {
-			const byte *p = pic + i * 4;
-
-			for ( int c = 0; c < 3; c++ ) {
-				sum[c] += p[c] * p[3] / ( 255.0 * 255.0 );
-			}
-		}
-		for ( int c = 0; c < 3; c++ ) {
-			image->averageColor[c] = (float)( sum[c] / ( width * height ) );
-		}
+		R_AverageColor( pic, width, height, image->averageColor );
 		image->averageLuma = image->averageColor[0] * 0.3f + image->averageColor[1] * 0.59f + image->averageColor[2] * 0.11f;
 		VK_TexCacheAverage( image->averageColor );
 	}
@@ -1052,10 +1093,6 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 
 	qglBindTexture( uiTarget, 0 );	//jfm: i don't know why this is here, but it breaks lightmaps when there's only 1
 	glState.currenttextures[glState.currenttmu] = 0;	//mark it not bound
-
-	const char *psNewName = GenerateImageMappingName(name);
-	Q_strncpyz(image->imgName, psNewName, sizeof(image->imgName));
-	AllocatedImages[ image->imgName ] = image;
 
 	if ( bRectangle )
 	{
@@ -1102,6 +1139,17 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 		image = R_CreateImage( ( char * ) name, NULL, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
 		VK_TexCacheFoundAverage( image->averageColor );
 		image->averageLuma = image->averageColor[0] * 0.3f + image->averageColor[1] * 0.59f + image->averageColor[2] * 0.11f;
+		VK_TexCacheEnd();
+		return image;
+	}
+
+	// made ahead on a worker thread while the level loads, or made there now and uploaded before the next frame
+	// (vk_prepare.cpp)
+	image = VK_PrefetchTake( name, mipmap, allowPicmip, allowTC, glWrapClampMode );
+	if ( !image && r_imagesMayWait ) {
+		image = VK_PrepareFile( name, mipmap, allowPicmip, allowTC, glWrapClampMode );
+	}
+	if ( image ) {
 		VK_TexCacheEnd();
 		return image;
 	}
@@ -1490,6 +1538,8 @@ settings; pic is used up by the upload. A new size makes the device wait once.
 ===============
 */
 void R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height ) {
+	// (pixels a worker thread is still making for it would come after these)
+	VK_PrepareFinish( image );
 	image->width = (word)width;
 	image->height = (word)height;
 	GL_Bind( image );
@@ -1501,18 +1551,28 @@ void R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height ) {
 R_MadeImage
 
 VisionJK: an image the renderer made itself by that name (mipmapped, repeated, never packed into blocks): made the
-first time, its pixels replaced when it is there already (also when it is left from an earlier level). pic is used
-up by the upload.
+first time, its pixels replaced when it is there already (also when it is left from an earlier level). pic is from
+malloc and taken: while a level loads its levels are made on a worker thread and uploaded before the next frame
+(vk_prepare.cpp), else at once.
 ===============
 */
 image_t *R_MadeImage( const char *name, byte *pic, int width, int height ) {
 	image_t *image = R_FindImageFile_NoLoad( name, qtrue, qtrue, qfalse, GL_REPEAT );
 
-	if ( image ) {
-		R_ReplaceImagePixels( image, pic, width, height );
+	if ( VK_PrepareLoading() ) {
+		if ( !image ) {
+			image = R_NewImage( name, width, height, qtrue, qtrue, GL_REPEAT );
+		}
+		VK_PreparePixels( image, pic, width, height );
 		return image;
 	}
-	return R_CreateImage( name, pic, width, height, GL_RGBA, qtrue, qtrue, qfalse, GL_REPEAT );
+	if ( image ) {
+		R_ReplaceImagePixels( image, pic, width, height );
+	} else {
+		image = R_CreateImage( name, pic, width, height, GL_RGBA, qtrue, qtrue, qfalse, GL_REPEAT );
+	}
+	free( pic );
+	return image;
 }
 
 /*

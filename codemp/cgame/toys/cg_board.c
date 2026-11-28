@@ -740,8 +740,13 @@ static void Board_DrawImports( float cx, float cy ) {
 	if ( !board.numImports ) {
 		char home[MAX_OSPATH], game[MAX_QPATH];
 
-		trap->Cvar_VariableStringBuffer( "fs_homepath", home, sizeof( home ) );
-		trap->Cvar_VariableStringBuffer( "fs_game", game, sizeof( game ) );
+		// (the folder of VisionJK, with an engine that has none the mod folder)
+		trap->Cvar_VariableStringBuffer( "fs_datapath", home, sizeof( home ) );
+		Q_strncpyz( game, "files", sizeof( game ) );
+		if ( !home[0] ) {
+			trap->Cvar_VariableStringBuffer( "fs_homepath", home, sizeof( home ) );
+			trap->Cvar_VariableStringBuffer( "fs_game", game, sizeof( game ) );
+		}
 		Win_Text( cx + 20.0f, cy + 20.0f, 0.5f, winText, ITEM_ALIGN_LEFT, "Put a picture (png, jpg or tga) into this folder:", w - 40.0f );
 		Win_Text( cx + 20.0f, cy + 42.0f, 0.5f, winDim, ITEM_ALIGN_LEFT, va( "%s/%s/drawings", home, game[0] ? game : "base" ), w - 40.0f );
 		Win_Text( cx + 20.0f, cy + 64.0f, 0.5f, winText, ITEM_ALIGN_LEFT, "Then click Picture again.", w - 40.0f );

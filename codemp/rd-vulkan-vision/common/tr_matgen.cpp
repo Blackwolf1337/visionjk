@@ -26,15 +26,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // has the change of the roughness in red (0.5 none), not the roughness, so the roughness and metalness of the
 // material stay live (generic.frag, PBR_RMO_RELATIVE).
 //
-// What is made is kept in cache/materials/ of the profile, by the file of the texture (its length and the checksum of
-// its pak, as vk_texcache.cpp names them) and the settings; a texture of a directory is made every time.
+// What is made is kept in cache/materials/ of the profile, by the file of the texture (its length and the CRC of its
+// contents, as vk_texcache.cpp names them) and the settings; a texture of a directory is made every time.
 
 #include "tr_local.h"
 
-#include <condition_variable>
+#include <atomic>
 #include <deque>
 #include <mutex>
-#include <thread>
 
 #define MATGEN_VERSION	2
 #define MATGEN_MAGIC	0x314e4756		// "VGN1"
@@ -60,7 +59,7 @@ void R_DefaultMaterialGen( materialGen_t *gen ) {
 }
 
 // The buffers of the steps come from the heap, not from the zone of the engine: the steps also run on the worker
-// thread of the materials made at load (Gen_Queue), and the zone is the main thread's alone. Their sizes are those of
+// threads (Gen_Queue), and the zone is the main thread's alone. Their sizes are those of
 // the textures.
 static byte *Gen_Alloc( int bytes ) {
 	byte *p = (byte *)malloc( (size_t)bytes );
@@ -318,15 +317,15 @@ static unsigned long long Gen_Hash( const char *text ) {
 // a directory)
 static qboolean Gen_CachePath( const image_t *base, char kind, const materialGen_t *g, char *path, int pathSize ) {
 	char file[MAX_QPATH], key[512];
-	int length = 0, checksum = 0;
+	int length = 0, crc = 0;
 
-	if ( !VK_ImageFileOf( base->imgName, file, sizeof( file ), &length, &checksum ) ) {
+	if ( !VK_ImageFileOf( base->imgName, file, sizeof( file ), &length, &crc ) ) {
 		return qfalse;
 	}
 	// what each map depends on: the albedo also feeds the normal and rmo maps
 	const qboolean albedo = Gen_AlbedoChanges( g );
 
-	Com_sprintf( key, sizeof( key ), "%s %i %08x v%i m%i k%c a%i %g %g %g %g %g n%g %g %g %i r%g %g", file, length, (unsigned)checksum,
+	Com_sprintf( key, sizeof( key ), "%s %i %08x v%i m%i k%c a%i %g %g %g %g %g n%g %g %g %i r%g %g", file, length, (unsigned)crc,
 		MATGEN_VERSION, MATGEN_MOST, kind, albedo, g->tint[0], g->tint[1], g->tint[2], g->delight, g->saturation,
 		kind == 'n' ? g->normalStrength : 0.0f, kind == 'n' ? g->normalBlur : 0.0f, kind == 'n' ? g->normalDetail : 0.0f,
 		kind == 'n' ? g->normalInvert : 0, kind == 'r' ? g->rmoVariation : 0.0f, kind == 'r' ? g->rmoOcclusion : 0.0f );
@@ -383,8 +382,8 @@ static image_t *Gen_Image( const stageMaterial_t *mat, char kind, genImage_t *im
 	image_t *image;
 
 	Com_sprintf( name, sizeof( name ), "*gen%c%d_%08x", kind, mat->sourceStage, (unsigned)( Gen_Hash( mat->shaderName ) & 0xffffffffu ) );
+	// (R_MadeImage takes the pixels)
 	image = R_MadeImage( name, img->data, img->width, img->height );
-	Gen_Free( img->data );
 	img->data = NULL;
 	return image;
 }
@@ -458,19 +457,24 @@ static void Gen_Apply( stageMaterial_t *mat, genImage_t *made ) {
 
 /*
 ===============
-The worker thread of the materials made at load
+The materials made at load, on the worker threads of the engine
 
 A level seen for the first time has its materials made from textures nobody made maps of yet, about 60 ms each
-(siege_hoth: 1.1 s for 18). Those are made here, one after the other, while the game runs: the main thread reads
-the texture (the file system is its alone), the worker runs the steps, and the main thread writes the cache and
-uploads the maps at the start of a frame (R_MaterialGenFrame), two a frame. A record is found again by its name,
-so what was made for a level that is gone is kept in the cache and dropped, or given to the same texture of the next.
+(siege_hoth: 1.1 s for 18). Those are made on the worker threads (qcommon/com_jobs.cpp), many at once, while the game
+runs: the main thread reads the file of the texture (the file system is its alone), a worker decodes it and runs the
+steps, and the main thread writes the cache and uploads the maps at the start of a frame (R_MaterialGenFrame), two a
+frame. A record is found again by its name, so what was made for a level that is gone is kept in the cache and
+dropped, or given to the same texture of the next.
 ===============
 */
 typedef struct genJob_s {
 	char			shaderName[MAX_QPATH];
 	int				sourceStage;
 	materialGen_t	gen;
+	char			file[MAX_QPATH];	// of the texture, read by the main thread
+	void			*bytes;				// as ri.FS_ReadFile gave them, freed by the main thread
+	int				length;
+	int				failed;				// 1: not decoded, 2: not a power of two (said by the main thread)
 	genImage_t		src;
 	genImage_t		made[3];
 	char			paths[3][MAX_QPATH];
@@ -478,31 +482,39 @@ typedef struct genJob_s {
 } genJob_t;
 
 static std::mutex				genLock;
-static std::condition_variable	genWake;
-static std::deque<genJob_t *>	genTodo, genDone;
-static std::thread				genThread;
-static bool						genQuit;
+static std::deque<genJob_t *>	genDone;
+static jobGroup_t				*genGroup;
+static std::atomic<bool>		genQuit;
 
-static void Gen_Worker( void ) {
-	for ( ;; ) {
-		genJob_t *job;
-		{
-			std::unique_lock<std::mutex> lock( genLock );
+// a job of the engine: no file system, no zone, no printing
+static void Gen_Run( void *data ) {
+	genJob_t	*job = (genJob_t *)data;
+	byte		*pic = NULL;
+	int			width = 0, height = 0;
 
-			genWake.wait( lock, [] { return genQuit || !genTodo.empty(); } );
-			if ( genQuit ) {
-				return;
+	if ( !genQuit ) {
+		if ( !R_DecodeImageFile( job->file, job->bytes, job->length, &pic, &width, &height ) ) {
+			job->failed = 1;
+		} else {
+			job->src.width = width;
+			job->src.height = height;
+			job->src.data = pic;		// (malloc, as Gen_Alloc)
+			Gen_Capped( &job->src );
+			if ( ( job->src.width & ( job->src.width - 1 ) ) || ( job->src.height & ( job->src.height - 1 ) ) ) {
+				job->failed = 2;
+			} else {
+				Gen_Compute( &job->gen, &job->src, job->made );
 			}
-			job = genTodo.front();
-			genTodo.pop_front();
 		}
-		Gen_Compute( &job->gen, &job->src, job->made );
-		std::lock_guard<std::mutex> lock( genLock );
-		genDone.push_back( job );
 	}
+	std::lock_guard<std::mutex> lock( genLock );
+	genDone.push_back( job );
 }
 
 static void Gen_FreeJob( genJob_t *job ) {
+	if ( job->bytes ) {
+		ri.FS_FreeFile( job->bytes );
+	}
 	Gen_Free( job->src.data );
 	for ( int i = 0; i < 3; i++ ) {
 		Gen_Free( job->made[i].data );
@@ -510,31 +522,34 @@ static void Gen_FreeJob( genJob_t *job ) {
 	delete job;
 }
 
-// src and made[] go to the job; qfalse: none made (no thread), the caller makes them itself
-static qboolean Gen_Queue( const stageMaterial_t *mat, genImage_t *src, genImage_t *made, char paths[3][MAX_QPATH], const qboolean *kept ) {
-	genJob_t *job = new genJob_t;
+// made[] goes to the job, which reads the file of base itself; qfalse: none made (no workers, no file), the caller
+// makes them itself
+static qboolean Gen_Queue( const stageMaterial_t *mat, const image_t *base, genImage_t *made, char paths[3][MAX_QPATH], const qboolean *kept ) {
+	genJob_t *job;
 
+	if ( ri.JobThreads() <= 0 ) {
+		return qfalse;
+	}
+	job = new genJob_t();
+	ri.LoadPush( "material texture read", mat->shaderName );
+	const qboolean read = VK_ReadImageFile( base->imgName, job->file, sizeof( job->file ), &job->bytes, &job->length );
+	ri.LoadPop();
+	if ( !read ) {
+		delete job;
+		return qfalse;
+	}
 	Q_strncpyz( job->shaderName, mat->shaderName, sizeof( job->shaderName ) );
 	job->sourceStage = mat->sourceStage;
 	job->gen = mat->gen;
-	job->src = *src;
 	for ( int i = 0; i < 3; i++ ) {
 		job->made[i] = made[i];
 		Q_strncpyz( job->paths[i], paths[i], sizeof( job->paths[i] ) );
 		job->kept[i] = kept[i];
 	}
-	std::lock_guard<std::mutex> lock( genLock );
-	if ( !genThread.joinable() ) {
-		genQuit = false;
-		try {
-			genThread = std::thread( Gen_Worker );
-		} catch ( ... ) {
-			delete job;
-			return qfalse;
-		}
+	if ( !genGroup ) {
+		genGroup = ri.JobGroupNew();
 	}
-	genTodo.push_back( job );
-	genWake.notify_one();
+	ri.JobAdd( genGroup, Gen_Run, job );
 	return qtrue;
 }
 
@@ -542,7 +557,7 @@ static qboolean Gen_Queue( const stageMaterial_t *mat, genImage_t *src, genImage
 ===============
 R_MaterialGenFrame
 
-At the start of a frame: the maps the worker thread finished into the cache and onto their records
+At the start of a frame: the maps the workers finished into the cache and onto their records
 ===============
 */
 void R_MaterialGenFrame( void ) {
@@ -556,6 +571,12 @@ void R_MaterialGenFrame( void ) {
 			}
 			job = genDone.front();
 			genDone.pop_front();
+		}
+		if ( job->failed == 1 ) {
+			ri.Printf( PRINT_WARNING, "WARNING: the maps of %s can not be made, its texture %s could not be read\n", job->shaderName, job->file );
+		} else if ( job->failed == 2 ) {
+			ri.Printf( PRINT_WARNING, "WARNING: the maps of %s are not made, its texture is %i x %i, not a power of two\n", job->shaderName,
+				job->src.width, job->src.height );
 		}
 		for ( int i = 0; i < 3; i++ ) {
 			if ( job->made[i].data && job->kept[i] ) {
@@ -571,25 +592,17 @@ void R_MaterialGenFrame( void ) {
 	}
 }
 
-// the renderer goes: what waits is dropped, the job in hand is finished first
+// the renderer goes: what waits is dropped (a job not begun yet skips its steps), the jobs in hand are finished first
 void R_MaterialGenShutdown( void ) {
-	{
-		std::lock_guard<std::mutex> lock( genLock );
-
-		genQuit = true;
-		genWake.notify_all();
-	}
-	if ( genThread.joinable() ) {
-		genThread.join();
+	genQuit = true;
+	if ( genGroup ) {
+		ri.JobGroupFree( genGroup );
+		genGroup = NULL;
 	}
 	std::lock_guard<std::mutex> lock( genLock );
-	for ( genJob_t *job : genTodo ) {
-		Gen_FreeJob( job );
-	}
 	for ( genJob_t *job : genDone ) {
 		Gen_FreeJob( job );
 	}
-	genTodo.clear();
 	genDone.clear();
 	genQuit = false;
 }
@@ -639,31 +652,43 @@ void R_MakeMaterialMaps( stageMaterial_t *mat, image_t *base ) {
 			continue;
 		}
 		kept[i] = Gen_CachePath( base, kinds[i].kind, g, paths[i], sizeof( paths[i] ) );
+		ri.LoadPush( "material kept", mat->shaderName );
 		if ( !kept[i] || !Gen_CacheRead( paths[i], &made[i] ) ) {
 			missing = qtrue;
 		}
+		ri.LoadPop();
 	}
 
 	if ( missing ) {
 		genImage_t src;
+		qboolean loaded;
 
-		if ( !Gen_LoadSource( mat, base, &src ) ) {
+		// a material made at load (v_autoMaterials) on a texture seen for the first time gets its maps on the worker
+		// threads: the level does not wait for them, the surface has its roughness at once and its bumps a moment later
+		if ( mat->autoMade && Gen_Queue( mat, base, made, paths, kept ) ) {
+			return;
+		}
+		ri.LoadPush( "material texture read", mat->shaderName );
+		loaded = Gen_LoadSource( mat, base, &src );
+		ri.LoadPop();
+		if ( !loaded ) {
 			for ( int i = 0; i < 3; i++ ) {
 				Gen_Free( made[i].data );
 			}
 			return;
 		}
-		// a material made at load (v_autoMaterials) on a texture seen for the first time gets its maps on the worker
-		// thread: the level does not wait for them, the surface has its roughness at once and its bumps a moment later
-		if ( mat->autoMade && Gen_Queue( mat, &src, made, paths, kept ) ) {
-			return;
-		}
+		ri.LoadPush( "material made", mat->shaderName );
 		Gen_Compute( g, &src, made );
+		ri.LoadPop();
+		ri.LoadPush( "material kept: written", mat->shaderName );
 		for ( int i = 0; i < 3; i++ ) {
 			if ( made[i].data && kept[i] ) {
 				Gen_CacheWrite( paths[i], &made[i] );
 			}
 		}
+		ri.LoadPop();
 	}
+	ri.LoadPush( "material image", mat->shaderName );
 	Gen_Apply( mat, made );
+	ri.LoadPop();
 }

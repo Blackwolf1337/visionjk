@@ -27,38 +27,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // that for alpha: two values of 8 bits and for every pixel one of eight points between them.
 //
 // Packing is work for every pixel of a level load (about 100 million on mp/ffa3). The large levels of a texture
-// are cut into bands of rows that a few worker threads take, the caller with them, and the caller goes on when
-// all bands are done. The workers do nothing else and sleep between two textures.
+// are cut into bands of rows that the worker threads of the engine take (qcommon/com_jobs.cpp), the caller with
+// them, and the caller goes on when all bands are done. Whole textures are also packed on those threads, each one
+// by itself (vk_prepare.cpp).
 
 #include "vk_local.h"
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
-#include <thread>
 
-#define VK_BC_MAX_WORKERS	7
-#define VK_BC_BAND			8			// rows of blocks a thread takes at a time
+#define VK_BC_BAND			8			// rows of blocks a job takes at a time
 #define VK_BC_SHARED_BLOCKS	4096		// a level with fewer blocks is packed by the caller alone
 
-static struct vkBcPool_s {
-	std::thread				threads[VK_BC_MAX_WORKERS];
-	int						numThreads;
-	std::mutex				mutex;
-	std::condition_variable	wake;			// for the workers: there is a job, or quit
-	std::condition_variable	done;			// for the caller: the last worker is through with the job
-	bool					quit;
-	int						job;			// counts up, so that every worker takes a job once
-	int						working;		// workers that are not through with the job yet
-
-	vkFormat_t				format;
-	const byte				*rgba;
-	int						width, height;
-	byte					*out;
-	std::atomic<int>		nextRow;		// in blocks: the first row nobody has taken yet
-} vk_bcPool;
-
-// For a block of one color: the pair of 5 (or 6) bit values whose point a third of the way from the first to
-// the second is closest to an 8 bit value
 static byte	vk_bcMatch5[256][2];
 static byte	vk_bcMatch6[256][2];
 
@@ -90,32 +67,9 @@ static void VK_BC_BuildMatch( byte ( *table )[2], int levels, int ( *expand )( i
 	}
 }
 
-static void VK_BC_Worker( void );
-
 void VK_BC_Init( void ) {
-	const int cores = (int)std::thread::hardware_concurrency();
-
 	VK_BC_BuildMatch( vk_bcMatch5, 32, VK_BC_Expand5 );
 	VK_BC_BuildMatch( vk_bcMatch6, 64, VK_BC_Expand6 );
-
-	vk_bcPool.quit = false;
-	vk_bcPool.numThreads = 0;
-	for ( int i = 0; i < VK_BC_MAX_WORKERS && i < cores - 1; i++ ) {
-		vk_bcPool.threads[vk_bcPool.numThreads++] = std::thread( VK_BC_Worker );
-	}
-}
-
-void VK_BC_Shutdown( void ) {
-	{
-		std::lock_guard<std::mutex> lock( vk_bcPool.mutex );
-
-		vk_bcPool.quit = true;
-	}
-	vk_bcPool.wake.notify_all();
-	for ( int i = 0; i < vk_bcPool.numThreads; i++ ) {
-		vk_bcPool.threads[i].join();
-	}
-	vk_bcPool.numThreads = 0;
 }
 
 vkSize_t VK_BC_Size( vkFormat_t format, int width, int height ) {
@@ -452,81 +406,36 @@ static void VK_BC_CompressRows( vkFormat_t format, const byte *rgba, int width, 
 	}
 }
 
-// takes bands of the job until none is left
-static void VK_BC_TakeBands( void ) {
-	const int rows = ( vk_bcPool.height + 3 ) / 4;
+typedef struct vkBcLevel_s {
+	vkFormat_t	format;
+	const byte	*rgba;
+	int			width, height, rows;
+	byte		*out;
+} vkBcLevel_t;
 
-	for ( ;; ) {
-		const int first = vk_bcPool.nextRow.fetch_add( VK_BC_BAND );
+// one band of rows of blocks, a job of the engine (ri.JobFor)
+static void VK_BC_Band( void *data, int band ) {
+	const vkBcLevel_t *level = (const vkBcLevel_t *)data;
+	const int first = band * VK_BC_BAND;
 
-		if ( first >= rows ) {
-			return;
-		}
-		VK_BC_CompressRows( vk_bcPool.format, vk_bcPool.rgba, vk_bcPool.width, vk_bcPool.height, vk_bcPool.out, first,
-			Q_min( first + VK_BC_BAND, rows ) );
-	}
-}
-
-static void VK_BC_Worker( void ) {
-	int taken = 0;
-
-	for ( ;; ) {
-		{
-			std::unique_lock<std::mutex> lock( vk_bcPool.mutex );
-
-			while ( !vk_bcPool.quit && vk_bcPool.job == taken ) {
-				vk_bcPool.wake.wait( lock );
-			}
-			if ( vk_bcPool.quit ) {
-				return;
-			}
-			taken = vk_bcPool.job;
-		}
-		VK_BC_TakeBands();
-		{
-			std::lock_guard<std::mutex> lock( vk_bcPool.mutex );
-
-			if ( --vk_bcPool.working == 0 ) {
-				vk_bcPool.done.notify_one();
-			}
-		}
-	}
+	VK_BC_CompressRows( level->format, level->rgba, level->width, level->height, level->out, first,
+		Q_min( first + VK_BC_BAND, level->rows ) );
 }
 
 /*
 ===============
 VK_BC_Compress
 
-One level of a texture, 32 bit RGBA, into VK_BC_Size() bytes at out
+One level of a texture, 32 bit RGBA, into VK_BC_Size() bytes at out. A large one in bands on the worker threads
+of the engine. Any thread may call it.
 ===============
 */
 void VK_BC_Compress( vkFormat_t format, const byte *rgba, int width, int height, byte *out ) {
-	const int rows = ( height + 3 ) / 4;
+	const vkBcLevel_t level = { format, rgba, width, height, ( height + 3 ) / 4, out };
 
-	if ( !vk_bcPool.numThreads || rows * ( ( width + 3 ) / 4 ) < VK_BC_SHARED_BLOCKS ) {
-		VK_BC_CompressRows( format, rgba, width, height, out, 0, rows );
+	if ( !ri.JobThreads() || level.rows * ( ( width + 3 ) / 4 ) < VK_BC_SHARED_BLOCKS ) {
+		VK_BC_CompressRows( format, rgba, width, height, out, 0, level.rows );
 		return;
 	}
-	{
-		std::lock_guard<std::mutex> lock( vk_bcPool.mutex );
-
-		vk_bcPool.format = format;
-		vk_bcPool.rgba = rgba;
-		vk_bcPool.width = width;
-		vk_bcPool.height = height;
-		vk_bcPool.out = out;
-		vk_bcPool.nextRow = 0;
-		vk_bcPool.working = vk_bcPool.numThreads;
-		vk_bcPool.job++;
-	}
-	vk_bcPool.wake.notify_all();
-	VK_BC_TakeBands();
-	{
-		// the bands are short, so this is over when the last worker has put down the one it holds
-		std::unique_lock<std::mutex> lock( vk_bcPool.mutex );
-
-		while ( vk_bcPool.working ) {
-			vk_bcPool.done.wait( lock );
-		}
-	}
+	ri.JobFor( ( level.rows + VK_BC_BAND - 1 ) / VK_BC_BAND, VK_BC_Band, (void *)&level );
 }

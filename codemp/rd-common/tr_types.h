@@ -580,6 +580,14 @@ typedef struct gpuProfile_s {
 	float	history[GPU_PROFILE_HISTORY];		// the whole frame on the device of the last frames, oldest first
 	float	levelOverdraw;						// runs of the fragment shader for the opaque level a pixel, 0: not counted
 	int		draws, triangles, cpuTriangles, transforms, bones, skeletons;	// of the last frame
+	// the card, for the values its driver gives the client (NVML, amdgpu) and the full panel
+	unsigned int	vendorID;							// PCI: 0x10de NVIDIA, 0x1002 AMD, 0x8086 Intel
+	qboolean		hasPci;								// VK_EXT_pci_bus_info
+	unsigned int	pciDomain, pciBus, pciDevice, pciFunction;
+	byte			deviceUUID[16];
+	float			vramUsedMB, vramBudgetMB;			// of this program on the memory of the card (VK_EXT_memory_budget), 0: not known
+	char			presentMode[16];
+	int				swapImages, framesInFlight;
 } gpuProfile_t;
 
 typedef struct saberBlade3D_s {

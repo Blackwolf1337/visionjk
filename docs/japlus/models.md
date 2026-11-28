@@ -12,8 +12,8 @@ checked on the site: the pk3 may have only the files of one model (`models/playe
 lives in the repository of the website.
 
 When a player on the server uses a model your game does not have, and the store has it, the game fetches it in the
-background and shows it at once. You do not reconnect. The pak is saved as `base/modelstore/<name>.pk3` in your home
-folder and stays there, so the model is found at every later start.
+background and shows it at once. You do not reconnect. The pak is saved as `modelstore/<name>.pk3` in the folder of VisionJK in your home
+folder (`visionjk-data/files`, see [datafolder.md](datafolder.md)) and stays there, so the model is found at every later start.
 
 Nothing is fetched:
 
@@ -48,8 +48,8 @@ cvar `v_modelStore` would take that name.
 
 ## How it works
 
-The window is `codemp/cgame/modelstore/cg_modelstore.c`. The engine keeps the list in `base/modelstore/index.txt`
-and the icons in `base/modelstore/icons/`, and fetches the icons when the window asks (`v_models icons`). The window
+The window is `codemp/cgame/modelstore/cg_modelstore.c`. The engine keeps the list in `modelstore/index.txt`
+and the icons in `modelstore/icons/` of `visionjk-data/files`, and fetches the icons when the window asks (`v_models icons`). The window
 reads those files and looks at `v_modelStoreChanged` to know when to read them again. `v_modelStoreFetching` tells it
 which tile is busy.
 
@@ -69,10 +69,10 @@ The client reads it (256 KB at most) and fetches it again after ten minutes when
 - The engine runs `v_modelArrived <name>`. `CG_ModelArrived_f()` loads again every player that uses the model and
   had the default one.
 
-The file system loads the paks of `base/modelstore` at every start, but only when every file in a pak belongs to the
+The file system loads the paks of `modelstore` in `visionjk-data/files` at every start, but only when every file in a pak belongs to the
 model its name says (`FS_ModelPakFits()`, with `WEB_ModelEntryAllowed()`). A pak put there by hand with other files
 is not loaded, and the console says so. Those paks are not tied to what a server references, as the paks of
-`downloads` are.
+`downloads` are. They still count as paks of `base`, which is what a server is told about them.
 
 A web address of `v_modelStoreURL` that is not https switches the store off with a line on the console. The cvar can be
 set on the command line. It was registered read only before, which made the engine force the default, so the
@@ -108,6 +108,7 @@ The function `wantModel` in `shared/sys/web/page/boot.js` does the fetch:
 - it takes the pak `/models/files/<name>.pk3` only with the size (100 MB at most) and the SHA-256 of that list, checked
   with WebCrypto,
 - it writes the pak to `/home/base/modelstore/<name>.pk3` in the file system of the engine and runs `v_modelPak <name>`.
+  The page was not changed for the folder of VisionJK and is switched off: it still writes to that old place.
 
 The engine then loads the pak as the desktop client does: `FS_AddModelPak()`, the renderer forgets what was missing,
 the cgame loads the players again. The TV plays as a demo, and in the page a demo does not stop the fetch.
@@ -164,12 +165,12 @@ owner deletes afterwards. The service is the one of the model store (`deploy/vis
 
 The engine fetches the list of the emojis, again after 10 minutes when it is old or when the masterserver says it changed, and then every emoji of it in the
 background, after the models. It does this only while the player is in a game that is not a demo. On a pure server it
-works too, see "The interactive emojis of the store" below. The picture is saved as `base/gfx/emoji/<name>.png` in the home folder, and only when its size and its SHA-256
+works too, see "The interactive emojis of the store" below. The picture is saved as `gfx/emoji/<name>.png` in `visionjk-data/files` of the home folder, and only when its size and its SHA-256
 match the list.
 
 The code is a table of named stores in `cl_models.cpp` (the part "Named stores"): the chat emojis (`emoji/index.txt`
-into `base/gfx/emoji`) and the own sounds of the interactive emojis (`emotes/sounds.txt` into `base/sound/emotes`, 96 KB
-at most for each). `base/emojistore.txt` in the home folder records which emojis came from the store. When the next list comes, an emoji
+into `gfx/emoji`) and the own sounds of the interactive emojis (`emotes/sounds.txt` into `sound/emotes`, 96 KB
+at most for each), all in `visionjk-data/files`. `emojistore.txt` there records which emojis came from the store. When the next list comes, an emoji
 the store no longer has (it was taken down) is deleted. `v_emojiStoreChanged` counts up when one came or went, and
 the chat then lists its emojis again.
 
@@ -209,9 +210,9 @@ lives in the repository of the website.
 
 ### How it works
 
-The engine fetches the list `emotes/index.txt` into `base/emotes/index.txt` for the cgame. A line is `number name emoji
+The engine fetches the list `emotes/index.txt` into `emotes/index.txt` of `visionjk-data/files` for the cgame. A line is `number name emoji
 burst colour colour path spin size pop sound voice bytes sha256`. Then it fetches the own sounds of the list
-(`sounds.txt`, into `base/sound/emotes`, 96 KB at most for each) and the chat emojis. A file the store no longer has is
+(`sounds.txt`, into `sound/emotes`, 96 KB at most for each) and the chat emojis. A file the store no longer has is
 deleted again. The cvar `v_emoteStoreChanged` counts up each time the list or a sound came, and the cgame reads the list
 again. A number the cgame does not know makes it run `v_emotes refresh`, and the engine fetches the lists again, at most
 once a minute.

@@ -77,31 +77,44 @@ static void VK_CreateSlotImage( vkImage_t *vi, int width, int height, int mipLev
 
 /*
 ===============
-VK_LevelFormat
+VK_FormatFor, VK_LevelFormat
 
 tr_image.cpp names a compressed format for the images that may be compressed when glConfig.textureCompression
 says so (r_ext_compress_textures; lightmaps only with r_ext_compress_lightmaps, shaders with noTC never). It
 asks for the one with alpha when an image has none too, unless r_texturebits is 16. The colors are stored the
 same way in both, so here an image without alpha takes the format without, which is half the size.
+VK_FormatFor() runs on any thread and says what image_t::internalFormat becomes (vk_prepare.cpp).
 ===============
 */
-static vkFormat_t VK_LevelFormat( image_t *image, int internalFormat, int width, int height, const byte *rgba ) {
+vkFormat_t VK_FormatFor( int internalFormat, int width, int height, const byte *rgba, int *storedFormat ) {
+	*storedFormat = internalFormat;
 	if ( !vk.bcTextures || ( internalFormat != GL_COMPRESSED_RGB_S3TC_DXT1_EXT && internalFormat != GL_COMPRESSED_RGBA_S3TC_DXT5_EXT ) ) {
 		return VKF_RGBA8;
 	}
 	// what imagelist prints
 	if ( width < 4 || height < 4 ) {
-		image->internalFormat = GL_RGBA8;
+		*storedFormat = GL_RGBA8;
 		return VKF_RGBA8;
 	}
 	for ( int i = 0; i < width * height; i++ ) {
 		if ( rgba[i * 4 + 3] != 255 ) {
-			image->internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			*storedFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 			return VKF_BC3;
 		}
 	}
-	image->internalFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+	*storedFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
 	return VKF_BC1;
+}
+
+static vkFormat_t VK_LevelFormat( image_t *image, int internalFormat, int width, int height, const byte *rgba ) {
+	int stored;
+	const vkFormat_t format = VK_FormatFor( internalFormat, width, height, rgba, &stored );
+
+	// (an uncompressed one keeps what Upload32() set)
+	if ( format != VKF_RGBA8 || stored != internalFormat ) {
+		image->internalFormat = stored;
+	}
+	return format;
 }
 
 /*
@@ -309,7 +322,6 @@ void VK_InitImages( void ) {
 
 void VK_ShutdownImages( void ) {
 	VK_FinishUploads();
-	VK_BC_Shutdown();
 	VK_ShutdownTextures();
 	memset( vk.images, 0, sizeof( vk.images ) );
 }

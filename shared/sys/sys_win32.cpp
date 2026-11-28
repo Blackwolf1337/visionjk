@@ -817,3 +817,115 @@ int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
 	return count;
 }
 #endif // !DEDICATED
+
+/*
+==============================================================
+
+The threads of the program, for the profiler (v_profiler)
+
+==============================================================
+*/
+
+// (Windows 10 1607 and later; looked up, so the program still starts on an older one)
+typedef HRESULT ( WINAPI *setThreadDescription_t )( HANDLE thread, PCWSTR description );
+typedef HRESULT ( WINAPI *getThreadDescription_t )( HANDLE thread, PWSTR *description );
+
+unsigned long long Sys_ThreadId( void ) {
+	return (unsigned long long)GetCurrentThreadId();
+}
+
+void Sys_SetThreadName( const char *name ) {
+	const setThreadDescription_t set = (setThreadDescription_t)(void *)GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "SetThreadDescription" );
+	WCHAR wide[32];
+	int i;
+
+	if ( !set ) {
+		return;
+	}
+	for ( i = 0; i < (int)ARRAY_LEN( wide ) - 1 && name[i]; i++ ) {
+		wide[i] = (WCHAR)(unsigned char)name[i];
+	}
+	wide[i] = 0;
+	set( GetCurrentThread(), wide );
+}
+
+static unsigned long long Sys_FileTimeNsec( const FILETIME *time ) {
+	return ( ( (unsigned long long)time->dwHighDateTime << 32 ) | time->dwLowDateTime ) * 100ull;
+}
+
+int Sys_ThreadTimes( sysThread_t *threads, int max ) {
+	const DWORD						process = GetCurrentProcessId();
+	const getThreadDescription_t	get = (getThreadDescription_t)(void *)GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "GetThreadDescription" );
+	HANDLE							snapshot = CreateToolhelp32Snapshot( TH32CS_SNAPTHREAD, 0 );
+	THREADENTRY32					entry;
+	int								count = 0;
+
+	if ( snapshot == INVALID_HANDLE_VALUE ) {
+		return 0;
+	}
+	entry.dwSize = sizeof( entry );
+	// (the snapshot has the threads of every process)
+	for ( BOOL more = Thread32First( snapshot, &entry ); more && count < max; more = Thread32Next( snapshot, &entry ) ) {
+		HANDLE		thread;
+		FILETIME	created, exited, kernel, user;
+
+		if ( entry.th32OwnerProcessID != process ) {
+			continue;
+		}
+		thread = OpenThread( THREAD_QUERY_LIMITED_INFORMATION, FALSE, entry.th32ThreadID );
+		if ( !thread ) {
+			continue;
+		}
+		if ( GetThreadTimes( thread, &created, &exited, &kernel, &user ) ) {
+			sysThread_t	*out = &threads[count++];
+			PWSTR		description = NULL;
+
+			out->id = entry.th32ThreadID;
+			out->cpuNsec = Sys_FileTimeNsec( &kernel ) + Sys_FileTimeNsec( &user );
+			out->name[0] = '\0';
+			if ( get && SUCCEEDED( get( thread, &description ) ) && description ) {
+				int i;
+
+				for ( i = 0; i < (int)sizeof( out->name ) - 1 && description[i]; i++ ) {
+					out->name[i] = description[i] < 128 ? (char)description[i] : '?';
+				}
+				out->name[i] = '\0';
+				LocalFree( description );
+			}
+			if ( !out->name[0] ) {
+				snprintf( out->name, sizeof( out->name ), "thread %lu", (unsigned long)entry.th32ThreadID );
+			}
+		}
+		CloseHandle( thread );
+	}
+	CloseHandle( snapshot );
+	return count;
+}
+
+const char *Sys_ProcessorName( void ) {
+	static char	name[64];
+	HKEY		key;
+
+	if ( name[0] ) {
+		return name;
+	}
+	if ( RegOpenKeyExA( HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &key ) == ERROR_SUCCESS ) {
+		char	text[64];
+		DWORD	size = sizeof( text ) - 1, type = 0;
+
+		if ( RegQueryValueExA( key, "ProcessorNameString", NULL, &type, (LPBYTE)text, &size ) == ERROR_SUCCESS && type == REG_SZ ) {
+			const char *start = text;
+
+			text[Q_min( (int)size, (int)sizeof( text ) - 1 )] = '\0';
+			while ( *start == ' ' ) {
+				start++;
+			}
+			Q_strncpyz( name, start, sizeof( name ) );
+		}
+		RegCloseKey( key );
+	}
+	if ( !name[0] ) {
+		Q_strncpyz( name, "processor", sizeof( name ) );
+	}
+	return name;
+}

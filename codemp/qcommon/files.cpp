@@ -44,6 +44,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #if defined(_WIN32)
 #include <windows.h>
 #endif
+#include <sys/stat.h>
 
 // for rmdir
 #if defined (_MSC_VER)
@@ -199,6 +200,7 @@ typedef struct fileInPack_s {
 	char					*name;		// name of the file
 	unsigned long			pos;		// file info position in zip
 	unsigned long			len;		// uncompress file size
+	unsigned int			crc;		// CRC-32 of its contents, from the directory of the zip
 	struct	fileInPack_s*	next;		// next file in the hash
 	qboolean				blocked;	// its player chose not to have it (FS_LoadBlocked): in no hash, in no list
 } fileInPack_t;
@@ -1352,6 +1354,35 @@ void FS_FCloseFile( fileHandle_t f ) {
 
 /*
 ===========
+FS_DataFolderOf
+
+The folder of the home path a file the game writes goes to: the one of VisionJK (FS_DATAGAME) for the files of the
+names below, the mod folder for all else. They are read through the search path, where that folder comes first.
+===========
+*/
+static const char *FS_DataFolderOf( const char *filename ) {
+	// the start of the path as the module or the engine writes it
+	static const char *const prefixes[] = {
+		"debugmenus.ini",		// the debug menus of the client (cl_imgui.cpp)
+		"vision/fxlights.txt",	// cl_fxlight.cpp
+		"materials/status.txt",	// cl_matdebug.cpp
+		"shaders/zz_mat_",		// the materials of the Material Lab (tr_material.cpp)
+		"drawings/",			// the drawing board (cg_board.c, cl_clipboard.cpp)
+		"chatlogs/",			// cg_chat.c
+		"remaps_off.txt",		// cg_remaps.c
+		"steamaudio/capture",	// v_spatialCapture
+	};
+
+	for ( size_t i = 0; i < ARRAY_LEN( prefixes ); i++ ) {
+		if ( !Q_stricmpn( filename, prefixes[i], (int)strlen( prefixes[i] ) ) ) {
+			return FS_DATAGAME;
+		}
+	}
+	return fs_gamedir;
+}
+
+/*
+===========
 FS_FOpenFileWrite
 
 ===========
@@ -1365,7 +1396,7 @@ fileHandle_t FS_FOpenFileWrite( const char *filename, qboolean safe ) {
 	f = FS_HandleForFile();
 	fsh[f].zipFile = qfalse;
 
-	ospath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, filename );
+	ospath = FS_BuildOSPath( fs_homepath->string, FS_DataFolderOf( filename ), filename );
 
 	if ( fs_debug->integer ) {
 		Com_Printf( "FS_FOpenFileWrite: %s\n", ospath );
@@ -1413,7 +1444,7 @@ fileHandle_t FS_FOpenFileAppend( const char *filename ) {
 	// don't let sound stutter
 	S_ClearSoundBuffer();
 
-	ospath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, filename );
+	ospath = FS_BuildOSPath( fs_homepath->string, FS_DataFolderOf( filename ), filename );
 
 	if ( fs_debug->integer ) {
 		Com_Printf( "FS_FOpenFileAppend: %s\n", ospath );
@@ -2215,8 +2246,9 @@ CONVENIENCE FUNCTIONS FOR ENTIRE FILES
 ======================================================================================
 */
 
-// the first pak of the search path that has the file, of the paks that may be read. NULL: none has it.
-static pack_t *FS_PakOfFile( const char *filename ) {
+// the first pak of the search path that has the file, of the paks that may be read, and with entry its file in
+// that pak. NULL: none has it.
+static pack_t *FS_PakOfFile( const char *filename, const fileInPack_t **entry ) {
 	searchpath_t	*search;
 	pack_t			*pak;
 	fileInPack_t	*pakFile;
@@ -2262,6 +2294,9 @@ static pack_t *FS_PakOfFile( const char *filename ) {
 			do {
 				// case and separator insensitive comparisons
 				if ( !FS_FilenameCompare( pakFile->name, filename ) ) {
+					if ( entry ) {
+						*entry = pakFile;
+					}
 					return pak;
 				}
 				pakFile = pakFile->next;
@@ -2272,7 +2307,7 @@ static pack_t *FS_PakOfFile( const char *filename ) {
 }
 
 int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
-	const pack_t *pak = FS_PakOfFile( filename );
+	const pack_t *pak = FS_PakOfFile( filename, NULL );
 
 	if ( !pak ) {
 		return -1;
@@ -2290,17 +2325,17 @@ FS_FileSource
 Not in the game. For who keeps something it made from a file and wants to know whether the file is still the
 one it was made from: where a read of qpath would get it from.
 
-FS_SOURCE_NONE: there is no such file. FS_SOURCE_PAK: from a pak, with the length of the file and the checksum of
-that pak, which stand for its contents as long as the pak is the same. It is the checksum of the pak file itself,
-not the one a pure server compares: that one is mixed with a number of the server and is another one with every
-level. FS_SOURCE_DIRECTORY: a file of a directory, which can change at any time.
+FS_SOURCE_NONE: there is no such file. FS_SOURCE_PAK: from a pak, with the length of the file and the CRC-32 of its
+contents as the directory of the pak has it, which stand for the contents of that file whatever pak it is in: a new
+version of a pak changes the CRC of the files that changed only. FS_SOURCE_DIRECTORY: a file of a directory, which
+can change at any time.
 ============
 */
-int FS_FileSource( const char *qpath, int *length, int *pakChecksum ) {
-	fileHandle_t	f = 0;
-	const long		len = FS_FOpenFileRead( qpath, &f, qfalse );
-	const pack_t	*pak;
-	qboolean		zip;
+int FS_FileSource( const char *qpath, int *length, int *fileCrc ) {
+	fileHandle_t		f = 0;
+	const long			len = FS_FOpenFileRead( qpath, &f, qfalse );
+	const fileInPack_t	*entry = NULL;
+	qboolean			zip;
 
 	if ( !f ) {
 		return FS_SOURCE_NONE;
@@ -2308,12 +2343,11 @@ int FS_FileSource( const char *qpath, int *length, int *pakChecksum ) {
 	zip = fsh[f].zipFile;
 	FS_FCloseFile( f );
 	// the pak the read took it from is the first one in the search path that has it
-	pak = ( zip && len >= 0 ) ? FS_PakOfFile( qpath ) : NULL;
-	if ( !pak ) {
+	if ( !zip || len < 0 || !FS_PakOfFile( qpath, &entry ) || !entry ) {
 		return FS_SOURCE_DIRECTORY;
 	}
 	*length = (int)len;
-	*pakChecksum = pak->checksum;
+	*fileCrc = (int)entry->crc;
 	return FS_SOURCE_PAK;
 }
 
@@ -2865,6 +2899,7 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 		// store the file position in the zip
 		buildBuffer[i].pos = entries[i].pos;
 		buildBuffer[i].len = entries[i].len;
+		buildBuffer[i].crc = (unsigned int)entries[i].crc;
 		buildBuffer[i].blocked = (qboolean)( FS_IsBlocked( blocked, buildBuffer[i].name )
 			|| !FS_EntryUsable( buildBuffer[i].name, buildBuffer[i].len ) );
 		if ( !buildBuffer[i].blocked ) {
@@ -3739,8 +3774,8 @@ static int QDECL paksort( const void *a, const void *b ) {
 ================
 FS_ClearSessionDownloads
 
-The paks that were downloaded for one session only (client/cl_download.cpp) lie in <game>/downloads/session of the
-home folder. They go when the game starts and when it ends: dir is the game folder whose session paks go now, NULL
+The paks that were downloaded for one session only (client/cl_download.cpp) lie in visionjk-data/downloads/<game>/
+session of the home folder. They go when the game starts and when it ends: dir is the game folder whose session paks go now, NULL
 every game folder that was seen since the start. Only paks, the files beside them that block some of what is in
 them, and parts of a download.
 ================
@@ -3755,7 +3790,7 @@ static void FS_ClearSessionDir( const char *dir ) {
 	char	**files;
 	int		numFiles, i;
 
-	Q_strncpyz( folder, FS_BuildOSPath( fs_homepath->string, dir, FS_DOWNLOADS_SESSION ), sizeof( folder ) );
+	Q_strncpyz( folder, FS_BuildOSPath( fs_homepath->string, FS_DOWNLOADS, va( "%s/" FS_DOWNLOADS_SESSION, dir ) ), sizeof( folder ) );
 	files = Sys_ListFiles( folder, "", NULL, &numFiles, qfalse );
 	for ( i = 0; i < numFiles; i++ ) {
 		if ( strchr( files[i], '/' ) || strchr( files[i], '\\' ) || !( COM_CompareExtension( files[i], ".pk3" )
@@ -3824,12 +3859,14 @@ static qboolean FS_ModelPakFits( const pack_t *pak, const char *model ) {
 ================
 FS_AddPaksOf
 
-The paks of a game folder, or of a folder in it (sub, NULL: the game folder itself), at the head of the path.
+The paks of a game folder (dir, sub NULL), or of the folder sub in dir, at the head of the path. They count as paks of
+gameName, which is what a server is told: the downloads and the model store are in the folder of VisionJK, and a pak
+of the store with another name than base would be sent as referenced.
 Those of the folders of downloads, and those whose names begin with "dl_", only while the server references them.
 Those of the model store always, when they have only files of their model.
 ================
 */
-static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, searchpath_t *thedir ) {
+static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, const char *gameName, searchpath_t *thedir ) {
 	int				i;
 	searchpath_t	*search;
 	pack_t			*pak;
@@ -3857,7 +3894,7 @@ static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, se
 			continue;
 
 #ifndef DEDICATED
-		if ( sub && !strcmp( sub, FS_MODELSTORE ) ) {
+		if ( sub && !strcmp( sub, FS_MODELSTORE ) && !strcmp( dir, FS_DATAGAME ) ) {
 			if ( !FS_ModelPakFits( pak, pak->pakBasename ) ) {
 				Com_Printf( S_COLOR_YELLOW "%s has files that are not of the model %s, it is not loaded\n", pakfile, pak->pakBasename );
 				FS_FreePak( pak );
@@ -3887,7 +3924,7 @@ static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, se
 
 		Q_strncpyz(pak->pakPathname, curpath, sizeof(pak->pakPathname));
 		// store the game name for downloading
-		Q_strncpyz(pak->pakGamename, dir, sizeof(pak->pakGamename));
+		Q_strncpyz(pak->pakGamename, gameName, sizeof(pak->pakGamename));
 
 		// if the pk3 is not in base, always reference it (standard jk2 behaviour)
 		if (Q_stricmpn(pak->pakGamename, BASEGAME, (int)strlen(BASEGAME))) {
@@ -3936,6 +3973,12 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 	searchpath_t	*search;
 	char			curpath[MAX_OSPATH + 1];
 
+	// never a game folder, whoever names it (fs_game, fs_basegame, fs_forcegame): see FS_DATAFOLDER
+	if ( !Q_stricmp( dir, FS_DATAFOLDER ) ) {
+		Com_PrintWarning( "%s is no game folder\n", dir );
+		return;
+	}
+
 	// this fixes the case where fs_basepath is the same as fs_cdpath
 	// which happens on full installs
 	for ( sp = fs_searchpaths ; sp ; sp = sp->next ) {
@@ -3962,15 +4005,18 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
 
-	FS_AddPaksOf( path, dir, NULL, search );
+	FS_AddPaksOf( path, dir, NULL, dir, search );
 	// (the game writes downloads into the home folder only)
 	if ( fs_homepath && Sys_PathCmp( path, fs_homepath->string ) ) {
+		char session[MAX_OSPATH];	// (no va(): the list of the paks takes a while and uses it too)
+
+		Com_sprintf( session, sizeof( session ), "%s/" FS_DOWNLOADS_SESSION, dir );
 		FS_ClearSessionDownloads( dir );
-		FS_AddPaksOf( path, dir, FS_DOWNLOADS, search );
-		FS_AddPaksOf( path, dir, FS_DOWNLOADS_SESSION, search );
+		FS_AddPaksOf( path, FS_DOWNLOADS, dir, dir, search );
+		FS_AddPaksOf( path, FS_DOWNLOADS, session, dir, search );
 #ifndef DEDICATED
 		if ( !Q_stricmp( dir, BASEGAME ) ) {
-			FS_AddPaksOf( path, dir, FS_MODELSTORE, search );
+			FS_AddPaksOf( path, FS_DATAGAME, FS_MODELSTORE, BASEGAME, search );
 		}
 #endif
 	}
@@ -3981,7 +4027,7 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 ================
 FS_AddModelPak
 
-The pak of model that the model store just sent (<home>/base/modelstore/<model>.pk3, client/cl_models.cpp), at the
+The pak of model that the model store just sent (<home>/visionjk-data/files/modelstore/<model>.pk3, client/cl_models.cpp), at the
 head of the path while the game runs, so its files can be read at once. qfalse: it is no pak, or it has files of
 anything else than its model (why says so).
 ================
@@ -3995,7 +4041,7 @@ qboolean FS_AddModelPak( const char *model, char *why, int whySize ) {
 		Q_strncpyz( why, "the file system is not running", whySize );
 		return qfalse;
 	}
-	Q_strncpyz( pakfile, FS_BuildOSPath( fs_homepath->string, BASEGAME, va( "%s/%s.pk3", FS_MODELSTORE, model ) ), sizeof( pakfile ) );
+	Q_strncpyz( pakfile, FS_BuildOSPath( fs_homepath->string, FS_DATAGAME, va( "%s/%s.pk3", FS_MODELSTORE, model ) ), sizeof( pakfile ) );
 	for ( search = fs_searchpaths; search; search = search->next ) {
 		if ( search->pack && Sys_PathCmp( search->pack->pakFilename, pakfile ) ) {
 			return qtrue;
@@ -4011,7 +4057,7 @@ qboolean FS_AddModelPak( const char *model, char *why, int whySize ) {
 		Q_strncpyz( why, "it has files that are not of the model", whySize );
 		return qfalse;
 	}
-	Q_strncpyz( pak->pakPathname, FS_BuildOSPath( fs_homepath->string, BASEGAME, FS_MODELSTORE ), sizeof( pak->pakPathname ) );
+	Q_strncpyz( pak->pakPathname, FS_BuildOSPath( fs_homepath->string, FS_DATAGAME, FS_MODELSTORE ), sizeof( pak->pakPathname ) );
 	Q_strncpyz( pak->pakGamename, BASEGAME, sizeof( pak->pakGamename ) );
 	fs_packFiles += pak->numfiles;
 
@@ -4169,12 +4215,12 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 				// Into the folder of downloads, whose paks are loaded only while a server references them. Do we have one
 				// with the same name?
 				// (cl_download.cpp moves it into the folder of the session when its player wants it for this one only)
-				if (FS_SV_FileExists(va("%s/" FS_DOWNLOADS "/%s.pk3", moddir, filename))) {
+				if (FS_SV_FileExists(va(FS_DOWNLOADS "/%s/%s.pk3", moddir, filename))) {
 					// We already have one called this, we need to download it to another name
 					// Make something up with the checksum in it
-					Q_strcat( currentPak, sizeof(currentPak), va("%s/" FS_DOWNLOADS "/%s.%08x.pk3", moddir, filename, fs_serverReferencedPaks[i]) );
+					Q_strcat( currentPak, sizeof(currentPak), va(FS_DOWNLOADS "/%s/%s.%08x.pk3", moddir, filename, fs_serverReferencedPaks[i]) );
 				} else {
-					Q_strcat( currentPak, sizeof(currentPak), va("%s/" FS_DOWNLOADS "/%s.pk3", moddir, filename) );
+					Q_strcat( currentPak, sizeof(currentPak), va(FS_DOWNLOADS "/%s/%s.pk3", moddir, filename) );
 				}
 
 				// If the currentPak doesn't fit the neededpaks buffer we are likely running into issues
@@ -4457,6 +4503,200 @@ void FS_LoadReflists( void ) {
 }
 
 /*
+=============================================================================
+
+THE FOLDER OF VISIONJK (<home>/visionjk-data, its searched part is files/ in it)
+
+What VisionJK makes for the player that belongs to no mod: the stores of the site (models, emojis, emotes, sprays,
+pictures of the drawing board), what came from servers (downloads/<game>), the caches, the key of an admin login, the notes of the debug menus, the drawings,
+the chat logs. Until 2026-11-28 they were in base/, in the mod folder of the game and in the home folder; they are
+moved here at the first start (FS_MoveToDataFolder). Not moved: what belongs to a mod or a server (configs, server
+logs, bans, web panel), and what players and other programs know where to find (screenshots, videos, demos).
+
+=============================================================================
+*/
+
+// 0: nothing is there, 1: a file, 2: a folder
+static int FS_OSKind( const char *osPath ) {
+#ifdef _WIN32
+	struct _stat st;
+
+	if ( _stat( osPath, &st ) != 0 ) {
+		return 0;
+	}
+	return ( st.st_mode & _S_IFDIR ) ? 2 : 1;
+#else
+	struct stat st;
+
+	if ( stat( osPath, &st ) != 0 ) {
+		return 0;
+	}
+	return S_ISDIR( st.st_mode ) ? 2 : 1;
+#endif
+}
+
+// moves from (a file or a folder) to to, a folder into a folder that is there already by its files. Never over a
+// file that is there: that one stays where it is (kept).
+static void FS_MoveIntoData( const char *from, const char *to, int *moved, int *kept ) {
+	char	path[MAX_OSPATH];
+	char	**list;
+	int		count, i;
+
+	if ( !FS_OSKind( from ) ) {
+		return;
+	}
+	if ( !FS_OSKind( to ) ) {
+		Q_strncpyz( path, to, sizeof( path ) );
+		if ( FS_CreatePath( path ) || rename( from, to ) != 0 ) {
+			( *kept )++;
+			return;
+		}
+		( *moved )++;
+		return;
+	}
+	if ( FS_OSKind( from ) != 2 || FS_OSKind( to ) != 2 ) {
+		( *kept )++;
+		return;
+	}
+	for ( int folders = 0; folders < 2; folders++ ) {
+		list = Sys_ListFiles( from, folders ? "/" : "", NULL, &count, qfalse );
+		for ( i = 0; i < count; i++ ) {
+			char subFrom[MAX_OSPATH], subTo[MAX_OSPATH];
+
+			if ( !strcmp( list[i], "." ) || !strcmp( list[i], ".." ) ) {
+				continue;
+			}
+			Com_sprintf( subFrom, sizeof( subFrom ), "%s%c%s", from, PATH_SEP, list[i] );
+			Com_sprintf( subTo, sizeof( subTo ), "%s%c%s", to, PATH_SEP, list[i] );
+			FS_MoveIntoData( subFrom, subTo, moved, kept );
+		}
+		Sys_FreeFileList( list );
+	}
+	// (gone when all of it was moved)
+	rmdir( from );
+}
+
+// item below folder of the home folder ("" for the home folder itself) to item below target, a folder of the home
+// folder too. (Not FS_BuildOSPath(): it takes the mod folder for an empty name.)
+static void FS_MoveItemToData( const char *folder, const char *item, const char *target, int *moved, int *kept ) {
+	char		from[MAX_OSPATH], to[MAX_OSPATH], *slash;
+	const int	movedBefore = *moved;
+
+	Com_sprintf( from, sizeof( from ), "%s/%s%s%s", fs_homepath->string, folder, folder[0] ? "/" : "", item );
+	Com_sprintf( to, sizeof( to ), "%s/%s/%s", fs_homepath->string, target, item );
+	FS_ReplaceSeparators( from );
+	FS_ReplaceSeparators( to );
+	FS_MoveIntoData( from, to, moved, kept );
+	// the folder it was in, when that held nothing else (rmdir takes only an empty one)
+	if ( *moved != movedBefore && strchr( item, '/' ) && ( slash = strrchr( from, PATH_SEP ) ) != NULL ) {
+		*slash = '\0';
+		rmdir( from );
+	}
+}
+
+// what was in the mod folder game of the home folder
+static void FS_MoveModFolderToData( const char *game, int *moved, int *kept ) {
+	static const char *const items[] = {
+		"debugmenus.ini", "vision/fxlights.txt", "materials/status.txt", "remaps_off.txt", "drawings", "chatlogs",
+		"steamaudio/capture.wav"
+	};
+	char	folder[MAX_OSPATH], target[MAX_OSPATH], **list;
+	int		count, i;
+
+	for ( size_t n = 0; n < ARRAY_LEN( items ); n++ ) {
+		FS_MoveItemToData( game, items[n], FS_DATAGAME, moved, kept );
+	}
+	// the materials of the Material Lab: only those of its name, the other shaders are of the mod
+	Q_strncpyz( folder, FS_BuildOSPath( fs_homepath->string, game, "shaders" ), sizeof( folder ) );
+	list = Sys_ListFiles( folder, ".oshader", NULL, &count, qfalse );
+	for ( i = 0; i < count; i++ ) {
+		if ( !Q_stricmpn( list[i], "zz_mat_", 7 ) ) {
+			FS_MoveItemToData( game, va( "shaders/%s", list[i] ), FS_DATAGAME, moved, kept );
+		}
+	}
+	Sys_FreeFileList( list );
+	// <game>/downloads to visionjk-data/downloads/<game>
+	Q_strncpyz( folder, FS_BuildOSPath( fs_homepath->string, game, "downloads" ), sizeof( folder ) );
+	Q_strncpyz( target, FS_BuildOSPath( fs_homepath->string, FS_DOWNLOADS, game ), sizeof( target ) );
+	FS_MoveIntoData( folder, target, moved, kept );
+}
+
+// once a program: what earlier versions put elsewhere into the folder of VisionJK
+static void FS_MoveToDataFolder( void ) {
+	static const char *const homeItems[] = { "cache", "cvarseen.txt", "ids_session", "admin_ed25519", "admin_ed25519.pub", "admin_hosts.txt" };
+	static const char *const baseItems[] = {
+		"modelstore", "gfx/emoji", "sound/emotes", "emotesounds.txt", "emojistore.txt", "emotes", "sprays/store",
+		"visionjk/changelog-fetched.md"
+	};
+	static qboolean	done;
+	int				moved = 0, kept = 0;
+
+	if ( done ) {
+		return;
+	}
+	done = qtrue;
+	for ( size_t n = 0; n < ARRAY_LEN( homeItems ); n++ ) {
+		FS_MoveItemToData( "", homeItems[n], FS_DATAFOLDER, &moved, &kept );
+	}
+	for ( size_t n = 0; n < ARRAY_LEN( baseItems ); n++ ) {
+		FS_MoveItemToData( BASEGAME, baseItems[n], FS_DATAGAME, &moved, &kept );
+	}
+	// the mod folders, this game's first: where two have the same file, its one wins
+	FS_MoveModFolderToData( JAPLUSGAME, &moved, &kept );
+	FS_MoveModFolderToData( BASEGAME, &moved, &kept );
+	// The folders of other mods only in a home folder of our own. Where it is the folder of the game, other clients
+	// write into them too, and drawings/ or chatlogs/ there may be theirs.
+	if ( !Sys_PathCmp( fs_homepath->string, fs_basepath->string ) ) {
+		int		count;
+		char	**folders = Sys_ListFiles( fs_homepath->string, "/", NULL, &count, qfalse );
+
+		for ( int i = 0; i < count; i++ ) {
+			if ( strcmp( folders[i], "." ) && strcmp( folders[i], ".." ) && Q_stricmp( folders[i], JAPLUSGAME )
+				&& Q_stricmp( folders[i], BASEGAME ) && Q_stricmp( folders[i], FS_DATAFOLDER ) ) {
+				FS_MoveModFolderToData( folders[i], &moved, &kept );
+			}
+		}
+		Sys_FreeFileList( folders );
+	}
+	if ( moved || kept ) {
+		Com_Printf( "VisionJK moved its files into %s: %i, %i stayed where they were\n", FS_DATAFOLDER, moved, kept );
+	}
+}
+
+// the folder and its cvar, and what is in old places moved there, before the search paths are made
+static void FS_PrepareDataFolder( void ) {
+	char path[MAX_OSPATH];
+
+	if ( !fs_homepath->string[0] ) {
+		return;
+	}
+	Q_strncpyz( path, FS_BuildOSPath( fs_homepath->string, FS_DATAGAME, "x" ), sizeof( path ) );
+	FS_CreatePath( path );
+	Q_strncpyz( path, FS_BuildOSPath( fs_homepath->string, FS_DATAFOLDER, "" ), sizeof( path ) );
+	path[strlen( path ) - 1] = '\0';	// strip the trailing slash
+	Cvar_Get( "fs_datapath", path, CVAR_ROM | CVAR_PROTECTED, "(Read Only) The folder of VisionJK in the home folder" );
+	FS_MoveToDataFolder();
+}
+
+// the searched part of the folder of VisionJK at the head of the search path: what the game writes there is what it
+// reads next
+static void FS_AddDataFolder( void ) {
+	searchpath_t *search;
+
+	if ( !fs_homepath->string[0] ) {
+		return;
+	}
+	search = (struct searchpath_s *)Z_Malloc( sizeof( searchpath_t ), TAG_FILESYS, qtrue );
+	search->dir = (directory_t *)Z_Malloc( sizeof( *search->dir ), TAG_FILESYS, qtrue );
+	Q_strncpyz( search->dir->path, fs_homepath->string, sizeof( search->dir->path ) );
+	Q_strncpyz( search->dir->fullpath, FS_BuildOSPath( fs_homepath->string, FS_DATAGAME, "" ), sizeof( search->dir->fullpath ) );
+	search->dir->fullpath[strlen( search->dir->fullpath ) - 1] = '\0';	// strip the trailing slash
+	Q_strncpyz( search->dir->gamedir, FS_DATAGAME, sizeof( search->dir->gamedir ) );
+	search->next = fs_searchpaths;
+	fs_searchpaths = search;
+}
+
+/*
 ================
 FS_StartupKey
 
@@ -4544,6 +4784,7 @@ void FS_Startup( const char *gameName ) {
 	}
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT|CVAR_PROTECTED, "(Read/Write) Location for user generated files" );
 	fs_gamedirvar = Cvar_Get ("fs_game", JAPLUSGAME, CVAR_INIT|CVAR_SYSTEMINFO, "Mod directory" );
+	FS_PrepareDataFolder();
 
 	fs_dirbeforepak = Cvar_Get("fs_dirbeforepak", "0", CVAR_INIT|CVAR_PROTECTED, "Prioritize directories before paks if not pure" );
 
@@ -4636,6 +4877,8 @@ void FS_Startup( const char *gameName ) {
 		}
 		Q_strncpyz( fs_gamedir, fs_forcegame->string, sizeof( fs_gamedir ) );
 	}
+
+	FS_AddDataFolder();
 
 	// add our commands
 	Cmd_AddCommand ("path", FS_Path_f, "Lists search paths" );

@@ -108,7 +108,9 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 	// actually start the commands going
 	if ( !r_skipBackEnd->integer ) {
 		// let it start on the new batch
+		ri.LoadPush( "frame: vulkan", NULL );
 		RB_ExecuteRenderCommands( cmdList->cmds );
+		ri.LoadPop();
 	}
 }
 
@@ -596,8 +598,11 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	if ( !tr.registered ) {
 		return;
 	}
-	// VisionJK: the maps of materials made at load that the worker thread finished (tr_matgen.cpp)
+	// VisionJK: the maps of materials made at load that the worker threads finished (tr_matgen.cpp), and the images
+	// whose levels worker threads made while a level loads (vk_prepare.cpp)
 	R_MaterialGenFrame();
+	VK_PrepareFlush();
+	VK_PrepareInFrame( qtrue );
 
 	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect(), RE_SetScreenEffect() and
 	// RE_AddLiquid(), RE_AddWet() and RE_AddPaint() was for the frame before
@@ -704,6 +709,7 @@ Returns the number of msec spent in the back end
 void RE_EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	swapBuffersCommand_t	*cmd;
 
+	VK_PrepareInFrame( qfalse );
 	if ( !tr.registered ) {
 		return;
 	}

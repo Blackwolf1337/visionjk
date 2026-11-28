@@ -92,6 +92,44 @@ static void VK_GpuAdd( const char *name, double ms ) {
 	vk_gpuNames[i].ms += ms;
 }
 
+// how much of the memory of the card the program has and may have: the largest heap on the card gives the budget,
+// what is in the others on the card (the small one the processor writes into directly) counts as used as well
+static void VK_ProfileMemory( gpuProfile_t *p ) {
+	VkPhysicalDeviceMemoryBudgetPropertiesEXT	budget = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT };
+	VkPhysicalDeviceMemoryProperties2			props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, &budget };
+	VkDeviceSize								used = 0, most = 0, largest = 0;
+
+	p->vramUsedMB = p->vramBudgetMB = 0.0f;
+	if ( !vk.memoryBudget ) {
+		return;
+	}
+	qvkGetPhysicalDeviceMemoryProperties2( vk.physicalDevice, &props );
+	for ( uint32_t i = 0; i < props.memoryProperties.memoryHeapCount; i++ ) {
+		const VkMemoryHeap &heap = props.memoryProperties.memoryHeaps[i];
+
+		if ( !( heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) ) {
+			continue;
+		}
+		used += budget.heapUsage[i];
+		if ( heap.size > largest ) {
+			largest = heap.size;
+			most = budget.heapBudget[i];
+		}
+	}
+	p->vramUsedMB = (float)( used / ( 1024.0 * 1024.0 ) );
+	p->vramBudgetMB = (float)( most / ( 1024.0 * 1024.0 ) );
+}
+
+static const char *VK_PresentModeName( VkPresentModeKHR mode ) {
+	switch ( mode ) {
+	case VK_PRESENT_MODE_IMMEDIATE_KHR:		return "immediate";
+	case VK_PRESENT_MODE_MAILBOX_KHR:		return "mailbox";
+	case VK_PRESENT_MODE_FIFO_KHR:			return "fifo (vsync)";
+	case VK_PRESENT_MODE_FIFO_RELAXED_KHR:	return "fifo relaxed";
+	default:								return "other";
+	}
+}
+
 // the window of the profiler closes: its averages become what ext.GpuProfile hands out
 static void VK_ProfileClose( void ) {
 	gpuProfile_t *p = &vk_profile;
@@ -110,6 +148,17 @@ static void VK_ProfileClose( void ) {
 	}
 	p->frameMs = (float)( vk_profFrameMs / vk_profFrames );
 	p->frameMaxMs = (float)vk_profFrameMaxMs;
+	VK_ProfileMemory( p );
+	p->vendorID = vk.properties.vendorID;
+	p->hasPci = vk.pciBusInfo;
+	p->pciDomain = vk.pciDomain;
+	p->pciBus = vk.pciBus;
+	p->pciDevice = vk.pciDevice;
+	p->pciFunction = vk.pciFunction;
+	memcpy( p->deviceUUID, vk.deviceUUID, sizeof( p->deviceUUID ) );
+	Q_strncpyz( p->presentMode, VK_PresentModeName( vk.presentMode ), sizeof( p->presentMode ) );
+	p->swapImages = (int)vk.numSwapImages;
+	p->framesInFlight = VK_FRAMES;
 	p->levelOverdraw = vk_profFragmentFrames && vk.width > 0 && vk.height > 0
 		? (float)( vk_profFragments / vk_profFragmentFrames / ( (double)vk.width * vk.height ) ) : 0.0f;
 	vk_profFragments = 0.0;
@@ -814,7 +863,9 @@ VK_BeginCommands
 void VK_BeginCommands( vkFrame_t *frame ) {
 	VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 
+	ri.LoadPush( "frame: wait for gpu", NULL );
 	VK_CHECK( qvkWaitForFences( vk.device, 1, &frame->fence, VK_TRUE, UINT64_MAX ) );
+	ri.LoadPop();
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	VK_CHECK( qvkResetCommandBuffer( frame->cmd, 0 ) );
 	VK_CHECK( qvkBeginCommandBuffer( frame->cmd, &begin ) );
@@ -928,7 +979,9 @@ void VK_PresentFrame( const float *gamma ) {
 	submit.pCommandBuffers = &cmd;
 	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
 
+	ri.LoadPush( "frame: wait for display", NULL );
 	present = VK_AcquireImage( frame, &imageIndex );
+	ri.LoadPop();
 	if ( !present ) {
 		vk.statFramesNotShown++;
 		submit.commandBufferCount = 0;
@@ -981,7 +1034,9 @@ void VK_PresentFrame( const float *gamma ) {
 		info.swapchainCount = 1;
 		info.pSwapchains = &vk.swapchain;
 		info.pImageIndices = &imageIndex;
+		ri.LoadPush( "frame: wait for display", NULL );
 		result = qvkQueuePresentKHR( vk.queue, &info );
+		ri.LoadPop();
 		if ( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ) {
 			qvkDeviceWaitIdle( vk.device );
 			VK_CreateSwapchain();

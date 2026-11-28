@@ -41,7 +41,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <time.h>
 
-#define SEEN_FILE			"cvarseen.txt"
+#define SEEN_FILE			FS_DATAFOLDER "/cvarseen.txt"
 #define SEEN_SAVE_MS		60000
 #define SEEN_FILE_MAX		( CVARSEEN_MAX * 80 + 32 )
 

@@ -63,6 +63,18 @@ qboolean R_ImageLoader_Add( const char *extension, ImageLoaderFn imageLoader );
 
 // Load an image from file.
 void R_LoadImage( const char *shortname, byte **pic, int *width, int *height );
+
+// VisionJK: how the loaders read their file, take their memory and say what is wrong (tr_image_load.cpp). On the
+// main thread that is the engine; on a worker thread that decodes with R_DecodeImageFile() it is the bytes it was
+// given, malloc and silence.
+int			R_ImageReadFile( const char *name, void **buffer );
+void		R_ImageFreeFile( void *buffer );
+void *		R_ImageAlloc( int bytes, memtag_t tag );		// the pixels, and what a loader needs while it works
+void		R_ImageFree( void *p );
+void		R_ImageWarn( int level, const char *fmt, ... );
+qboolean	R_ImageOnWorker( void );
+// on any thread: the pixels of file (its name with the extension) from its bytes, from malloc (free them), or NULL
+qboolean	R_DecodeImageFile( const char *file, const void *bytes, int length, byte **pic, int *width, int *height );
 qboolean R_LoadImageFit( const char *name, byte *rgba, int width, int height );
 
 // Load raw image data from TGA image.

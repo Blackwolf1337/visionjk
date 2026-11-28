@@ -466,7 +466,7 @@ gamescope adds, not the renderer).
   the main thread, which goes on when a texture is done: 0.47 s for that level on this machine, 1.5 s on one
   core. The workers do nothing else and sleep while the game runs.
 - Since 2026-10-10 a texture is packed once and then kept: `vk_texcache.cpp` writes the blocks of every image
-  file of a pak to `vulkan/tex/` of the profile and reads them back the next time, without the image file
+  file of a pak to `vulkan/tex/` of the profile (now `visionjk-data/cache/textures`, see [datafolder.md](datafolder.md)) and reads them back the next time, without the image file
   being read or decoded (`v_vkTexCache`, on by default). The first load of mp/ffa3 since the program started
   went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
   [loading.md](loading.md) has how that was measured and what the cache is named after.
@@ -673,7 +673,7 @@ with traced shadows off the floor fills with the light. Not checked: Windows, a 
 ### Cost and caching
 
 Pipelines are kept in the profile. The renderer uses a `VkPipelineCache` for every pipeline and saves it, with the list
-of pipeline states the session used, to `vulkan/pipelines.dat` in the profile (`vulkan/pipelines_rt.dat` for a device
+of pipeline states the session used, to `pipelines/pipelines.dat` in `visionjk-data/cache` of the home folder (`pipelines_rt.dat` for a device
 with ray tracing, because the driver treats it as another device). At start the listed states are created again by
 several threads at once. A pipeline of `generic.frag` takes the driver about half a second to make, and they used to be
 made during the first frames, so after an install or after switching `v_rayTracing` the game froze for seconds. With a
@@ -696,6 +696,80 @@ uses a coarser search of the swept place and no glow on surfaces.
 `v_gpuTimes` has two more marks: "level resolve" (the end of the level pass resolving its samples, which used to be
 counted as "rt builds") and "screen effects" (heat over lit blades, rings, drops, which used to be counted as
 "weather").
+
+## The profiler panel (v_profiler), 2026-11-28
+
+`v_profiler` (archived) puts a panel over the game that takes neither keys nor the mouse
+(`client/cl_profiler.cpp`, drawn with the debug menus of `cl_imgui.cpp`). 1 is the compact panel at the top left, 2 the
+same at the top right (the HUD has its clock and the leader there). 3 and 4 are the full panel, in two columns, at the
+top left and the top right. 0 closes it. The compact panel is as it was before this day.
+
+Both panels start with what draws and at which size (`Vulkan`, the size, the samples of MSAA, the name of the card),
+the frames a second, large (green from 57, yellow from 29, red below), the frame on the CPU and on the device in ms
+with the slowest frame of the window, and a graph of the last frames: bars for the client, a line for the device, dashed
+lines at 60 and 30 frames a second. `Sound GPU` is the echo of `v_spatial` on a device of its own (`v_spatialGpu`),
+which the timestamps of the renderer do not see. With another renderer there are no values of the device. Values are
+averages of a window of 500 ms. The compact panel then lists the passes of the device (`v_gpuTimes`) and what the last
+frame was made of: overdraw of the level, draws, triangles, bones, transforms.
+
+The left column of the full panel is the processor, under the name of the processor.
+
+| Row | Meaning |
+|-----|---------|
+| Busy | the main thread's frame without what it waits for: the frame, less the wait of `com_maxfps`, for the card and for the display |
+| Limit | what holds the frames back: `display / com_maxfps` when the wait of `com_maxfps` and the wait for the display together are over a quarter of the frame, else `GPU` when the wait for the card is over a tenth, else `CPU` |
+| the bars | where the time of the frame went, in ms a frame, the biggest first: the parts of the frame below, `frame limit` (the wait before the frame, `com_maxfps`) and `not named` (what no part covers) |
+| Process | what the whole program uses of the processor, 100 % is one processor thread, with the number the machine has and the count of the threads |
+| thread bars | the eight busiest threads in percent of a processor thread, the main thread as `main`, the rest in one line (`N more`) |
+| Jobs | jobs a second that the workers of the engine ran, and how busy the workers were together |
+
+The parts of the frame are the pushes of `qcommon/com_load.cpp` whose kind starts with `frame: `: `input` (shown as
+`input, net`), `server`, `game` (`game module`), `client` (`client rest`), `cgame`, `sound`, `menus`, `debug menus`,
+`renderer`, `vulkan`, `drawn` (`end of frame`), and the two waits `wait for gpu` (the fence of the frame in
+`VK_BeginCommands()`) and `wait for display` (getting an image of the swap chain and the present, in `vk_cmd.cpp`). A
+part is its own time, without what is pushed inside it. The sums are kept only while the full panel is open
+(`Com_FrameProfileOn()`, `Com_FrameProfile()`), and the window closes the sums of its half second into averages a frame.
+
+The right column is the card.
+
+| Row | Meaning |
+|-----|---------|
+| Load | how busy the card is in percent, with the clock of the cores and of the memory in MHz |
+| Temperature | in degrees, with the source of the values behind it (`NVML` or `amdgpu`) |
+| Power | the draw in watts, and the limit |
+| VRAM game | what this program has on the memory of the card and the budget the driver gives it now (`VK_EXT_memory_budget`). The budget is less when other programs hold memory. Red above 90 % of it |
+| VRAM card | used and total memory of the whole card, every program on it |
+| Present | the present mode (`immediate`, `mailbox`, `fifo (vsync)`, `fifo relaxed`), the images of the swap chain and the frames in flight |
+| the bars | what each part of the frame took on the device in ms, the average and the largest value, the biggest first |
+| counts | as in the compact panel |
+
+A row is left out when the value is not known. Load turns yellow from 95 %, temperature from 75 and red from 85 degrees.
+
+Where the values come from. The time of a thread is read from `/proc/self/task/<id>/schedstat` on Linux (nanoseconds
+on a processor, the file `stat` with ticks of 10 ms when a kernel has no schedstat), from the Toolhelp snapshot and
+`GetThreadTimes` on Windows and from `task_threads` on macOS (`Sys_ThreadTimes()` in `shared/sys/`). The name of the
+processor comes from `/proc/cpuinfo`, the registry or `sysctl`. The values of the card come from the driver, found by the
+PCI address of the card of the renderer (`VK_EXT_pci_bus_info`) or its UUID: for an NVIDIA card NVML, loaded when it is
+first asked for (`libnvidia-ml.so.1` on Linux, `nvml.dll` on Windows from the system folder only, so a file of that name
+next to the game is never loaded); for an AMD card on Linux the files of the `amdgpu` driver under
+`/sys/bus/pci/devices/<address>` (`gpu_busy_percent`, `mem_info_vram_*`, and `hwmon` for temperature, clocks and power).
+An Intel card and macOS get no values of the driver. If the library or the files are not there the rows are left out and
+the rest of the panel works.
+
+A reading runs as a job every 500 ms (`client/cl_profstats.cpp`, `Com_JobAdd()`), because asking a driver can take a
+millisecond and the frame does not wait for it. The panel shows the last one that was done. It touches nothing of the
+engine. With `v_jobThreads -1` there are no workers and the job runs at once on the main thread. The workers are named
+`vjk job <n>` (`Sys_SetThreadName()`, 15 characters on Linux), so they can be told apart in this panel and in the tools
+of the system.
+
+Two things changed for others. `gpuProfile_t` (`rd-common/tr_types.h`) got the card, its PCI address and UUID, the memory
+of the program, the present mode and the numbers of images and frames, so the engine and the renderer must be of the same
+build: an old renderer with a new engine reads the structure wrongly. And the pushes above are always in the code now,
+so `v_loadReport` and `v_hitchLog` (see [loading.md](loading.md)) name `frame: input`, `menus`, `debug menus`, `cgame`
+and the two waits where they said `not named` before.
+
+Seen on 2026-11-28, hidden on Linux with an NVIDIA card (NVML): modes 3 and 4 and 1, and off and on again. Not seen:
+AMD values, Windows, macOS.
 
 ## Not done
 

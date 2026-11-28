@@ -164,11 +164,14 @@ in `admin_keys.txt` or a one-time code.
   and from key files are printed without `^`, `"` and `%`.
 - The login is bound to the server by a host key (protocol version 2). The server makes 32 random bytes once and
   keeps them as base64 in `auth_host.key` in its game folder, and sends them with the nonce. The signed message
-  has the host key in it. The client keeps the host key of every server address in `admin_hosts.txt` (the first
+  has the host key in it. The client keeps the host key of every server address in `admin_hosts.txt` in `visionjk-data` (the first
   login on an address keeps it, like ssh `known_hosts`) and does not sign when a server sends another key than
   the one kept for its address, or one kept for another address. A server that passes on the question of
   another one has a key that is not the key of that other server, so the signature is no use there. The host
-  key is no secret on purpose: the protection is what the client kept. A server that proved it has a secret
+  key is no secret on purpose: the protection is what the client kept. The private key `admin_ed25519` and
+  `admin_hosts.txt` are in `visionjk-data` of the home folder, which is in no search path, so no module and no
+  command can read them through the file system of the engine, and a server can not name that folder as
+  its `fs_game` (see [datafolder.md](datafolder.md)). A server that proved it has a secret
   would not help, a hostile server could pass that challenge on as well.
 - A server of this version takes a version 1 signature (older clients, no host key) only when `vs_authHosts` is
   set. Without it the older client gets `vs_auth fail version`: those players have to update, or the owner sets
@@ -433,7 +436,7 @@ Regions of memory and child processes are looked at every 2 seconds. The code of
 - What existed at the first look counts as the start of the game and is not written down, except the strong signs.
 - macOS has none of this, only the crash part below.
 
-The crash part. On a server the file `ids_session` in the home folder holds the address of the server, from the
+The crash part. On a server the file `ids_session` in `visionjk-data` of the home folder holds the address of the server, from the
 connect to the disconnect. If it is still there at the next start, the last run ended on that server. That is
 written down as a `crash` event, and the first connect to that server is refused with the reason. It tells the
 player that the server may have been the cause. A bug of the game makes a crash too, which is why a crash weighs
@@ -569,7 +572,7 @@ answers a delete key, shown once.
 
 The client takes an emoji only from the list of the store, and only when the file has the size and the SHA-256 of the
 list. Otherwise it does not keep the file. It fetches nothing in a demo, and `v_emojiStore 0`
-stops it. On a pure server it fetches now, see the interactive emojis below. `base/emojistore.txt` records which files came from the store. When a new list lacks one of them, the client
+stops it. On a pure server it fetches now, see the interactive emojis below. `emojistore.txt` in `visionjk-data/files` records which files came from the store. When a new list lacks one of them, the client
 deletes it, so an emoji the owner took down goes from the players too. Files that did not come from the store are
 never deleted. Not tested: the store on the host.
 
@@ -607,7 +610,7 @@ file only when it has exactly the size of a drawing. Not tested: the POST on Win
 
 The board can also take the picture of the system clipboard (`v_clipboardImage`, `codemp/client/cl_clipboard.cpp`).
 It accepts only a PNG or JPEG (on Windows also a bitmap, written as a TGA), and a picture of 32 MB or less. It writes
-only into `drawings/` of the home folder, through the file system of the engine. The path must not contain `..` or a
+only into `drawings/` (of `visionjk-data/files` in the home folder), through the file system of the engine. The path must not contain `..` or a
 drive letter or a backslash, and must not start with `/`. On X11 the engine asks the owner of the clipboard on a
 connection of its own, nothing waits for it, and the answer is dropped after 3 s. The picture is then loaded by the
 normal image loaders, as any picture of the Picture button is. Not tested: Windows and macOS.
@@ -618,7 +621,7 @@ The spray store of the model service (issue #9, the upload of `v_sprays upload`)
 checks the format: a square RGBA PNG of 64 to 512 pixels, a power of two, 512 KB at most, with a valid `vjAn` chunk for
 the frames, and the pixels must unpack to exactly the rows (no decompression bomb). The same file gets the same
 number. The limits are 30 uploads an hour and 120 a day per address, and the store keeps the newest 20000. The owner
-takes one down with `modelstore.py remove-spray <number>`. The client fetches a sheet only by the number that came with a spray, into `sprays/store/<number>.png`.
+takes one down with `modelstore.py remove-spray <number>`. The client fetches a sheet only by the number that came with a spray, into `sprays/store/<number>.png` of `visionjk-data/files`.
 
 On a pure server the files of `sprays/` and `sprays/store/` are read from the folder (`FS_IsToyFile` in
 `files.cpp`, which replaces `FS_IsDrawing`, with the files of `drawings/`). The game decodes a gif with stb_image

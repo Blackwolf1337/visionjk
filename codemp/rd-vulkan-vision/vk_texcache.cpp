@@ -27,9 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // profile, and the next time the blocks are read and handed to the device as they are.
 //
 // A file of the cache is named after what it was made from: the path of the image file, its length and the
-// checksum of the pak it is in (FS_FileSource() of the engine), and the settings its contents depend on. Another
-// pak, another length or another setting is another name, so nothing has to be compared or thrown away, and an
-// old file is merely left behind. An image file of a directory is never kept: it can change while the name of
+// CRC-32 of its contents from the directory of its pak (FS_FileSource() of the engine), and the settings its
+// contents depend on. Another file, another length or another setting is another name, so nothing has to be
+// compared or thrown away, and an old file is merely left behind. A new version of a pak leaves the files that
+// did not change under the names they had. An image file of a directory is never kept: it can change while the name of
 // what was made from it stays the same.
 //
 // The files end in .dat: of the files of a directory, the engine lets only a few kinds be read while the game
@@ -91,8 +92,12 @@ static unsigned long long VK_TexCacheHash( const char *text ) {
 	return hash;
 }
 
+static void VK_TexCachePathOf( const char *key, char *path, int pathSize ) {
+	Com_sprintf( path, pathSize, "textures/%016llx.dat", VK_TexCacheHash( key ) );
+}
+
 static void VK_TexCachePath( char *path, int pathSize ) {
-	Com_sprintf( path, pathSize, "textures/%016llx.dat", VK_TexCacheHash( texCache.key ) );
+	VK_TexCachePathOf( texCache.key, path, pathSize );
 }
 
 /*
@@ -101,13 +106,13 @@ VK_ImageFileOf
 
 Which file R_LoadImage() would take for the name, as it looks for it: the extension of the name first, then
 the kinds it knows in its order. qfalse when that file is of a directory or there is none, else file is its
-name with its length and the checksum of its pak (also for the generated maps of tr_matgen.cpp).
+name with its length and the CRC of its contents (also for the generated maps of tr_matgen.cpp).
 
 VK_TexCacheKey: the key of what is made from it. The settings in the key are the ones Upload32() and
 VK_LevelFormat() look at.
 ===============
 */
-qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *checksum ) {
+qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *crc ) {
 	static const char *const kinds[] = { "jpg", "png", "tga" };
 	char		stripped[MAX_QPATH];
 	const char	*given = COM_GetExtension( name );
@@ -127,7 +132,7 @@ qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length
 			continue;
 		}
 		Com_sprintf( file, fileSize, "%s.%s", stripped, kinds[kind] );
-		source = ri.FS_FileSource( file, length, checksum );
+		source = ri.FS_FileSource( file, length, crc );
 		if ( source == FS_SOURCE_NONE ) {
 			continue;
 		}
@@ -140,18 +145,80 @@ qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length
 	return qfalse;
 }
 
-static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allowPicmip ) {
+static qboolean VK_TexCacheKeyOf( const char *name, qboolean mipmap, qboolean allowPicmip, char *key, int keySize ) {
 	char	file[MAX_QPATH];
-	int		length = 0, checksum = 0;
+	int		length = 0, crc = 0;
 
-	if ( VK_ImageFileOf( name, file, sizeof( file ), &length, &checksum ) ) {
-		Com_sprintf( texCache.key, sizeof( texCache.key ), "%s %i %08x v%i m%i p%i s%i c%i t%i x%i o%i i%g g%g", file, length,
-			(unsigned)checksum, TEXCACHE_VERSION, mipmap ? 1 : 0, allowPicmip ? r_picmip->integer : 0,
+	if ( VK_ImageFileOf( name, file, sizeof( file ), &length, &crc ) ) {
+		Com_sprintf( key, keySize, "%s %i %08x v%i m%i p%i s%i c%i t%i x%i o%i i%g g%g", file, length,
+			(unsigned)crc, TEXCACHE_VERSION, mipmap ? 1 : 0, allowPicmip ? r_picmip->integer : 0,
 			r_simpleMipMaps->integer, r_colorMipLevels->integer, r_texturebits->integer, glConfig.maxTextureSize, tr.overbrightBits,
 			r_intensity->value, glConfig.deviceSupportsGamma ? 0.0f : r_gamma->value );
 		return qtrue;
 	}
 	return qfalse;
+}
+
+static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allowPicmip ) {
+	return VK_TexCacheKeyOf( name, mipmap, allowPicmip, texCache.key, sizeof( texCache.key ) );
+}
+
+/*
+===============
+VK_TexCacheKeyFor / VK_TexCacheHas
+
+For the textures made ahead on worker threads (vk_prepare.cpp): the key the texture of this image file would be kept
+under (qfalse: it would not be kept), and whether a file of that key is there.
+===============
+*/
+qboolean VK_TexCacheKeyFor( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, char *key, int keySize ) {
+	if ( !vk.bcTextures || !allowTC || !v_vkTexCache || !v_vkTexCache->integer ) {
+		return qfalse;
+	}
+	return VK_TexCacheKeyOf( name, mipmap, allowPicmip, key, keySize );
+}
+
+qboolean VK_TexCacheHas( const char *key ) {
+	char path[MAX_QPATH];
+
+	VK_TexCachePathOf( key, path, sizeof( path ) );
+	return ri.Cache_Exists( path );
+}
+
+/*
+===============
+VK_TexCacheWrite
+
+The file of a texture of key: its levels one after the other, as VK_TexCacheUpload() takes them. Only textures in
+BC1 or BC3 blocks with a first level of at least 4 x 4 are kept (as VK_TexCacheLevel() records them).
+===============
+*/
+void VK_TexCacheWrite( const char *key, vkFormat_t format, int width, int height, int mipLevels, const vec3_t averageColor,
+	const byte *levels, size_t size ) {
+	texCacheHeader_t	header;
+	char				path[MAX_QPATH];
+
+	if ( ( format != VKF_BC1 && format != VKF_BC3 ) || width < 4 || height < 4 || mipLevels < 1 || mipLevels > TEXCACHE_MAX_LEVELS ) {
+		return;
+	}
+	memset( &header, 0, sizeof( header ) );
+	header.magic = TEXCACHE_MAGIC;
+	header.width = width;
+	header.height = height;
+	header.format = format;
+	header.mipLevels = mipLevels;
+	header.keyLength = (int)strlen( key );
+	VectorCopy( averageColor, header.averageColor );
+
+	std::vector<byte> out( sizeof( header ) + header.keyLength + size );
+
+	memcpy( out.data(), &header, sizeof( header ) );
+	memcpy( out.data() + sizeof( header ), key, header.keyLength );
+	memcpy( out.data() + sizeof( header ) + header.keyLength, levels, size );
+	VK_TexCachePathOf( key, path, sizeof( path ) );
+	ri.LoadPush( "texture kept: written", NULL );
+	ri.Cache_Write( path, out.data(), (int)out.size() );
+	ri.LoadPop();
 }
 
 // the blocks of a level of a texture of this size
@@ -314,16 +381,8 @@ void VK_TexCacheEnd( void ) {
 		texCache.file = NULL;
 	}
 	if ( texCache.recording && texCache.levelsKept == texCache.recorded.mipLevels && texCache.levelsKept > 0 ) {
-		char path[MAX_QPATH];
-		std::vector<byte> out( sizeof( texCache.recorded ) + texCache.recorded.keyLength + texCache.blocks.size() );
-
-		memcpy( out.data(), &texCache.recorded, sizeof( texCache.recorded ) );
-		memcpy( out.data() + sizeof( texCache.recorded ), texCache.key, texCache.recorded.keyLength );
-		memcpy( out.data() + sizeof( texCache.recorded ) + texCache.recorded.keyLength, texCache.blocks.data(), texCache.blocks.size() );
-		VK_TexCachePath( path, sizeof( path ) );
-		ri.LoadPush( "texture kept: written", NULL );
-		ri.Cache_Write( path, out.data(), (int)out.size() );
-		ri.LoadPop();
+		VK_TexCacheWrite( texCache.key, (vkFormat_t)texCache.recorded.format, texCache.recorded.width, texCache.recorded.height,
+			texCache.recorded.mipLevels, texCache.recorded.averageColor, texCache.blocks.data(), texCache.blocks.size() );
 	}
 	texCache.recording = texCache.pending = qfalse;
 }

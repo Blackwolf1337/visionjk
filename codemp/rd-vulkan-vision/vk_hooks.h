@@ -104,13 +104,27 @@ void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );	
 
 // vk_texcache.cpp: the texture of an image file as an earlier run packed it, see there for the order of the calls
 qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );
-qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *checksum );
+qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *crc );
 void VK_SunChanged( void );
 qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
 void VK_TexCacheRecord( void );
 void VK_TexCacheAverage( const vec3_t color );
 void VK_TexCacheFoundAverage( vec3_t color );
 void VK_TexCacheEnd( void );
+
+// vk_prepare.cpp: textures made on the worker threads of the engine while a level loads, see there
+qboolean VK_PrepareLoading( void );
+void VK_PrepareLevelBegin( void );
+void VK_PrepareLevelEnd( void );
+void VK_PrepareDrop( void );
+qboolean VK_ReadImageFile( const char *name, char *file, int fileSize, void **bytes, int *length );
+void VK_PrepareFlush( void );
+void VK_PrepareFinish( image_t *image );
+void VK_PrepareInFrame( qboolean inFrame );
+image_t *VK_PrepareFile( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode );
+void VK_PreparePixels( image_t *image, byte *pic, int width, int height );
+void VK_PrefetchWorld( const dshader_t *shaders, int numShaders );
+image_t *VK_PrefetchTake( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode );
 
 // The few OpenGL calls left in the shared files, by where they are:
 // tr_image.cpp Upload32, R_CreateImage, GL_TextureMode, R_Images_DeleteImageContents

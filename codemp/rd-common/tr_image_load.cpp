@@ -24,6 +24,74 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_common.h"
 
+/*
+=================
+The file, the memory and the messages of the loaders
+
+A worker thread that decodes a file it was given (R_DecodeImageFile) must not touch the file system, the zone or
+the console of the engine: there the loaders read the bytes it holds, take memory from malloc and say nothing.
+=================
+*/
+static thread_local struct {
+	bool		active;
+	const char	*name;
+	const void	*bytes;
+	int			length;
+} imageWorker;
+
+qboolean R_ImageOnWorker( void ) {
+	return (qboolean)imageWorker.active;
+}
+
+int R_ImageReadFile( const char *name, void **buffer ) {
+	if ( imageWorker.active ) {
+		if ( Q_stricmp( name, imageWorker.name ) ) {
+			*buffer = NULL;
+			return -1;
+		}
+		*buffer = (void *)imageWorker.bytes;
+		return imageWorker.length;
+	}
+	return (int)ri.FS_ReadFile( name, buffer );
+}
+
+void R_ImageFreeFile( void *buffer ) {
+	if ( !imageWorker.active ) {
+		ri.FS_FreeFile( buffer );
+	}
+}
+
+void *R_ImageAlloc( int bytes, memtag_t tag ) {
+	if ( imageWorker.active ) {
+		return malloc( (size_t)bytes );
+	}
+	return ri.Z_Malloc( bytes, tag, qfalse, 4 );
+}
+
+void R_ImageFree( void *p ) {
+	if ( !p ) {
+		return;
+	}
+	if ( imageWorker.active ) {
+		free( p );
+	} else {
+		ri.Z_Free( p );
+	}
+}
+
+void R_ImageWarn( int level, const char *fmt, ... ) {
+	va_list	args;
+	char	text[1024];
+
+	if ( imageWorker.active ) {
+		return;
+	}
+	va_start( args, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, args );
+	va_end( args );
+	ri.Printf( level, "%s", text );
+}
+
 const int MAX_IMAGE_LOADERS = 10;
 struct ImageLoaderMap
 {
@@ -137,6 +205,23 @@ void R_LoadImage( const char *shortname, byte **pic, int *width, int *height ) {
 			return;
 		}
 	}
+}
+
+qboolean R_DecodeImageFile( const char *file, const void *bytes, int length, byte **pic, int *width, int *height ) {
+	const ImageLoaderMap *imageLoader = FindImageLoader( COM_GetExtension( file ) );
+
+	*pic = NULL;
+	*width = *height = 0;
+	if ( !imageLoader || !bytes || length <= 0 ) {
+		return qfalse;
+	}
+	imageWorker.active = true;
+	imageWorker.name = file;
+	imageWorker.bytes = bytes;
+	imageWorker.length = length;
+	imageLoader->loader( file, pic, width, height );
+	imageWorker.active = false;
+	return (qboolean)( *pic != NULL );
 }
 
 /*

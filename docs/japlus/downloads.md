@@ -9,8 +9,8 @@ When a server offers paks you do not have and you allow downloads (`cl_allowDown
 anything is downloaded (`v_downloadReview 1`, the default):
 
 - every pak the server offers, ticked: untick what you do not want;
-- **Keep them (downloads folder)**: the paks go into `<game>/downloads` of your home folder and stay there;
-- **This session only**: they go into `<game>/downloads/session`, which is emptied when the game starts and
+- **Keep them (downloads folder)**: the paks go into `visionjk-data/downloads/<game>` of your home folder and stay there;
+- **This session only**: they go into `visionjk-data/downloads/<game>/session`, which is emptied when the game starts and
   when it ends (the default since 2026-11-02, `v_downloadKeep 0`);
 - **Download**, **Join without** (nothing is downloaded), **Disconnect**. A pure server may not let you play
   without its files.
@@ -30,7 +30,7 @@ could run on your computer (on Windows the engine unpacks a game module it finds
 them** goes on into the game, **Disconnect** leaves.
 
 A download that does not finish (you leave the server, are dropped, disconnect or connect elsewhere in the
-middle of it) leaves nothing behind: the part that came, the `.tmp` file in `<game>/downloads`, is deleted. A
+middle of it) leaves nothing behind: the part that came, the `.tmp` file in `visionjk-data/downloads/<game>`, is deleted. A
 pak that came whole but has not the checksum the server named is deleted too, before the connection ends
 ("Incorrect checksum for file").
 
@@ -44,12 +44,14 @@ more than about a million entries is refused.
 
 The paks of both folders are loaded only while a server references them, as the `dl_` paks of the engine were:
 what one server sends does not change the menus or the models on another server, nor when you play alone. Paks
-that were downloaded into the game folder itself before 0.1.9 stay where they are and load as before.
+that were downloaded into the game folder itself before 0.1.9 stay where they are and load as before. Paks that
+were kept in `<game>/downloads` before 2026-11-28 are moved to the new place once at the start, see
+[datafolder.md](datafolder.md).
 
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|
 | `v_downloadReview` | 1 | the two windows. 0: everything is downloaded, programs in it stay blocked |
-| `v_downloadKeep` | 0 (1 before 2026-11-02) | where the paks go by default: `downloads` (1) or `downloads/session` (0) |
+| `v_downloadKeep` | 0 (1 before 2026-11-02) | where the paks go by default: `downloads/<game>` (1) or `downloads/<game>/session` (0), in `visionjk-data` |
 | `v_downloadReview_do` | | what a click in the windows does, for a key or a script: `download`, `without`, `keep 0/1`, `pak <n>`, `kind <pak> <kind>`, `use`, `skip`, `skipall` |
 | `v_downloadHttp` | 1 | paks of a server that names a web address for them come from there. 0: only from the server itself. Bit 14 of `cp_pluginDisable` (AllowDownloadURL_Redirect) does the same |
 
@@ -129,8 +131,8 @@ Of the web address:
 
 Of the windows:
 
-- `FS_ComparePaks()` names the place of a download as `<game>/downloads/<name>.pk3` (with the checksum in the
-  name when one of that name is there already). `CL_DownloadLocalName()` moves it into `downloads/session` for a
+- `FS_ComparePaks()` names the place of a download as `visionjk-data/downloads/<game>/<name>.pk3` (with the checksum in the
+  name when one of that name is there already). `CL_DownloadLocalName()` moves it into the folder `session` below the game folder for a
   pak of this session.
 - `CL_InitDownloads()` opens the first window (`CL_DownloadReviewBegin()`) in place of starting the first
   download; the question per file of `cl_downloadPrompt` is not asked while a window of this file is open.
@@ -141,8 +143,10 @@ Of the windows:
 - `FS_LoadZipFile()` reads `<pak>.blocked`: those files still count for the checksum (a pure server sees the
   pak it sent), but they are in no hash table and in no list, so nothing can open or list them, `Sys_UnpackDLL()`
   included.
-- `FS_AddGameDirectory()` adds the paks of `downloads` and `downloads/session` of the home folder after those of
-  the game folder, with the rule of the `dl_` paks. The session folder is emptied once a game folder a run, before
+- `FS_AddGameDirectory()` adds the paks of `visionjk-data/downloads/<game>` and its `session` folder of the home folder
+  after those of the game folder (`FS_AddPaksOf()`), with the rule of the `dl_` paks. They count as paks of the game
+  folder. `visionjk-data` itself is never a game folder: `FS_AddGameDirectory()` and the check of the `fs_game` a
+  server sends refuse the name. The session folder is emptied once a game folder a run, before
   its first paks are loaded, and at quit (`FS_Shutdown( qtrue )`), only `.pk3`, `.tmp` and `.blocked` files.
 - A `.blocked` list that is larger than 16 MB or can not be read blocks the whole pak, where it blocked nothing
   before. The names of the pak are classified with `/` for `\`.
@@ -185,6 +189,14 @@ The windows:
 2026-10-17, hidden and silent on Linux (`uitest/dltest.sh` of the test tools: a server of this tree with a test
 pak holding a map file, a texture, a config and a fake `cgamex86_64.dll`, a fresh client profile): both windows
 seen in German, kept and session mode, the fake program blocked and not found by `which`, an unticked kind
-blocked, the map file and the config loaded from `downloads/` and `downloads/session/`, the session folder empty
+blocked, the map file and the config loaded from `downloads/` and `downloads/session/` (the old places of that day), the session folder empty
 after quit. Not run: Windows (where `Sys_UnpackDLL()` would have been the danger), a pure server, a pak with
 thousands of files in the second window (it scrolls with the wheel, never seen), a real mouse.
+
+The folder of VisionJK, 2026-11-28, hidden and silent on Linux: real downloads from a server on 127.0.0.1 with the
+paks forced by `ref_forcelist.txt`, and the two windows clicked with real pointer input. Keep, on a server that is
+not pure: the pak lay in `visionjk-data/downloads/<game>` byte for byte the same, the map file and the config were
+loaded and `cgamex86_64.dll` was blocked. This session only, on a pure server: the client joined and was not dropped
+in about 10 seconds, and `session/` was empty after quit. A pak that was kept before the move was found in the new
+place and not asked for again. Not run: Windows, macOS, a download from a web address, a server that sends hostile
+pak names. More in [datafolder.md](datafolder.md).

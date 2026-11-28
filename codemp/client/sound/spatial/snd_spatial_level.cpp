@@ -682,14 +682,16 @@ void S_SpatialApplyBrushes( void ) {
 
 // v_spatialSaveScene: the scene of the simulator as Steam Audio has it, into steamaudio/scene.obj of the home path
 void S_SpatialSaveScene_f( void ) {
-	const char *path;
+	char path[MAX_OSPATH];
 
 	if ( !spatial.level.top || spatialWorkerState.load() != WORKER_IDLE ) {
 		Com_Printf( "v_spatialSaveScene: no level, or a pass runs, try again\n" );
 		return;
 	}
-	// steamaudio/ is there: the paths of the levels are kept in it
-	path = FS_BuildOSPath( Cvar_VariableString( "fs_homepath" ), FS_GetCurrentGameDir(), "steamaudio/scene.obj" );
+	Q_strncpyz( path, FS_BuildOSPath( Cvar_VariableString( "fs_homepath" ), FS_DATAGAME, "steamaudio/scene.obj" ), sizeof( path ) );
+	if ( FS_CreatePath( path ) ) {
+		return;
+	}
 	qiplSceneSaveOBJ( spatial.level.top, path );
 	Com_Printf( "v_spatialSaveScene: %s\n", path );
 }

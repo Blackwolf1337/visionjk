@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // to jka.vision/models, with their icons, a page at a time, and a button that fetches one. v_modelbrowser opens and
 // closes it (Controls, Extras). While it is open the mouse is free (select/cg_select.c draws it and hands it the
 // keys). The engine does the fetching (client/cl_models.cpp): it keeps the list of the store in
-// modelstore/index.txt and the icons in modelstore/icons/ of base, and counts v_modelStoreChanged up when one of
+// modelstore/index.txt and the icons in modelstore/icons/ of visionjk-data/files, and counts v_modelStoreChanged up when one of
 // them, or a model, came. Not from JA+, see docs/japlus/models.md.
 
 #include "cgame/cg_local.h"

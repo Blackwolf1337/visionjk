@@ -347,7 +347,9 @@ static shader_t *ShaderForShaderNum( int shaderNum, const int *lightmapNum, cons
 		styles = vertexStyles;
 	}
 
+	ri.LoadPush( "world: shader of a surface", NULL );
 	shader = R_FindShader( dsh->shader, lightmapNum, styles, qtrue );
+	ri.LoadPop();
 
 	// if the shader had errors, just use default shader
 	if ( shader->defaultShader ) {
@@ -1466,6 +1468,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 		}
 	}
 
+	ri.LoadPush( "world: patch stitching", NULL );
 	if ( r_patchStitching->integer ) {
 		R_StitchAllPatches(worldData);
 	}
@@ -1475,6 +1478,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 	if ( r_patchStitching->integer ) {
 		R_MovePatchSurfacesToHunk(worldData);
 	}
+	ri.LoadPop();
 
 	ri.Printf( PRINT_ALL, "...loaded %d faces, %i meshes, %i trisurfs, %i flares\n", numFaces, numMeshes, numTriSurfs, numFlares );
 }
@@ -2160,24 +2164,38 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 		Com_Error (ERR_DROP, "RE_LoadWorldMap: %s has a lump outside of the file", name);
 	}
 
-	// load into heap
+	// load into heap (VisionJK: each step named for v_loadReport, the shaders and images inside count as their own)
+	ri.LoadPush( "world: shaders", NULL );
 	R_LoadShaders( &header->lumps[LUMP_SHADERS], worldData );
+	ri.LoadPop();
+	// their images on worker threads while the rest loads (vk_prepare.cpp)
+	VK_PrefetchWorld( worldData.shaders, worldData.numShaders );
+	ri.LoadPush( "world: lightmaps", NULL );
 	R_LoadLightmaps( &header->lumps[LUMP_LIGHTMAPS], name, worldData );
+	ri.LoadPop();
+	ri.LoadPush( "world: planes and fogs", NULL );
 	R_LoadPlanes (&header->lumps[LUMP_PLANES], worldData);
 	R_LoadFogs( &header->lumps[LUMP_FOGS], &header->lumps[LUMP_BRUSHES], &header->lumps[LUMP_BRUSHSIDES], worldData, index );
+	ri.LoadPop();
+	ri.LoadPush( "world: surfaces", NULL );
 	R_LoadSurfaces( &header->lumps[LUMP_SURFACES], &header->lumps[LUMP_DRAWVERTS], &header->lumps[LUMP_DRAWINDEXES], worldData, index );
+	ri.LoadPop();
+	ri.LoadPush( "world: nodes and vis", NULL );
 	R_LoadMarksurfaces (&header->lumps[LUMP_LEAFSURFACES], worldData);
 	R_LoadNodesAndLeafs (&header->lumps[LUMP_NODES], &header->lumps[LUMP_LEAFS], worldData);
 	R_LoadSubmodels (&header->lumps[LUMP_MODELS], worldData, index);
 	R_LoadVisibility( &header->lumps[LUMP_VISIBILITY], worldData );
+	ri.LoadPop();
 
 	worldData.dataSize = (byte *)Hunk_Alloc(0, h_low) - startMarker;
 
 	if (!index)
 	{
+		ri.LoadPush( "world: entities and light grid", NULL );
 		R_LoadEntities( &header->lumps[LUMP_ENTITIES], worldData );
 		R_LoadLightGrid( &header->lumps[LUMP_LIGHTGRID], worldData );
 		R_LoadLightGridArray( &header->lumps[LUMP_LIGHTARRAY], worldData );
+		ri.LoadPop();
 
 		// only set tr.world now that we know the entire level has loaded properly
 		tr.world = &worldData;
@@ -2185,8 +2203,12 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 
 		char sMapName[MAX_QPATH];
 		COM_StripExtension( name, sMapName, sizeof( sMapName ) );
+		ri.LoadPush( "world: pbr grid", NULL );
 		R_CreatePbrGrid( sMapName );
+		ri.LoadPop();
+		ri.LoadPush( "world: probes", NULL );
 		R_CreateProbes( sMapName );
+		ri.LoadPop();
 	}
 
 	if (ri.CM_GetCachedMapDiskImage())
@@ -2206,12 +2228,16 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 void RE_LoadWorldMap( const char *name )
 {
 	// (what the level before made, while the game is loading anyway)
+	ri.LoadPush( "world: pipeline cache saved", NULL );
 	VK_SavePipelineCache();
+	ri.LoadPop();
 	VK_StageTime( NULL );
 	ri.CM_SetUsingCache( qtrue );
 	RE_LoadWorldMap_Actual( name, s_worldData, 0 );
 	ri.CM_SetUsingCache( qfalse );
 	// VisionJK: the sun of this level is the one an override gives way to (tr_material.cpp)
+	ri.LoadPush( "world: materials", NULL );
 	R_MaterialWorldLoaded();
+	ri.LoadPop();
 	VK_StageTime( "level" );
 }

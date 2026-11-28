@@ -138,7 +138,7 @@ Both are in Setup, HUD, under Menus and HUD.
   something (remap to a shader that draws nothing, a sky). `v_remaps 0` does none of them. The window
   `v_remaps_window` (button "List of Texture Swaps ..." in Setup, Video, Detail, next to the switch) lists every
   swap with what is swapped for what and a switch for each. What is switched off is kept by the name of the
-  swapped shader in the file `remaps_off.txt` in the home folder of the game, so it holds on every server that
+  swapped shader in the file `remaps_off.txt` in `visionjk-data/files` of the home folder of the game, so it holds on every server that
   swaps the same shader. Client only, nobody else sees a difference. Code in `cgame/look/cg_remaps.c`. In
   rd-vulkan-vision a surface of the level whose texture is remapped to a shader without stages is invisible as in
   rd-vanilla; before, the depth pre-pass still drew it and it stood there in black.
