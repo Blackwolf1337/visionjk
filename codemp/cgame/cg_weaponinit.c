@@ -74,9 +74,15 @@ void CG_RegisterWeapon( int weaponNum) {
 	weaponInfo->viewModel = trap->R_RegisterModel(item->view_model);
 
 	// calc midpoint for rotation
-	trap->R_ModelBounds( weaponInfo->weaponModel, mins, maxs );
-	for ( i = 0 ; i < 3 ; i++ ) {
-		weaponInfo->weaponMidpoint[i] = mins[i] + 0.5 * ( maxs[i] - mins[i] );
+	// VisionJK: not for a Ghoul2 model (all world models of the weapons of JA). The renderer of the game gave no bounds
+	// for one, so the pickups turn about their origin above the pad; rd-vulkan-vision measures them since the saber
+	// of the menus is framed by them (R_ModelBounds), in the space of the model, and that set the pickups beside it.
+	VectorClear( weaponInfo->weaponMidpoint );
+	if ( Q_stricmp( COM_GetExtension( item->world_model[0] ), "glm" ) ) {
+		trap->R_ModelBounds( weaponInfo->weaponModel, mins, maxs );
+		for ( i = 0 ; i < 3 ; i++ ) {
+			weaponInfo->weaponMidpoint[i] = mins[i] + 0.5 * ( maxs[i] - mins[i] );
+		}
 	}
 
 	weaponInfo->weaponIcon = trap->R_RegisterShader( item->icon );
