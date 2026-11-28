@@ -1265,7 +1265,7 @@ qboolean JP_ClientCommand( gentity_t *ent, const char *cmd ) {
 	}
 
 	if ( level.intermissionQueued || level.intermissiontime ) {
-		if ( strstr( name, "gun" ) && ent->client->sess.jpAdminLevel != JPADM_NONE )
+		if ( !Q_stricmpn( name, "gun", 3 ) && ent->client->sess.jpAdminLevel != JPADM_NONE )
 			return qtrue;
 		if ( JP_IsJAPlusCommand( name ) ) {
 			trap->SendServerCommand( ent-g_entities, va( "print \"%s (%s) \n\"", G_GetStringEdString( "MP_SVGAME", "CANNOT_TASK_INTERMISSION" ), name ) );
@@ -1281,8 +1281,9 @@ qboolean JP_ClientCommand( gentity_t *ent, const char *cmd ) {
 	if ( JP_ChatCommand( ent, name ) || JP_PlayerCommand( ent, name ) || JP_RconRankCommand( ent, name ) )
 		return qtrue;
 
-	// admin guns: "gunkick" selects amkick and the player in the crosshair
-	if ( strstr( name, "gun" ) && ent->client->sess.jpAdminLevel != JPADM_NONE ) {
+	// admin guns: "gunkick" selects amkick and the player in the crosshair. VisionJK: only a command that starts with
+	// "gun" (anywhere in the name took amportalgun for one)
+	if ( !Q_stricmpn( name, "gun", 3 ) && ent->client->sess.jpAdminLevel != JPADM_NONE ) {
 		char gunCmd[MAX_TOKEN_CHARS];
 
 		if ( !jp_admScript.integer ) {

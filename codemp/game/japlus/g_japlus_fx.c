@@ -408,7 +408,7 @@ static qboolean JP_FxHasTarget( qboolean rcon ) {
 	char name[MAX_TOKEN_CHARS];
 
 	trap->Argv( 0, name, sizeof( name ) );
-	return (!rcon && (!Q_stricmp( name, "admCmdEXE" ) || strstr( name, "gun" ))) || trap->Argc() >= 2;
+	return (!rcon && (!Q_stricmp( name, "admCmdEXE" ) || !Q_stricmpn( name, "gun", 3 ))) || trap->Argc() >= 2;
 }
 
 // tells the admin the command does not work in this gametype. The original reads the arguments first: a command
@@ -417,7 +417,7 @@ static qboolean JP_FxDisallowedInGametype( gentity_t *ent, qboolean rcon, const 
 	char name[MAX_TOKEN_CHARS];
 
 	trap->Argv( 0, name, sizeof( name ) );
-	if ( !(!rcon && (!Q_stricmp( name, "admCmdEXE" ) || strstr( name, "gun" ))) && trap->Argc() < 2 && (!selfByDefault || rcon) )
+	if ( !(!rcon && (!Q_stricmp( name, "admCmdEXE" ) || !Q_stricmpn( name, "gun", 3 ))) && trap->Argc() < 2 && (!selfByDefault || rcon) )
 		return qfalse;
 
 	if ( g_gametype.integer == GT_FFA && !g_jediVmerc.integer && !(alsoHighlander && jp_highlander.integer == 1) )
