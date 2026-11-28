@@ -40,8 +40,9 @@ static const uint32_t vk_sparksComp[] =
 #define VK_SPARK_ROWS		5			// vec4 a spark (shaders/sparks.comp)
 #define VK_SPARK_BURSTS		128			// bursts a frame
 #define VK_SPARK_BODIES		32			// characters of the frame nothing lies on (shaders/sparks.comp OnBody)
-#define VK_SPARK_HEADER		( 12 + VK_SPARK_BODIES )	// rows before the bursts in the frame buffer: the view, the numbers
-													// of the frame, the bodies
+#define VK_SPARK_HEADER		( 12 + VK_SPARK_BODIES * 2 )	// rows before the bursts in the frame buffer: the view, the numbers
+													// of the frame, the bodies, how they move
+#define VK_SPARK_MOVE_MSEC	25			// how fast a body moves is taken from its way over at least that long
 #define VK_SPARK_BURST_ROWS	6
 
 cvar_t	*v_gpuSparks;
@@ -67,6 +68,14 @@ static struct {
 	int				embersUntil;		//	and an ember lie: no glow on the floors after it
 	float			view[VK_WET_HEADER][4];	// the view of the distance in vk.softDepth (VK_SparksView)
 	float			bodies[VK_SPARK_BODIES][4];	//	and the characters in it: their middle and how far round
+	float			moves[VK_SPARK_BODIES][4];	//	how fast they move, 1: the dust minds them
+	struct {
+		const void	*ghoul2;			// whose
+		vec3_t		from;				// where it was
+		int			since;				//	at that ri.Milliseconds()
+		vec3_t		velocity;
+	}				tracks[VK_SPARK_BODIES];	// the bodies of the frame before, in the order of bodies
+	int				numTracks;
 	qboolean		viewValid;
 	int				lastTime;
 	uint32_t		seed;
@@ -156,23 +165,67 @@ qboolean RE_EmitSparks( const sparkBurst_t *burst ) {
 // the view whose distance vk.softDepth now holds (vk_post.cpp VK_SoftDepth), for the bounces of the next frame
 // and the characters seen in it, which the distance has as well: an ember on a shoulder would hang in the air once
 // the player walks on (shaders/sparks.comp OnBody)
+// How fast each moves is found here too, for the dust they stir (Moved): an entity of a scene does not say, so it is
+// the way its ghoul2 instance went since it was last looked at.
 void VK_SparksView( void ) {
-	int viewport[4];
-	int	count = 0;
+	const int	now = ri.Milliseconds();
+	int			viewport[4];
+	int			count = 0;
+	decltype( sp.tracks ) before;
+	const int	numBefore = sp.numTracks;
 
 	VK_ViewRows( sp.view, viewport );
 	sp.viewValid = qtrue;
+	memcpy( before, sp.tracks, sizeof( before ) );
 	memset( sp.bodies, 0, sizeof( sp.bodies ) );
+	memset( sp.moves, 0, sizeof( sp.moves ) );
 	for ( int i = 0; i < backEnd.refdef.num_entities && count < VK_SPARK_BODIES; i++ ) {
 		const refEntity_t *e = &backEnd.refdef.entities[i].e;
 
-		// (the own body seen from its eyes is not drawn, so not in the distance)
-		if ( e->reType != RT_MODEL || !e->ghoul2 || ( ( e->renderfx & RF_THIRD_PERSON ) && !backEnd.viewParms.isPortal ) ) {
+		if ( e->reType != RT_MODEL || !e->ghoul2 ) {
 			continue;
 		}
-		Vector4Set4( sp.bodies[count], e->origin[0], e->origin[1], e->origin[2], 28.0f );
+		// (the own body seen from its eyes is not drawn, so not in the distance: 0, but it stirs the dust)
+		const qboolean	drawn = (qboolean)!( ( e->renderfx & RF_THIRD_PERSON ) && !backEnd.viewParms.isPortal );
+		auto			*track = &sp.tracks[count];
+		int				k;
+
+		for ( k = 0; k < count && sp.tracks[k].ghoul2 != e->ghoul2; k++ ) {
+		}
+		if ( k < count ) {
+			continue;	// (in the scene twice, a shell over it)
+		}
+		for ( k = 0; k < numBefore && before[k].ghoul2 != e->ghoul2; k++ ) {
+		}
+		if ( k < numBefore ) {
+			const int msec = now - before[k].since;
+
+			*track = before[k];
+			if ( msec >= VK_SPARK_MOVE_MSEC ) {
+				vec3_t way;
+
+				VectorSubtract( e->origin, track->from, way );
+				VectorScale( way, 1000.0f / msec, way );
+				// (a jump across the level, or not looked at for a while, is no movement)
+				if ( msec > 250 || VectorLengthSquared( way ) > 2500.0f * 2500.0f ) {
+					VectorClear( track->velocity );
+				} else {
+					VectorAverage( track->velocity, way, track->velocity );
+				}
+				VectorCopy( e->origin, track->from );
+				track->since = now;
+			}
+		} else {
+			track->ghoul2 = e->ghoul2;
+			VectorCopy( e->origin, track->from );
+			track->since = now;
+			VectorClear( track->velocity );
+		}
+		Vector4Set4( sp.bodies[count], e->origin[0], e->origin[1], e->origin[2], drawn ? 28.0f : 0.0f );
+		Vector4Set4( sp.moves[count], track->velocity[0], track->velocity[1], track->velocity[2], 1.0f );
 		count++;
 	}
+	sp.numTracks = count;
 }
 
 /*
@@ -199,6 +252,7 @@ void VK_SparksSimulate( void ) {
 
 	memcpy( rows, sp.view, sizeof( sp.view ) );
 	memcpy( rows + 12, sp.bodies, sizeof( sp.bodies ) );
+	memcpy( rows + 12 + VK_SPARK_BODIES, sp.moves, sizeof( sp.moves ) );
 	Vector4Set4( rows[11], dt, depth ? 1.0f : 0.0f, (float)sp.numBursts, (float)( ++sp.seed & 0xffffff ) );
 	for ( int b = 0; b < sp.numBursts; b++ ) {
 		const sparkBurst_t	*s = &sp.bursts[b];
