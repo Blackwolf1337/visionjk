@@ -15,6 +15,8 @@ struct Transform {
 	vec4	ambientLight;
 	vec4	directedLight;
 	vec4	clipPlane;		// in world space, xyz normal, w distance. Zero: nothing is clipped
+	vec4	lightDir2;		// in model space, the light of the grid from a second direction
+	vec4	directedLight2;	//	its colour, zero: none
 };
 
 struct Draw {

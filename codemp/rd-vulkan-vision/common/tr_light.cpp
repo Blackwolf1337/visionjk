@@ -146,6 +146,9 @@ R_SetupEntityLightingGrid
 
 =================
 */
+// a cell whose light comes from further off the main direction than this (cosine: 72 degrees) is a second light
+#define GRID_SECOND_DOT		0.3f
+
 static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 	vec3_t			lightOrigin;
 	int				pos[3];
@@ -155,12 +158,17 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 	vec3_t			direction;
 	float			totalFactor;
 	unsigned short	*startGridPos;
+	// VisionJK: each of the eight cells with its own direction and directed light (weighted), for the second light
+	vec3_t			cellDir[8], cellLight[8];
+	int				numCells = 0;
 
 	if (r_fullbright->integer)
 	{
 		ent->ambientLight[0] = ent->ambientLight[1] = ent->ambientLight[2] = 255.0;
 		ent->directedLight[0] = ent->directedLight[1] = ent->directedLight[2] = 255.0;
 		VectorCopy( tr.sunDirection, ent->lightDir );
+		VectorClear( ent->directedLight2 );
+		VectorClear( ent->lightDir2 );
 		return;
 	}
 
@@ -189,6 +197,8 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 
 	VectorClear( ent->ambientLight );
 	VectorClear( ent->directedLight );
+	VectorClear( ent->directedLight2 );
+	VectorClear( ent->lightDir2 );
 	VectorClear( direction );
 
 	// trilerp the light value
@@ -228,12 +238,17 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 		}
 
 		totalFactor += factor;
+		VectorClear( cellLight[numCells] );
 
 		for(j=0;j<MAXLIGHTMAPS;j++)
 		{
 			if (data->styles[j] != LS_LSNONE)
 			{
 				const byte	style= data->styles[j];
+
+				cellLight[numCells][0] += factor * data->directLight[j][0] * styleColors[style][0] / 255.0f;
+				cellLight[numCells][1] += factor * data->directLight[j][1] * styleColors[style][1] / 255.0f;
+				cellLight[numCells][2] += factor * data->directLight[j][2] * styleColors[style][2] / 255.0f;
 
 				ent->ambientLight[0] += factor * data->ambientLight[j][0] * styleColors[style][0] / 255.0f;
 				ent->ambientLight[1] += factor * data->ambientLight[j][1] * styleColors[style][1] / 255.0f;
@@ -263,6 +278,42 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 		normal[2] = tr.sinTable[(lng + (FUNCTABLE_SIZE / 4)) & FUNCTABLE_MASK];
 
 		VectorMA( direction, factor, normal, direction );
+		VectorCopy( normal, cellDir[numCells] );
+		numCells++;
+	}
+
+	// VisionJK: cells whose light comes from well off the main direction (between two lamps, in a corridor lit from
+	// both ends) become a second light instead of being averaged into the first, which pointed somewhere between and
+	// left the other side flat; the main light keeps the rest, the sum stays what the grid holds
+	if ( numCells > 1 ) {
+		vec3_t	main, second, rest;
+		float	secondWeight = 0.0f;
+
+		VectorNormalize2( direction, main );
+		VectorClear( second );
+		VectorClear( rest );
+		for ( i = 0; i < numCells; i++ ) {
+			const float bright = cellLight[i][0] * 0.3f + cellLight[i][1] * 0.59f + cellLight[i][2] * 0.11f;
+
+			if ( DotProduct( cellDir[i], main ) < GRID_SECOND_DOT ) {
+				VectorAdd( ent->directedLight2, cellLight[i], ent->directedLight2 );
+				VectorMA( second, bright, cellDir[i], second );
+				secondWeight += bright;
+			} else {
+				VectorMA( rest, bright, cellDir[i], rest );
+			}
+		}
+		if ( secondWeight > 0.0f && VectorNormalize2( second, ent->lightDir2 ) > 0.0f ) {
+			VectorSubtract( ent->directedLight, ent->directedLight2, ent->directedLight );
+			for ( i = 0; i < 3; i++ ) {
+				ent->directedLight[i] = Q_max( ent->directedLight[i], 0.0f );
+			}
+			if ( VectorLength( rest ) > 0.0f ) {
+				VectorCopy( rest, direction );
+			}
+		} else {
+			VectorClear( ent->directedLight2 );
+		}
 	}
 
 	if ( totalFactor > 0 && totalFactor < 0.99 )
@@ -270,10 +321,12 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 		totalFactor = 1.0 / totalFactor;
 		VectorScale( ent->ambientLight, totalFactor, ent->ambientLight );
 		VectorScale( ent->directedLight, totalFactor, ent->directedLight );
+		VectorScale( ent->directedLight2, totalFactor, ent->directedLight2 );
 	}
 
 	VectorScale( ent->ambientLight, r_ambientScale->value, ent->ambientLight );
 	VectorScale( ent->directedLight, r_directedScale->value, ent->directedLight );
+	VectorScale( ent->directedLight2, r_directedScale->value, ent->directedLight2 );
 
 	VectorNormalize2( direction, ent->lightDir );
 }
@@ -643,6 +696,8 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 		ent->directedLight[0] = ent->directedLight[1] =
 			ent->directedLight[2] = tr.identityLight * 150;
 		VectorCopy( tr.sunDirection, ent->lightDir );
+		VectorClear( ent->directedLight2 );
+		VectorClear( ent->lightDir2 );
 	}
 
 	// bonus items and view weapons have a fixed minimum add
@@ -779,6 +834,10 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	ent->lightDir[0] = DotProduct( lightDir, ent->e.axis[0] );
 	ent->lightDir[1] = DotProduct( lightDir, ent->e.axis[1] );
 	ent->lightDir[2] = DotProduct( lightDir, ent->e.axis[2] );
+	VectorCopy( ent->lightDir2, lightDir );
+	ent->lightDir2[0] = DotProduct( lightDir, ent->e.axis[0] );
+	ent->lightDir2[1] = DotProduct( lightDir, ent->e.axis[1] );
+	ent->lightDir2[2] = DotProduct( lightDir, ent->e.axis[2] );
 }
 
 /*
